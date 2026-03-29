@@ -112,7 +112,7 @@ object MyEndpoint:
 
 ### services
 
-**Service traits, Live implementations, and external integrations.** All services must follow the [ZIO Service Pattern](https://zio.dev/reference/service-pattern/).
+**Service traits, Live implementations, and external integrations.** All services must follow the [ZIO Service Pattern](https://zio.dev/reference/service-pattern/). When in doubt, read the official docs first — they are the authoritative reference.
 
 **1. Trait — the service interface**
 ```scala
@@ -185,26 +185,28 @@ object MyServiceLive:
 
 ### Config Pattern
 
-Config types live in `domainPrivate` and load from environment variables:
+Config types live in `domainPrivate` and use `zio-config-magnolia` for automatic derivation. Never use `System.env` directly — always go through `ZIO.config`.
 
 ```scala
 package app.myservice.domain.internal
 
-import zio.*
+import zio.config.*
+import zio.config.magnolia.*
 
-final case class MyConfig(queueUrl: String, timeout: Long)
+final case class MyConfig(queueUrl: String, timeoutMs: Long) derives Config
 
 object MyConfig:
   val layer: TaskLayer[MyConfig] =
-    ZLayer.fromZIO:
-      for
-        queueUrl <- System.env("MY_QUEUE_URL")
-                      .someOrFail(new IllegalArgumentException("Missing MY_QUEUE_URL"))
-        timeout  <- System.env("MY_TIMEOUT_MS")
-                      .someOrFail(new IllegalArgumentException("Missing MY_TIMEOUT_MS"))
-                      .flatMap(v => ZIO.attempt(v.toLong))
-      yield MyConfig(queueUrl, timeout)
+    ZLayer.fromZIO(ZIO.config[MyConfig])
 ```
+
+Wire the config provider once in `server`:
+```scala
+override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
+  Runtime.setConfigProvider(ConfigProvider.envProvider.snakeCase.upperCase)
+```
+
+See `references/CONFIGURATION.md` for full details and field naming rules.
 
 ### Server Entry Point
 

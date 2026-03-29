@@ -28,7 +28,7 @@ Choose the reference most relevant to your task:
 
 - **Immutability everywhere** — `val` only, no `var`
 - **Typed errors** — use `ZIO[R, E, A]` with specific error types, not `Task` everywhere
-- **ZIO Service Pattern** — every service has a trait, a `Live` implementation, and a `ZLayer`
+- **ZIO Service Pattern** — every service has a trait, a `Live` implementation, a `ZLayer`, and a **test implementation** backed by `Ref` or another in-memory construct
 - **Composition over inheritance** — combine `ZLayer`s rather than subclassing
 - **Derive codecs** — use `derives JsonCodec`, never write codec instances by hand
 - **Wrap primitives** — use newtypes or opaque types for domain values instead of raw `String`/`Int`

@@ -1,6 +1,7 @@
 ---
 name: mill-build
 description: Guidance for working with the Mill build tool for Scala projects — commands, module configuration, dependency management, and service architecture.
+allowed-tools: Bash
 ---
 
 # Mill Build System
@@ -74,6 +75,10 @@ val zioHttpDeps = Agg(
   ivy"dev.zio::zio-http:3.0.1"
 )
 
+val tapirDeps = Agg(
+  ivy"com.softwaremill.sttp.tapir::tapir-core:1.11.10"
+)
+
 object myService extends Module {
   object domainPublic extends ScalaModule {
     def scalaVersion = scalaVer
@@ -87,9 +92,7 @@ object myService extends Module {
   object api extends ScalaModule {
     def scalaVersion = scalaVer
     def moduleDeps = Seq(domainPublic)
-    def ivyDeps = Agg(
-      ivy"com.softwaremill.sttp.tapir::tapir-core:1.11.10"
-    )
+    def ivyDeps = tapirDeps
   }
 
   object services extends ScalaModule {

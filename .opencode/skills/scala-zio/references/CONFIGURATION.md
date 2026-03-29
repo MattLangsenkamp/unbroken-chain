@@ -13,69 +13,29 @@ This document covers the configuration pattern for ZIO services.
 
 ---
 
-## Pattern: Manual Environment Variable Loading
+## Pattern: zio-config with Automatic Derivation
 
-Config classes are `final case class`es that load from environment variables via `ZLayer.fromZIO`. Use `System.env` to read each variable and fail immediately if it is absent or invalid.
+Use `zio-config-magnolia` for all config classes. Annotate the case class with `derives Config` and load it via `ZIO.config[T]`.
 
 ```scala
 package app.myservice.domain.internal
 
-import zio.*
+import zio.config.*
+import zio.config.magnolia.*
 
 final case class MyServiceConfig(
   queueUrl: String,
   timeoutMs: Long,
   maxRetries: Int
-)
+) derives Config
 
 object MyServiceConfig:
   val layer: TaskLayer[MyServiceConfig] =
-    ZLayer.fromZIO:
-      for
-        queueUrl   <- env("MY_QUEUE_URL")
-        timeoutMs  <- envLong("MY_TIMEOUT_MS")
-        maxRetries <- envInt("MY_MAX_RETRIES")
-      yield MyServiceConfig(queueUrl, timeoutMs, maxRetries)
-
-  private def env(name: String): Task[String] =
-    System
-      .env(name)
-      .someOrFail(new IllegalArgumentException(s"Missing required environment variable: $name"))
-
-  private def envLong(name: String): Task[Long] =
-    env(name).flatMap: value =>
-      ZIO
-        .attempt(value.toLong)
-        .mapError(_ => new IllegalArgumentException(s"Invalid numeric value for $name: '$value'"))
-
-  private def envInt(name: String): Task[Int] =
-    env(name).flatMap: value =>
-      ZIO
-        .attempt(value.toInt)
-        .mapError(_ => new IllegalArgumentException(s"Invalid numeric value for $name: '$value'"))
+    ZLayer.fromZIO(ZIO.config[MyServiceConfig])
 ```
 
----
+Wire the config provider in the `server` bootstrap so all config reads use environment variables in `SCREAMING_SNAKE_CASE`:
 
-## Alternative: zio-config with Automatic Derivation
-
-For services that prefer automatic derivation, use `zio-config-magnolia`:
-
-```scala
-import zio.config.*
-import zio.config.magnolia.*
-
-final case class SqsConsumerConfig(sqsQueueUrl: String) derives Config
-```
-
-Then in the companion object:
-```scala
-object SqsConsumerConfig:
-  val layer: TaskLayer[SqsConsumerConfig] =
-    ZLayer.fromZIO(ZIO.config[SqsConsumerConfig])
-```
-
-Wire the config provider in the `server` bootstrap:
 ```scala
 object Server extends ZIOAppDefault:
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
@@ -115,9 +75,6 @@ They are consumed in `server` via `provide(...)` but are never exposed outside t
 
 ## Dependency in build.sc
 
-For the manual pattern, no extra dependency is needed beyond ZIO core.
-
-For `zio-config-magnolia` derivation:
 ```scala
 ivy"dev.zio::zio-config:4.0.3",
 ivy"dev.zio::zio-config-magnolia:4.0.3"

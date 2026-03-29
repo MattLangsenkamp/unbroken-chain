@@ -6,3 +6,5 @@ This project uses **OpenCode** for agentic workflows. Always check the `.opencod
 
 - `.opencode/skills/mill-build/` — Mill build commands, module structure, dependency management
 - `.opencode/skills/scala-zio/` — Scala 3 / ZIO patterns, domain modeling, configuration, service setup
+
+More skills may be added over time — always check `.opencode/skills/` for the full list.
