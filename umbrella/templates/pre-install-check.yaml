@@ -1,0 +1,77 @@
+---
+# ServiceAccount for the pre-install CRD check job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pre-install-check
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Namespace }}-pre-install-check
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+rules:
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Namespace }}-pre-install-check
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Namespace }}-pre-install-check
+subjects:
+  - kind: ServiceAccount
+    name: pre-install-check
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pre-install-check
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      serviceAccountName: pre-install-check
+      restartPolicy: Never
+      containers:
+        - name: check
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Checking for required operator CRDs..."
+
+              check_crd() {
+                if kubectl get crd "$1" >/dev/null 2>&1; then
+                  echo "  ✅ $1"
+                else
+                  echo "  ❌ $1 — operator not installed. Run bin/deploy-local.sh to install operators."
+                  exit 1
+                fi
+              }
+
+              check_crd clusters.postgresql.cnpg.io
+              check_crd rabbitmqclusters.rabbitmq.com
+              check_crd opentelemetrycollectors.opentelemetry.io
+              check_crd clustersecretstores.external-secrets.io
+
+              echo "All operator CRDs are present."

@@ -1,0 +1,15 @@
+{{- range .Values.postgres.databases }}
+---
+# Database CR for {{ .name }}
+# The 'app' bootstrap user (owner) is created by the Cluster CR.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  name: {{ .dbName }}
+  owner: app
+  cluster:
+    name: {{ $.Values.postgres.clusterName }}
+{{- end }}

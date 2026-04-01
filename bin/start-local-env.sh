@@ -28,6 +28,7 @@ else
     --api-port 6550 \
     --port "8080:80@loadbalancer" \
     --port "8443:443@loadbalancer" \
+    --port "3000:3000@loadbalancer" \
     --volume "${REPO_ROOT}:/repo@all"
   echo "✅ k3d cluster '${CLUSTER_NAME}' created"
 fi

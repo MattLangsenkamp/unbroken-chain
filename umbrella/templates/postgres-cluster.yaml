@@ -1,0 +1,22 @@
+---
+# Shared CloudNativePG Cluster for the platform.
+# Bootstrap creates an initial 'app' user whose credentials come from the
+# ESO-generated 'postgres-credentials' secret (synced from local-credentials).
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.postgres.clusterName }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: {{ .Values.postgres.instances }}
+  storage:
+    size: {{ .Values.postgres.storage.size }}
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      secret:
+        # Password for the 'app' user — synced from local-credentials via ESO
+        name: postgres-credentials
+  superuserSecret:
+    name: postgres-credentials

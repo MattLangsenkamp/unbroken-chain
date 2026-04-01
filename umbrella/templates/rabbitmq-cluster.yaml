@@ -1,0 +1,12 @@
+---
+# RabbitMQ Cluster managed by the RabbitMQ Cluster Operator (community).
+# The operator creates a '<clusterName>-default-user' Secret with generated
+# credentials. Services consume those credentials via the ESO-synced
+# 'rabbitmq-credentials' Secret.
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: {{ .Values.rabbitmq.clusterName }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.rabbitmq.replicas }}
