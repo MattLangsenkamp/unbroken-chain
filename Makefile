@@ -2,7 +2,7 @@ CLUSTER_NAME ?= unbroken-chain
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s
+.PHONY: check-deps start stop kubeconfig k9s build-images load-images deploy-images
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -23,6 +23,21 @@ kubeconfig:
 ## k9s : launch k9s for the local k3d cluster
 k9s:
 	@$(SCRIPT_DIR)/k9s.sh $(CLUSTER_NAME)
+
+## build-images : build all service Docker images via Mill
+build-images:
+	./mill provider-gateways.github-gateway.server.docker.build
+	./mill reader.server.docker.build
+	./mill writer.server.docker.build
+	./mill extraction-service.server.docker.build
+	./mill ubc-control-plane.server.docker.build
+
+## load-images : import all service Docker images into the k3d cluster
+load-images:
+	@$(SCRIPT_DIR)/load-images.sh $(CLUSTER_NAME)
+
+## deploy-images : build all service Docker images and import them into the k3d cluster
+deploy-images: build-images load-images
 
 ## help : list available targets
 help:

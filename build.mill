@@ -1,0 +1,64 @@
+//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION"]
+
+package build
+
+import mill.*
+import mill.scalalib.*
+import mill.contrib.docker.DockerModule
+
+val scalaVer = "3.3.7"
+
+val zioDeps = Seq(
+  mvn"dev.zio::zio:2.1.17"
+)
+
+trait ServiceModule extends ScalaModule with DockerModule {
+  def scalaVersion = scalaVer
+  override def mvnDeps = super.mvnDeps() ++ zioDeps
+
+  trait ServiceDockerConfig extends DockerConfig {
+    def baseImage = "eclipse-temurin:21-jre"
+  }
+}
+
+object `provider-gateways` extends Module {
+  object `github-gateway` extends Module {
+    object server extends ServiceModule {
+      object docker extends ServiceDockerConfig {
+        def tags = List("unbrokenchain/github-gateway:latest")
+      }
+    }
+  }
+}
+
+object reader extends Module {
+  object server extends ServiceModule {
+    object docker extends ServiceDockerConfig {
+      def tags = List("unbrokenchain/reader:latest")
+    }
+  }
+}
+
+object writer extends Module {
+  object server extends ServiceModule {
+    object docker extends ServiceDockerConfig {
+      def tags = List("unbrokenchain/writer:latest")
+    }
+  }
+}
+
+object `extraction-service` extends Module {
+  object server extends ServiceModule {
+    object docker extends ServiceDockerConfig {
+      def tags = List("unbrokenchain/extraction-service:latest")
+    }
+  }
+}
+
+object `ubc-control-plane` extends Module {
+  object server extends ServiceModule {
+    object docker extends ServiceDockerConfig {
+      def tags = List("unbrokenchain/ubc-control-plane:latest")
+    }
+  }
+}
