@@ -1,0 +1,29 @@
+CLUSTER_NAME ?= unbroken-chain
+
+SCRIPT_DIR := bin
+
+.PHONY: check-deps start stop kubeconfig k9s
+
+## check-deps : verify all required local tools are installed
+check-deps:
+	@$(SCRIPT_DIR)/check-deps.sh $(CLUSTER_NAME)
+
+## start : create and start the local k3d cluster
+start:
+	@$(SCRIPT_DIR)/start-local-env.sh $(CLUSTER_NAME)
+
+## stop : delete the local k3d cluster
+stop:
+	@$(SCRIPT_DIR)/stop-local-env.sh $(CLUSTER_NAME)
+
+## kubeconfig : set kubectl context to the local k3d cluster
+kubeconfig:
+	@$(SCRIPT_DIR)/kubeconfig.sh local $(CLUSTER_NAME)
+
+## k9s : launch k9s for the local k3d cluster
+k9s:
+	@$(SCRIPT_DIR)/k9s.sh $(CLUSTER_NAME)
+
+## help : list available targets
+help:
+	@grep -E '^## ' Makefile | sed 's/## //'
