@@ -8,6 +8,8 @@ allowed-tools: Bash
 
 This skill provides guidance for working with Mill for Scala projects.
 
+**This project uses Mill 1.x** — see the [Mill 1.x Migration](#mill-1x-changes) section for key differences from 0.11.x.
+
 ## Core Concepts
 
 Mill is a modern build tool for Scala that emphasizes:
@@ -18,10 +20,10 @@ Mill is a modern build tool for Scala that emphasizes:
 
 ## Project Structure
 
-This project uses **programmatic build configuration** (`build.sc`):
+This project uses **programmatic build configuration** (`build.mill`):
 
 ```
-build.sc                  # Build configuration
+build.mill                # Build configuration (Mill 1.x uses .mill extension)
 <service>/
   domainPublic/src/       # Public domain types
   domainPrivate/src/      # Internal types
@@ -29,6 +31,8 @@ build.sc                  # Build configuration
   services/src/           # Service implementations
   server/src/             # Entry point / wiring
 ```
+
+**Source file placement**: Source files go directly in the `src/` directory — do NOT use maven-style nested directories (e.g., `src/com/example/`). Place `.scala` files directly in `<module>/src/`.
 
 ## Common Commands
 
@@ -57,27 +61,75 @@ build.sc                  # Build configuration
 ./mill <module>.run              # Run a module's main class
 ```
 
-## Module Configuration
+### Docker
+```bash
+./mill <service>.server.docker.build    # Build Docker image for a service
+```
 
-Define all modules in `build.sc`. Dependency groups are declared as top-level `val`s and composed per module — never inline individual deps inside module definitions.
+## Mill 1.x Changes
+
+Mill 1.x introduces several breaking changes from 0.11.x:
+
+| 0.11.x | 1.x | Notes |
+|--------|-----|-------|
+| `build.sc` | `build.mill` | New file extension |
+| `import mill._` | `import mill.*` | Scala 3 wildcard syntax |
+| `ivy"group::artifact:version"` | `mvn"group::artifact:version"` | New dependency format |
+| `def ivyDeps = Agg(...)` | `def mvnDeps = Seq(...)` | `Agg` → `Seq`, `ivyDeps` → `mvnDeps` |
+| `import $ivy.\`...\`` | `//\| mvnDeps: ["..."]` | Header-based plugin imports |
+| `import contrib.docker.DockerModule` | `import mill.contrib.docker.DockerModule` | Full path for contrib |
+
+### Build Header
+
+Mill 1.x uses a header comment for plugin dependencies:
 
 ```scala
-import mill._, scalalib._
+//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION"]
+
+package build
+
+import mill.*
+import mill.scalalib.*
+import mill.contrib.docker.DockerModule
+```
+
+## Module Configuration
+
+Define all modules in `build.mill`. Dependency groups are declared as top-level `val`s and composed per module — never inline individual deps inside module definitions.
+
+```scala
+//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION"]
+
+package build
+
+import mill.*
+import mill.scalalib.*
+import mill.contrib.docker.DockerModule
 
 val scalaVer = "3.3.7"
 
-val zioDeps = Agg(
-  ivy"dev.zio::zio:2.1.17",
-  ivy"dev.zio::zio-streams:2.1.17"
+val zioDeps = Seq(
+  mvn"dev.zio::zio:2.1.17",
+  mvn"dev.zio::zio-streams:2.1.17"
 )
 
-val zioHttpDeps = Agg(
-  ivy"dev.zio::zio-http:3.0.1"
+val zioHttpDeps = Seq(
+  mvn"dev.zio::zio-http:3.0.1"
 )
 
-val tapirDeps = Agg(
-  ivy"com.softwaremill.sttp.tapir::tapir-core:1.11.10"
+val tapirDeps = Seq(
+  mvn"com.softwaremill.sttp.tapir::tapir-core:1.11.10"
 )
+
+// Shared trait for service modules with Docker support
+trait ServiceModule extends ScalaModule with DockerModule {
+  def scalaVersion = scalaVer
+  override def mvnDeps = super.mvnDeps() ++ zioDeps
+
+  trait ServiceDockerConfig extends DockerConfig {
+    def baseImage = "eclipse-temurin:21-jre"
+  }
+}
 
 object myService extends Module {
   object domainPublic extends ScalaModule {
@@ -92,39 +144,42 @@ object myService extends Module {
   object api extends ScalaModule {
     def scalaVersion = scalaVer
     def moduleDeps = Seq(domainPublic)
-    def ivyDeps = tapirDeps
+    override def mvnDeps = super.mvnDeps() ++ tapirDeps
   }
 
   object services extends ScalaModule {
     def scalaVersion = scalaVer
     def moduleDeps = Seq(domainPublic, domainPrivate, api)
-    def ivyDeps = zioDeps
+    override def mvnDeps = super.mvnDeps() ++ zioDeps
   }
 
-  object server extends ScalaModule {
-    def scalaVersion = scalaVer
+  object server extends ServiceModule {
     def moduleDeps = Seq(domainPublic, domainPrivate, api, services)
-    def ivyDeps = zioDeps ++ zioHttpDeps
+    override def mvnDeps = super.mvnDeps() ++ zioHttpDeps
+
+    object docker extends ServiceDockerConfig {
+      def tags = List("unbrokenchain/my-service:latest")
+    }
   }
 }
 ```
 
 ## Adding Dependencies
 
-Use `ivy"groupId::artifactId:version"` format:
+Use `mvn"groupId::artifactId:version"` format:
 - `::` for Scala libraries (adds Scala version suffix automatically)
 - `:` for Java libraries (no suffix)
 
 ```scala
-def ivyDeps = Agg(
-  ivy"dev.zio::zio:2.1.17",                   // Scala library
-  ivy"org.apache.lucene:lucene-core:9.9.1"    // Java library
+override def mvnDeps = super.mvnDeps() ++ Seq(
+  mvn"dev.zio::zio:2.1.17",                   // Scala library
+  mvn"org.apache.lucene:lucene-core:9.9.1"    // Java library
 )
 ```
 
 ## Centralized Scala Version
 
-Always define `scalaVersion` as a shared `val` at the top of `build.sc` and reference it in every module. Never hardcode it per module.
+Always define `scalaVersion` as a shared `val` at the top of `build.mill` and reference it in every module. Never hardcode it per module.
 
 ## Dependency Direction
 
@@ -152,12 +207,38 @@ def moduleDeps = Seq(domainPublic, api, otherService.domainPublic)
 mkdir -p <service>/{domainPublic,domainPrivate,api,services,server}/src
 ```
 
-2. Add the service object to `build.sc` following the template above.
+2. Add the service object to `build.mill` following the template above.
 
 3. Verify and test:
 ```bash
 ./mill resolve <service>.__
 ./mill <service>.server.compile
+```
+
+## Provider Gateways
+
+Provider gateway services live under the `provider-gateways/` directory:
+
+```
+provider-gateways/
+  github-gateway/
+    server/src/
+  gitlab-gateway/
+    server/src/
+```
+
+In `build.mill`, these are nested under a `provider-gateways` module:
+
+```scala
+object `provider-gateways` extends Module {
+  object `github-gateway` extends Module {
+    object server extends ServiceModule {
+      object docker extends ServiceDockerConfig {
+        def tags = List("unbrokenchain/github-gateway:latest")
+      }
+    }
+  }
+}
 ```
 
 ## Troubleshooting
@@ -168,6 +249,8 @@ mkdir -p <service>/{domainPublic,domainPrivate,api,services,server}/src
 | Scala version mismatch | Ensure all modules use the shared `scalaVer` val |
 | Dependency not found | Check `::` vs `:` for Scala vs Java libraries |
 | Circular dependency error | Review `moduleDeps` — cycles are not allowed |
+| `Agg` not found | Use `Seq` instead (Mill 1.x change) |
+| `ivyDeps` not found | Use `mvnDeps` instead (Mill 1.x change) |
 
 ## Service Architecture
 
@@ -183,3 +266,5 @@ Each service follows this 5-layer pattern:
 
 - [Mill Documentation](https://mill-build.org/)
 - [Mill ScalaLib](https://mill-build.org/mill/scalalib/intro.html)
+- [Mill Docker Contrib](https://mill-build.org/mill/contrib/docker.html)
+- [Mill Migration Guide](https://mill-build.org/mill/migrating/migrating.html)
