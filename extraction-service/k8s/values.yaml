@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ""
+  repository: "unbrokenchain/extraction-service"
   tag: latest
   pullPolicy: IfNotPresent
 

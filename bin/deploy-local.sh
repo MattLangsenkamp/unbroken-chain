@@ -7,8 +7,8 @@
 #   1. Pull and import grafana/otel-lgtm image into k3d
 #   2. Install/upgrade all operators via helm upgrade --install
 #   3. Create local-credentials Secret if it does not exist
-#   4. helm dependency update on the umbrella chart
-#   5. helm upgrade --install the umbrella chart
+#   4. helm upgrade --install the infra chart (Postgres, RabbitMQ, ESO, OTel)
+#   5. helm upgrade --install each service chart directly
 #
 # Args:
 #   $1  cluster_name : k3d cluster name, defaults to "unbroken-chain"
@@ -31,7 +31,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 1. Pull and import grafana/otel-lgtm
 # ---------------------------------------------------------------------------
-echo "--- [1/4] Importing grafana/otel-lgtm into k3d ---"
+echo "--- [1/5] Importing grafana/otel-lgtm into k3d ---"
 docker pull grafana/otel-lgtm:latest
 k3d image import grafana/otel-lgtm:latest --cluster "$CLUSTER_NAME"
 echo ""
@@ -39,7 +39,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 2. Install/upgrade operators
 # ---------------------------------------------------------------------------
-echo "--- [2/4] Installing operators ---"
+echo "--- [2/5] Installing operators ---"
 
 echo "  CloudNativePG..."
 helm upgrade --install cloudnative-pg cloudnative-pg \
@@ -60,6 +60,9 @@ helm upgrade --install opentelemetry-operator opentelemetry-operator \
   --set admissionWebhooks.certManager.enabled=false \
   --set admissionWebhooks.autoGenerateCert.enabled=true \
   --wait
+# Restart the operator so it regenerates and patches the webhook cert, then wait
+kubectl rollout restart deployment/opentelemetry-operator -n opentelemetry-operator-system
+kubectl rollout status deployment/opentelemetry-operator -n opentelemetry-operator-system --timeout=2m
 
 echo "  External Secrets Operator..."
 helm upgrade --install external-secrets external-secrets \
@@ -75,7 +78,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 3. Create namespace and local-credentials Secret
 # ---------------------------------------------------------------------------
-echo "--- [3/4] Creating namespace and local-credentials Secret ---"
+echo "--- [3/5] Creating namespace and local-credentials Secret ---"
 
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
@@ -85,6 +88,7 @@ else
   echo "  Creating local-credentials with placeholder values..."
   kubectl create secret generic local-credentials \
     --namespace "$NAMESPACE" \
+    --from-literal=postgres-username=app \
     --from-literal=postgres-password=changeme \
     --from-literal=rabbitmq-password=changeme
   echo "  ✅ local-credentials created"
@@ -94,26 +98,38 @@ fi
 echo ""
 
 # ---------------------------------------------------------------------------
-# 4. Helm upgrade --install (with dependency update)
+# 4. Deploy infra chart (Postgres, RabbitMQ, ESO, OTel)
 # ---------------------------------------------------------------------------
-echo "--- [4/4] Deploying umbrella chart ---"
-# Remove stale lock file so Helm validates against Chart.yaml, not cached digests
-rm -f "$UMBRELLA_DIR/Chart.lock"
-# Package each service chart explicitly into umbrella/charts/
-mkdir -p "$UMBRELLA_DIR/charts"
-helm package "$REPO_ROOT/provider-gateways/github-gateway/k8s" --destination "$UMBRELLA_DIR/charts/"
-helm package "$REPO_ROOT/reader/k8s"                           --destination "$UMBRELLA_DIR/charts/"
-helm package "$REPO_ROOT/writer/k8s"                           --destination "$UMBRELLA_DIR/charts/"
-helm package "$REPO_ROOT/extraction-service/k8s"               --destination "$UMBRELLA_DIR/charts/"
-helm package "$REPO_ROOT/ubc-control-plane/k8s"                --destination "$UMBRELLA_DIR/charts/"
-# Clear Helm's API discovery cache so newly installed operator CRDs are visible
-rm -rf "$(helm env HELM_CACHE_HOME)/discovery"
-helm upgrade --install unbroken-chain "$UMBRELLA_DIR" \
+echo "--- [4/5] Deploying infra chart ---"
+helm upgrade --install unbroken-chain-infra "$UMBRELLA_DIR" \
   --namespace "$NAMESPACE" \
   --create-namespace \
   --values "$UMBRELLA_DIR/values.yaml" \
   --wait \
   --timeout 5m
+echo ""
+
+# ---------------------------------------------------------------------------
+# 5. Deploy service charts
+# ---------------------------------------------------------------------------
+echo "--- [5/5] Deploying services ---"
+
+deploy_service() {
+  local name="$1"
+  local chart_dir="$2"
+  echo "  $name..."
+  helm upgrade --install "$name" "$chart_dir" \
+    --namespace "$NAMESPACE" \
+    --values "$chart_dir/values.yaml" \
+    --wait \
+    --timeout 2m
+}
+
+deploy_service github-gateway    "$REPO_ROOT/provider-gateways/github-gateway/k8s"
+deploy_service reader             "$REPO_ROOT/reader/k8s"
+deploy_service writer             "$REPO_ROOT/writer/k8s"
+deploy_service extraction-service "$REPO_ROOT/extraction-service/k8s"
+deploy_service ubc-control-plane  "$REPO_ROOT/ubc-control-plane/k8s"
 
 echo ""
 echo "✅ Deployment complete!"

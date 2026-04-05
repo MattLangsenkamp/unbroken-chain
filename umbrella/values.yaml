@@ -1,82 +1,8 @@
 # =============================================================================
-# Unbroken Chain — Umbrella Chart Values
-# Single values file — no overlays.
+# Unbroken Chain — Infra Chart Values
+# Covers: Postgres, RabbitMQ, OTel, ESO.
+# Services are deployed independently by bin/deploy-local.sh.
 # =============================================================================
-
-# ---------------------------------------------------------------------------
-# Service sub-chart values (keyed by chart name)
-# ---------------------------------------------------------------------------
-
-github-gateway:
-  replicaCount: 1
-  image:
-    repository: unbrokenchain/github-gateway
-    tag: latest
-    pullPolicy: IfNotPresent
-  postgres:
-    enabled: true
-    host: unbroken-chain-pg-rw
-    db: github_gateway
-    user: app
-  resources:
-    limits:
-      memory: "256Mi"
-      cpu: "250m"
-
-reader:
-  replicaCount: 1
-  image:
-    repository: unbrokenchain/reader
-    tag: latest
-    pullPolicy: IfNotPresent
-  postgres:
-    enabled: false
-  resources:
-    limits:
-      memory: "256Mi"
-      cpu: "250m"
-
-writer:
-  replicaCount: 1
-  image:
-    repository: unbrokenchain/writer
-    tag: latest
-    pullPolicy: IfNotPresent
-  postgres:
-    enabled: false
-  resources:
-    limits:
-      memory: "256Mi"
-      cpu: "250m"
-
-extraction-service:
-  replicaCount: 1
-  image:
-    repository: unbrokenchain/extraction-service
-    tag: latest
-    pullPolicy: IfNotPresent
-  postgres:
-    enabled: false
-  resources:
-    limits:
-      memory: "256Mi"
-      cpu: "250m"
-
-ubc-control-plane:
-  replicaCount: 1
-  image:
-    repository: unbrokenchain/ubc-control-plane
-    tag: latest
-    pullPolicy: IfNotPresent
-  postgres:
-    enabled: true
-    host: unbroken-chain-pg-rw
-    db: ubc_control_plane
-    user: app
-  resources:
-    limits:
-      memory: "256Mi"
-      cpu: "250m"
 
 # ---------------------------------------------------------------------------
 # Postgres — shared CloudNativePG cluster

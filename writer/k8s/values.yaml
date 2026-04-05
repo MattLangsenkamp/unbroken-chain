@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ""
+  repository: "unbrokenchain/writer"
   tag: latest
   pullPolicy: IfNotPresent
 

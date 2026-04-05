@@ -1,15 +1,15 @@
 replicaCount: 1
 
 image:
-  repository: ""
+  repository: "unbrokenchain/github-gateway"
   tag: latest
   pullPolicy: IfNotPresent
 
 # Set to true (and configure host/db/user) for services that need Postgres
 postgres:
-  enabled: false
+  enabled: true
   host: unbroken-chain-pg-rw
-  db: ""
+  db: github_gateway
   user: app
 
 rabbitmq:

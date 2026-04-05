@@ -1,22 +1,6 @@
 apiVersion: v2
 name: unbroken-chain
-description: Umbrella chart for the Unbroken Chain platform
+description: Umbrella chart for the Unbroken Chain platform — infra only
 type: application
 version: 0.1.0
 appVersion: latest
-dependencies:
-  - name: github-gateway
-    version: "0.1.0"
-    repository: "file://../provider-gateways/github-gateway/k8s"
-  - name: reader
-    version: "0.1.0"
-    repository: "file://../reader/k8s"
-  - name: writer
-    version: "0.1.0"
-    repository: "file://../writer/k8s"
-  - name: extraction-service
-    version: "0.1.0"
-    repository: "file://../extraction-service/k8s"
-  - name: ubc-control-plane
-    version: "0.1.0"
-    repository: "file://../ubc-control-plane/k8s"
