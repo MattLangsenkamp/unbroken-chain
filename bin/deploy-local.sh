@@ -31,7 +31,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 1. Pull and import grafana/otel-lgtm
 # ---------------------------------------------------------------------------
-echo "--- [1/5] Importing grafana/otel-lgtm into k3d ---"
+echo "--- [1/4] Importing grafana/otel-lgtm into k3d ---"
 docker pull grafana/otel-lgtm:latest
 k3d image import grafana/otel-lgtm:latest --cluster "$CLUSTER_NAME"
 echo ""
@@ -39,7 +39,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 2. Install/upgrade operators
 # ---------------------------------------------------------------------------
-echo "--- [2/5] Installing operators ---"
+echo "--- [2/4] Installing operators ---"
 
 echo "  CloudNativePG..."
 helm upgrade --install cloudnative-pg cloudnative-pg \
@@ -49,11 +49,8 @@ helm upgrade --install cloudnative-pg cloudnative-pg \
   --wait
 
 echo "  RabbitMQ Cluster Operator..."
-helm upgrade --install rabbitmq-cluster-operator \
-  oci://registry-1.docker.io/bitnamicharts/rabbitmq-cluster-operator \
-  --namespace rabbitmq-system \
-  --create-namespace \
-  --wait
+kubectl apply -f "https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml"
+kubectl rollout status deployment/rabbitmq-cluster-operator -n rabbitmq-system --timeout=5m
 
 echo "  OpenTelemetry Operator..."
 helm upgrade --install opentelemetry-operator opentelemetry-operator \
@@ -70,13 +67,15 @@ helm upgrade --install external-secrets external-secrets \
   --namespace external-secrets \
   --create-namespace \
   --wait
+kubectl wait --for=condition=Established crd/clustersecretstores.external-secrets.io --timeout=60s
+kubectl wait --for=condition=Established crd/externalsecrets.external-secrets.io --timeout=60s
 
 echo ""
 
 # ---------------------------------------------------------------------------
 # 3. Create namespace and local-credentials Secret
 # ---------------------------------------------------------------------------
-echo "--- [3/5] Creating namespace and local-credentials Secret ---"
+echo "--- [3/4] Creating namespace and local-credentials Secret ---"
 
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
@@ -95,16 +94,20 @@ fi
 echo ""
 
 # ---------------------------------------------------------------------------
-# 4. Helm dependency update
+# 4. Helm upgrade --install (with dependency update)
 # ---------------------------------------------------------------------------
-echo "--- [4/5] Running helm dependency update ---"
-helm dependency update "$UMBRELLA_DIR"
-echo ""
-
-# ---------------------------------------------------------------------------
-# 5. Helm upgrade --install
-# ---------------------------------------------------------------------------
-echo "--- [5/5] Deploying umbrella chart ---"
+echo "--- [4/4] Deploying umbrella chart ---"
+# Remove stale lock file so Helm validates against Chart.yaml, not cached digests
+rm -f "$UMBRELLA_DIR/Chart.lock"
+# Package each service chart explicitly into umbrella/charts/
+mkdir -p "$UMBRELLA_DIR/charts"
+helm package "$REPO_ROOT/provider-gateways/github-gateway/k8s" --destination "$UMBRELLA_DIR/charts/"
+helm package "$REPO_ROOT/reader/k8s"                           --destination "$UMBRELLA_DIR/charts/"
+helm package "$REPO_ROOT/writer/k8s"                           --destination "$UMBRELLA_DIR/charts/"
+helm package "$REPO_ROOT/extraction-service/k8s"               --destination "$UMBRELLA_DIR/charts/"
+helm package "$REPO_ROOT/ubc-control-plane/k8s"                --destination "$UMBRELLA_DIR/charts/"
+# Clear Helm's API discovery cache so newly installed operator CRDs are visible
+rm -rf "$(helm env HELM_CACHE_HOME)/discovery"
 helm upgrade --install unbroken-chain "$UMBRELLA_DIR" \
   --namespace "$NAMESPACE" \
   --create-namespace \
