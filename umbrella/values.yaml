@@ -1,0 +1,49 @@
+# =============================================================================
+# Unbroken Chain — Infra Chart Values
+# Covers: Postgres, RabbitMQ, OTel, ESO.
+# Services are deployed independently by bin/deploy-local.sh.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Postgres — shared CloudNativePG cluster
+# ---------------------------------------------------------------------------
+postgres:
+  clusterName: unbroken-chain-pg
+  instances: 1
+  storage:
+    size: 1Gi
+  # One Database CR is created for each entry below
+  databases:
+    - name: github-gateway-db
+      dbName: github_gateway
+    - name: ubc-control-plane-db
+      dbName: ubc_control_plane
+
+# ---------------------------------------------------------------------------
+# RabbitMQ
+# ---------------------------------------------------------------------------
+rabbitmq:
+  clusterName: unbroken-chain-rabbitmq
+  replicas: 1
+
+# ---------------------------------------------------------------------------
+# Observability — grafana/otel-lgtm + OpenTelemetry Collector
+# ---------------------------------------------------------------------------
+otel:
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    # Grafana exposed at localhost:3000 via k3d loadbalancer port mapping
+    grafanaPort: 3000
+    otlpGrpcPort: 4317
+    otlpHttpPort: 4318
+  collector:
+    # Services should set OTEL_EXPORTER_OTLP_ENDPOINT to this
+    endpoint: "http://otel-collector:4317"
+
+# ---------------------------------------------------------------------------
+# External Secrets Operator — Kubernetes-backed local store
+# ---------------------------------------------------------------------------
+eso:
+  storeName: local-secret-store
+  # This Secret is created by bin/deploy-local.sh and never committed
+  sourceSecret: local-credentials

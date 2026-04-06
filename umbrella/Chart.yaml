@@ -1,0 +1,6 @@
+apiVersion: v2
+name: unbroken-chain
+description: Umbrella chart for the Unbroken Chain platform — infra only
+type: application
+version: 0.1.0
+appVersion: latest

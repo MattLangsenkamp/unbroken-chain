@@ -1,0 +1,16 @@
+# Version control
+.git/
+.gitignore
+.github/
+
+# Build artifacts
+charts/
+
+# Development files
+*.orig
+*.bak
+*.tmp
+
+# OS artifacts
+.DS_Store
+Thumbs.db

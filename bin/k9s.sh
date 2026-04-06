@@ -15,4 +15,4 @@ CONTEXT="k3d-${CLUSTER_NAME}"
 command -v k9s >/dev/null 2>&1 || { echo "❌ k9s is not installed. Install: https://k9scli.io/topics/install/"; exit 1; }
 
 echo "Launching k9s for context '${CONTEXT}'..."
-exec k9s --context "${CONTEXT}"
+exec k9s --context "${CONTEXT}" --all-namespaces

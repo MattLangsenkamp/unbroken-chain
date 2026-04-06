@@ -73,6 +73,7 @@ Each service follows this layout:
   api/src/             package: app.<service>.api
   services/src/        package: app.<service>.services
   server/src/          package: app.<service>.server
+  k8s/                 Helm chart for this service — see the k8s skill for full details
 ```
 
 Cross-service shared infrastructure lives in:

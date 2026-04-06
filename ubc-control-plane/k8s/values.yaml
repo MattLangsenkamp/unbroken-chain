@@ -1,0 +1,25 @@
+replicaCount: 1
+
+image:
+  repository: "unbrokenchain/ubc-control-plane"
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Set to true (and configure host/db/user) for services that need Postgres
+postgres:
+  enabled: true
+  host: unbroken-chain-pg-rw
+  db: ubc_control_plane
+  user: app
+
+rabbitmq:
+  host: unbroken-chain-rabbitmq
+  user: user
+
+otel:
+  endpoint: "http://otel-collector:4317"
+
+extraEnv: []
+
+resources: {}
+

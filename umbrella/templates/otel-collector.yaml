@@ -1,0 +1,94 @@
+---
+# grafana/otel-lgtm — all-in-one local observability stack
+# (Grafana + Loki + Tempo + Mimir + built-in OTel receiver)
+# Exposed at localhost:3000 via the k3d loadbalancer port mapping added in
+# bin/start-local-env.sh (--port "3000:3000@loadbalancer").
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-lgtm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: otel-lgtm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-lgtm
+  template:
+    metadata:
+      labels:
+        app: otel-lgtm
+    spec:
+      containers:
+        - name: otel-lgtm
+          image: {{ .Values.otel.lgtm.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grafana
+              containerPort: {{ .Values.otel.lgtm.grafanaPort }}
+            - name: otlp-grpc
+              containerPort: {{ .Values.otel.lgtm.otlpGrpcPort }}
+            - name: otlp-http
+              containerPort: {{ .Values.otel.lgtm.otlpHttpPort }}
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+# Service exposing Grafana (port 3000) via the k3d LoadBalancer and
+# the OTLP gRPC port for the OTel Collector to forward to.
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-lgtm
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: LoadBalancer
+  selector:
+    app: otel-lgtm
+  ports:
+    - name: grafana
+      port: {{ .Values.otel.lgtm.grafanaPort }}
+      targetPort: {{ .Values.otel.lgtm.grafanaPort }}
+    - name: otlp-grpc
+      port: {{ .Values.otel.lgtm.otlpGrpcPort }}
+      targetPort: {{ .Values.otel.lgtm.otlpGrpcPort }}
+    - name: otlp-http
+      port: {{ .Values.otel.lgtm.otlpHttpPort }}
+      targetPort: {{ .Values.otel.lgtm.otlpHttpPort }}
+---
+# OpenTelemetryCollector CR — managed by the OTel Operator.
+# Acts as a gateway: receives OTLP from services and forwards to otel-lgtm.
+# Services should set: OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel-collector
+  namespace: {{ .Release.Namespace }}
+spec:
+  mode: deployment
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    exporters:
+      otlp:
+        endpoint: "otel-lgtm:{{ .Values.otel.lgtm.otlpGrpcPort }}"
+        tls:
+          insecure: true
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          exporters: [otlp]
+        metrics:
+          receivers: [otlp]
+          exporters: [otlp]
+        logs:
+          receivers: [otlp]
+          exporters: [otlp]
