@@ -2,7 +2,7 @@ CLUSTER_NAME ?= unbroken-chain
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s build-images load-images deploy-images deploy-app psql-github-gateway psql-control-plane
+.PHONY: check-deps start stop kubeconfig k9s build-images load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -42,6 +42,11 @@ deploy-images: build-images load-images
 ## deploy-app : deploy the full application stack to the local k3d cluster
 deploy-app:
 	@$(SCRIPT_DIR)/deploy-local.sh $(CLUSTER_NAME)
+
+## prepare-migrations : build and load all migration images into k3d
+prepare-migrations:
+	@$(SCRIPT_DIR)/build-migrations.sh provider-gateways/github-gateway unbrokenchain/github-gateway-migrations:latest $(CLUSTER_NAME)
+	@$(SCRIPT_DIR)/build-migrations.sh ubc-control-plane unbrokenchain/ubc-control-plane-migrations:latest $(CLUSTER_NAME)
 
 ## psql-github-gateway : open psql session for the github_gateway database
 psql-github-gateway:

@@ -104,6 +104,44 @@ This causes `umbrella/templates/databases.yaml` to render a `Database` CR automa
 
 ---
 
+## 6. Add Flyway migrations (if Postgres-enabled)
+
+Create a `db/` folder alongside the service:
+
+```
+my-service/
+  db/
+    Dockerfile
+    V1__initial.sql
+```
+
+**`my-service/db/Dockerfile`** — copy verbatim from any existing service:
+```dockerfile
+FROM flyway/flyway:latest
+COPY . /flyway/sql/
+```
+
+Add the `migrations` block to `my-service/k8s/values.yaml`:
+```yaml
+migrations:
+  image:
+    repository: "unbrokenchain/my-service-migrations"
+    tag: latest
+    pullPolicy: IfNotPresent
+```
+
+Copy `migrate-job.yaml` from any existing Postgres-enabled service into `my-service/k8s/templates/`. The template is identical across services.
+
+Add a call to `bin/prepare-migrations` in `Makefile`:
+```makefile
+prepare-migrations:
+    @$(SCRIPT_DIR)/build-migrations.sh my-service unbrokenchain/my-service-migrations:latest $(CLUSTER_NAME)
+```
+
+The Helm hook Job in `migrate-job.yaml` fires as `pre-install,pre-upgrade` — migrations run on every deploy but never on pod restarts. Flyway is idempotent; re-running against an up-to-date schema is safe.
+
+---
+
 ## Checklist
 
 - [ ] Mill module added to `build.mill`
@@ -111,3 +149,6 @@ This causes `umbrella/templates/databases.yaml` to render a `Database` CR automa
 - [ ] `my-service/k8s/` chart created with `image.repository` set
 - [ ] `deploy_service` call added to `bin/deploy-local.sh` step 5
 - [ ] If Postgres: `postgres.enabled: true` and entry in `umbrella/values.yaml` `postgres.databases`
+- [ ] If Postgres: `my-service/db/` created with `Dockerfile` and initial migration
+- [ ] If Postgres: `migrations` block added to `values.yaml` and `migrate-job.yaml` copied into templates
+- [ ] If Postgres: `build-migrations.sh` call added to `prepare-migrations` in Makefile
