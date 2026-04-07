@@ -19,6 +19,12 @@ rabbitmq:
 otel:
   endpoint: "http://otel-collector:4317"
 
+migrations:
+  image:
+    repository: "unbrokenchain/ubc-control-plane-migrations"
+    tag: latest
+    pullPolicy: IfNotPresent
+
 extraEnv: []
 
 resources: {}

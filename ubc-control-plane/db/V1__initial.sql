@@ -1,0 +1,2 @@
+-- V1: initial schema placeholder
+-- Replace with your actual schema
