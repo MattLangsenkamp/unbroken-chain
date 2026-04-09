@@ -1,15 +1,22 @@
-//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION"]
+//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION", "com.github.lolgab::mill-scalablytyped::0.4.1"]
 
 package build
 
 import mill.*
 import mill.scalalib.*
+import mill.scalajslib.*
 import mill.contrib.docker.DockerModule
+import com.github.lolgab.mill.scalablytyped.*
 
-val scalaVer = "3.3.7"
+val scalaVer   = "3.6.4"
+val scalaJSVer = "1.19.0"
 
 val zioDeps = Seq(
   mvn"dev.zio::zio:2.1.17"
+)
+
+val tyrianDeps = Seq(
+  mvn"io.indigoengine:::tyrian-io:0.14.0"
 )
 
 trait ServiceModule extends ScalaModule with DockerModule {
@@ -19,6 +26,29 @@ trait ServiceModule extends ScalaModule with DockerModule {
   trait ServiceDockerConfig extends DockerConfig {
     def baseImage = "eclipse-temurin:21-jre"
   }
+}
+
+// Convention for modules cross-compiled to both JVM and Scala.js.
+// Use for domainPublic and api layers that the frontend needs to consume.
+// Sources live in <module>/src/ and are shared by both jvm and js sub-modules.
+trait CrossPlatform extends Module {
+  trait Shared extends ScalaModule {
+    def scalaVersion = scalaVer
+    override def sources = Seq(PathRef(millSourcePath / os.up / "src"))
+  }
+  object jvm extends Shared
+  object js extends Shared with ScalaJSModule {
+    def scalaJSVersion = scalaJSVer
+  }
+}
+
+object presentation extends ScalaJSModule with ScalablyTypedModule {
+  def scalaVersion   = scalaVer
+  def scalaJSVersion = scalaJSVer
+  override def mvnDeps = tyrianDeps
+
+  // All npm artifacts (package.json, node_modules, package-lock.json) live under presentation/
+  override def scalablyTypedPackageJson = Task { PathRef(millSourcePath / "package.json") }
 }
 
 object `provider-gateways` extends Module {
