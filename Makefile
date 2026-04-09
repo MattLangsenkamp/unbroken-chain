@@ -1,9 +1,10 @@
 CLUSTER_NAME ?= unbroken-chain
-PRESENTATION_IMAGE ?= unbrokenchain/presentation:latest
+UBC_PRESENTATION_IMAGE          ?= unbrokenchain/ubc-control-plane-presentation:latest
+GITHUB_GATEWAY_PRESENTATION_IMAGE ?= unbrokenchain/github-gateway-presentation:latest
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s build-images build-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations
+.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -32,11 +33,21 @@ build-images:
 	./mill writer.server.docker.build
 	./mill extraction-service.server.docker.build
 	./mill ubc-control-plane.server.docker.build
-	@$(SCRIPT_DIR)/build-presentation.sh $(PRESENTATION_IMAGE)
+	@$(SCRIPT_DIR)/build-presentation.sh ubc-control-plane/presentation $(UBC_PRESENTATION_IMAGE)
+	@$(SCRIPT_DIR)/build-presentation.sh provider-gateways/github-gateway/presentation $(GITHUB_GATEWAY_PRESENTATION_IMAGE)
 
-## build-presentation : compile Scala.js, bundle with Vite, build nginx Docker image
-build-presentation:
-	@$(SCRIPT_DIR)/build-presentation.sh $(PRESENTATION_IMAGE) $(CLUSTER_NAME)
+## build-presentations : build all presentation nginx Docker images
+build-presentations:
+	@$(SCRIPT_DIR)/build-presentation.sh ubc-control-plane/presentation $(UBC_PRESENTATION_IMAGE)
+	@$(SCRIPT_DIR)/build-presentation.sh provider-gateways/github-gateway/presentation $(GITHUB_GATEWAY_PRESENTATION_IMAGE)
+
+## build-ubc-presentation : build the ubc-control-plane presentation nginx image
+build-ubc-presentation:
+	@$(SCRIPT_DIR)/build-presentation.sh ubc-control-plane/presentation $(UBC_PRESENTATION_IMAGE) $(CLUSTER_NAME)
+
+## build-github-gateway-presentation : build the github-gateway presentation nginx image
+build-github-gateway-presentation:
+	@$(SCRIPT_DIR)/build-presentation.sh provider-gateways/github-gateway/presentation $(GITHUB_GATEWAY_PRESENTATION_IMAGE) $(CLUSTER_NAME)
 
 ## load-images : import all service Docker images into the k3d cluster
 load-images:

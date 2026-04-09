@@ -14,11 +14,12 @@ CLUSTER_NAME="${1:-unbroken-chain}"
 
 IMAGES=(
   "unbrokenchain/github-gateway:latest"
+  "unbrokenchain/github-gateway-presentation:latest"
   "unbrokenchain/reader:latest"
   "unbrokenchain/writer:latest"
   "unbrokenchain/extraction-service:latest"
   "unbrokenchain/ubc-control-plane:latest"
-  "unbrokenchain/presentation:latest"
+  "unbrokenchain/ubc-control-plane-presentation:latest"
 )
 
 echo "Loading images into k3d cluster '${CLUSTER_NAME}'..."

@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: "unbrokenchain/presentation"
+  repository: "unbrokenchain/github-gateway-presentation"
   tag: latest
   pullPolicy: IfNotPresent
 

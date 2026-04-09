@@ -1,29 +1,38 @@
 #!/bin/bash
-# build-presentation.sh [image_name] [cluster_name]
+# build-presentation.sh <presentation_dir> <image_name> [cluster_name]
 #
-# Compiles the Tyrian Scala.js app, bundles it with Vite, and builds an
-# nginx Docker image. Optionally imports the image into a k3d cluster.
+# Compiles a Tyrian Scala.js presentation app, bundles it with Vite,
+# and builds an nginx Docker image. Optionally imports the image into k3d.
 #
-# Steps:
-#   1. ./mill presentation.fullLinkJS   — optimised Scala.js linker output
-#   2. npm install                       — ensure deps are present
-#   3. SCALA_JS_DEST=fullLinkJS npm run build — Vite bundles to presentation/dist/
-#   4. docker build                      — nginx image wrapping dist/
-#   5. k3d image import (if cluster_name provided)
+# The Mill module path is derived from presentation_dir by replacing / with .
+# (e.g. ubc-control-plane/presentation → ubc-control-plane.presentation).
+# The fullLinkJS output path is likewise derived from the dir.
 #
 # Args:
-#   $1  image_name   : Docker image name with tag, defaults to "unbrokenchain/presentation:latest"
-#   $2  cluster_name : k3d cluster to import image into; skipped if not provided
+#   $1  presentation_dir : path relative to repo root (e.g. ubc-control-plane/presentation)
+#   $2  image_name       : Docker image name with tag (e.g. unbrokenchain/ubc-control-plane-presentation:latest)
+#   $3  cluster_name     : k3d cluster to import image into; skipped if not provided
 
 set -e
 
-IMAGE_NAME="${1:-unbrokenchain/presentation:latest}"
-CLUSTER_NAME="${2:-}"
+PRESENTATION_DIR="${1:?Usage: $0 <presentation_dir> <image_name> [cluster_name]}"
+IMAGE_NAME="${2:?Usage: $0 <presentation_dir> <image_name> [cluster_name]}"
+CLUSTER_NAME="${3:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+FULL_PRESENTATION_DIR="$REPO_ROOT/$PRESENTATION_DIR"
+
+# Derive Mill module target by replacing / with .
+# e.g. ubc-control-plane/presentation → ubc-control-plane.presentation
+MILL_MODULE="${PRESENTATION_DIR//\//.}"
+
+# Mill places fullLinkJS output at out/<module-path>/fullLinkJS.dest/
+SCALA_JS_OUT="$REPO_ROOT/out/$PRESENTATION_DIR/fullLinkJS.dest/main.js"
+
 echo "=== Building presentation image: $IMAGE_NAME ==="
+echo "    Module: $MILL_MODULE"
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -31,27 +40,29 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "--- [1/4] Compiling Scala.js (fullLinkJS) ---"
 cd "$REPO_ROOT"
-./mill presentation.fullLinkJS
+./mill "${MILL_MODULE}.fullLinkJS"
 echo ""
 
 # ---------------------------------------------------------------------------
-# 2 & 3. npm install + Vite bundle
+# 2. npm install
 # ---------------------------------------------------------------------------
 echo "--- [2/4] Installing npm dependencies ---"
-cd "$REPO_ROOT/presentation"
+cd "$FULL_PRESENTATION_DIR"
 npm install
 echo ""
 
+# ---------------------------------------------------------------------------
+# 3. Vite bundle (SCALA_JS_DEST → absolute path → vite.config.js derives relative path)
+# ---------------------------------------------------------------------------
 echo "--- [3/4] Bundling with Vite ---"
-SCALA_JS_DEST="../out/presentation/fullLinkJS.dest/main.js" npm run build
+SCALA_JS_DEST="$SCALA_JS_OUT" npm run build
 echo ""
 
 # ---------------------------------------------------------------------------
-# 4. Docker build (context = repo root so COPY presentation/... resolves)
+# 4. Docker build (context = presentation dir — Dockerfile uses COPY dist/ directly)
 # ---------------------------------------------------------------------------
 echo "--- [4/4] Building Docker image ---"
-cd "$REPO_ROOT"
-docker build -t "$IMAGE_NAME" -f presentation/Dockerfile .
+docker build -t "$IMAGE_NAME" "$FULL_PRESENTATION_DIR"
 echo ""
 
 # ---------------------------------------------------------------------------

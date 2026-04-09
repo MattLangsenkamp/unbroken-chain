@@ -125,12 +125,13 @@ deploy_service() {
     --timeout 2m
 }
 
-deploy_service github-gateway    "$REPO_ROOT/provider-gateways/github-gateway/k8s"
-deploy_service reader             "$REPO_ROOT/reader/k8s"
-deploy_service writer             "$REPO_ROOT/writer/k8s"
-deploy_service extraction-service "$REPO_ROOT/extraction-service/k8s"
-deploy_service ubc-control-plane  "$REPO_ROOT/ubc-control-plane/k8s"
-deploy_service presentation       "$REPO_ROOT/presentation/k8s"
+deploy_service github-gateway              "$REPO_ROOT/provider-gateways/github-gateway/k8s"
+deploy_service github-gateway-presentation "$REPO_ROOT/provider-gateways/github-gateway/presentation/k8s"
+deploy_service reader                      "$REPO_ROOT/reader/k8s"
+deploy_service writer                      "$REPO_ROOT/writer/k8s"
+deploy_service extraction-service          "$REPO_ROOT/extraction-service/k8s"
+deploy_service ubc-control-plane           "$REPO_ROOT/ubc-control-plane/k8s"
+deploy_service ubc-control-plane-presentation "$REPO_ROOT/ubc-control-plane/presentation/k8s"
 
 echo ""
 echo "✅ Deployment complete!"

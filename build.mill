@@ -42,17 +42,18 @@ trait CrossPlatform extends Module {
   }
 }
 
-object presentation extends ScalaJSModule with ScalablyTypedModule {
+// Mixin for per-service Tyrian SPA modules.
+// npm artifacts (package.json, node_modules) are scoped to <service>/presentation/.
+trait PresentationModule extends ScalaJSModule with ScalablyTypedModule {
   def scalaVersion   = scalaVer
   def scalaJSVersion = scalaJSVer
   override def mvnDeps = tyrianDeps
-
-  // All npm artifacts (package.json, node_modules, package-lock.json) live under presentation/
   override def scalablyTypedPackageJson = Task { PathRef(millSourcePath / "package.json") }
 }
 
 object `provider-gateways` extends Module {
   object `github-gateway` extends Module {
+    object presentation extends PresentationModule
     object server extends ServiceModule {
       object docker extends ServiceDockerConfig {
         def tags = List("unbrokenchain/github-gateway:latest")
@@ -86,6 +87,7 @@ object `extraction-service` extends Module {
 }
 
 object `ubc-control-plane` extends Module {
+  object presentation extends PresentationModule
   object server extends ServiceModule {
     object docker extends ServiceDockerConfig {
       def tags = List("unbrokenchain/ubc-control-plane:latest")

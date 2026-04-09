@@ -11,7 +11,7 @@ object Main extends TyrianIOApp[Msg, Model]:
     case Msg.NoOp => (model, Cmd.None)
 
   def view(model: Model): Html[Msg] =
-    div()(text("Hello from Tyrian"))
+    div()(text("GitHub Gateway"))
 
   def subscriptions(model: Model): Sub[IO, Msg] =
     Sub.None
