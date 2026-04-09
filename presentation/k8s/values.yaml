@@ -1,0 +1,8 @@
+replicaCount: 1
+
+image:
+  repository: "unbrokenchain/presentation"
+  tag: latest
+  pullPolicy: IfNotPresent
+
+resources: {}
