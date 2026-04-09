@@ -1,8 +1,9 @@
 CLUSTER_NAME ?= unbroken-chain
+PRESENTATION_IMAGE ?= unbrokenchain/presentation:latest
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s build-images load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations
+.PHONY: check-deps start stop kubeconfig k9s build-images build-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -24,13 +25,18 @@ kubeconfig:
 k9s:
 	@$(SCRIPT_DIR)/k9s.sh $(CLUSTER_NAME)
 
-## build-images : build all service Docker images via Mill
+## build-images : build all service Docker images
 build-images:
 	./mill provider-gateways.github-gateway.server.docker.build
 	./mill reader.server.docker.build
 	./mill writer.server.docker.build
 	./mill extraction-service.server.docker.build
 	./mill ubc-control-plane.server.docker.build
+	@$(SCRIPT_DIR)/build-presentation.sh $(PRESENTATION_IMAGE)
+
+## build-presentation : compile Scala.js, bundle with Vite, build nginx Docker image
+build-presentation:
+	@$(SCRIPT_DIR)/build-presentation.sh $(PRESENTATION_IMAGE) $(CLUSTER_NAME)
 
 ## load-images : import all service Docker images into the k3d cluster
 load-images:

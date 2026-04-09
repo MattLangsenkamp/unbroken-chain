@@ -18,6 +18,7 @@ IMAGES=(
   "unbrokenchain/writer:latest"
   "unbrokenchain/extraction-service:latest"
   "unbrokenchain/ubc-control-plane:latest"
+  "unbrokenchain/presentation:latest"
 )
 
 echo "Loading images into k3d cluster '${CLUSTER_NAME}'..."
