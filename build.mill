@@ -16,7 +16,7 @@ val zioDeps = Seq(
 )
 
 val tyrianDeps = Seq(
-  mvn"io.indigoengine:::tyrian-io:0.14.0"
+  mvn"io.indigoengine::tyrian-io:0.14.0"
 )
 
 trait ServiceModule extends ScalaModule with DockerModule {
@@ -48,6 +48,8 @@ trait PresentationModule extends ScalaJSModule with ScalablyTyped {
   def scalaVersion   = scalaVer
   def scalaJSVersion = scalaJSVer
   override def mvnDeps = tyrianDeps
+  // Scope npm artifacts to <service>/presentation/ rather than the repo root
+  override def scalablyTypedBasePath    = Task { moduleDir }
   override def scalablyTypedPackageJson = Task.Source { moduleDir / "package.json" }
 }
 
