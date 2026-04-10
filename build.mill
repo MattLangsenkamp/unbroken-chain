@@ -48,7 +48,7 @@ trait PresentationModule extends ScalaJSModule with ScalablyTyped {
   def scalaVersion   = scalaVer
   def scalaJSVersion = scalaJSVer
   override def mvnDeps = tyrianDeps
-  override def scalablyTypedPackageJson = Task { PathRef(moduleDir / "package.json") }
+  override def scalablyTypedPackageJson = Task.Source { moduleDir / "package.json" }
 }
 
 object `provider-gateways` extends Module {
