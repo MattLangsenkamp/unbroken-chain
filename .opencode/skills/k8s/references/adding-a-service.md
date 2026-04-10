@@ -142,6 +142,61 @@ The Helm hook Job in `migrate-job.yaml` fires as `pre-install,pre-upgrade` — m
 
 ---
 
+---
+
+## Adding a Presentation to a Service
+
+If the service needs a Tyrian SPA frontend, follow these additional steps. See `.opencode/skills/presentation/SKILL.md` for full details.
+
+### 1. Scaffold the presentation directory
+
+Copy from an existing presentation (e.g. `ubc-control-plane/presentation/`) and update:
+- `index.html` — update `<title>`
+- `package.json` — update `"name"`
+- `k8s/Chart.yaml` — update `name` and `description`
+- `k8s/values.yaml` — set `image.repository: "unbrokenchain/my-service-presentation"`
+
+```bash
+cp -r ubc-control-plane/presentation my-service/presentation
+# then edit the files above
+```
+
+### 2. Add the Mill module
+
+In `build.mill`, add `object presentation extends PresentationModule` to the service:
+
+```scala
+object `my-service` extends Module {
+  object presentation extends PresentationModule
+  object server extends ServiceModule { ... }
+}
+```
+
+### 3. Wire into deploy and images
+
+**`bin/deploy-local.sh`** — add after the backend deploy_service call:
+```bash
+deploy_service my-service-presentation "$REPO_ROOT/my-service/presentation/k8s"
+```
+
+**`bin/load-images.sh`** — add to `IMAGES`:
+```bash
+"unbrokenchain/my-service-presentation:latest"
+```
+
+**`Makefile`** — add variable and targets:
+```makefile
+MY_SERVICE_PRESENTATION_IMAGE ?= unbrokenchain/my-service-presentation:latest
+
+## build-my-service-presentation : build the my-service presentation nginx image
+build-my-service-presentation:
+	@$(SCRIPT_DIR)/build-presentation.sh my-service/presentation $(MY_SERVICE_PRESENTATION_IMAGE) $(CLUSTER_NAME)
+```
+
+Also add to `build-images` and `build-presentations`.
+
+---
+
 ## Checklist
 
 - [ ] Mill module added to `build.mill`
@@ -152,3 +207,6 @@ The Helm hook Job in `migrate-job.yaml` fires as `pre-install,pre-upgrade` — m
 - [ ] If Postgres: `my-service/db/` created with `Dockerfile` and initial migration
 - [ ] If Postgres: `migrations` block added to `values.yaml` and `migrate-job.yaml` copied into templates
 - [ ] If Postgres: `build-migrations.sh` call added to `prepare-migrations` in Makefile
+- [ ] If presentation: scaffold `my-service/presentation/` from existing, update title/name/image
+- [ ] If presentation: `object presentation extends PresentationModule` in `build.mill`
+- [ ] If presentation: `deploy_service` and image wired into deploy/load/Makefile

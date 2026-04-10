@@ -51,13 +51,20 @@ umbrella/                        # infra chart — no service dependencies
     external-secrets.yaml        # ExternalSecret per credential
 
 <service>/
-  k8s/
+  k8s/                           # Helm chart for the JVM backend
     Chart.yaml
     values.yaml                  # image.repository must be set here
     templates/
       deployment.yaml
       service.yaml
       configmap.yaml
+  presentation/                  # Tyrian SPA (only on services that have a frontend)
+    k8s/
+      Chart.yaml
+      values.yaml                # image.repository: unbrokenchain/<service>-presentation
+      templates/
+        deployment.yaml          # nginx on port 80, no env vars
+        service.yaml             # ClusterIP port 80
 ```
 
 ## deploy-local.sh — Order of Operations
@@ -81,10 +88,12 @@ umbrella/                        # infra chart — no service dependencies
 
 ## Services and Postgres
 
-| Service | Chart location | Postgres |
-|---|---|---|
-| `provider-gateways/github-gateway` | `provider-gateways/github-gateway/k8s` | ✅ (`github_gateway`) |
-| `ubc-control-plane` | `ubc-control-plane/k8s` | ✅ (`ubc_control_plane`) |
-| `reader` | `reader/k8s` | ❌ |
-| `writer` | `writer/k8s` | ❌ |
-| `extraction-service` | `extraction-service/k8s` | ❌ |
+| Service | Chart location | Postgres | Presentation |
+|---|---|---|---|
+| `provider-gateways/github-gateway` | `provider-gateways/github-gateway/k8s` | ✅ (`github_gateway`) | ✅ |
+| `ubc-control-plane` | `ubc-control-plane/k8s` | ✅ (`ubc_control_plane`) | ✅ |
+| `reader` | `reader/k8s` | ❌ | ❌ |
+| `writer` | `writer/k8s` | ❌ | ❌ |
+| `extraction-service` | `extraction-service/k8s` | ❌ | ❌ |
+
+Presentation Helm charts (`<service>/presentation/k8s/`) are deployed alongside the backend chart in `bin/deploy-local.sh`. They are minimal — no configmap, no secrets, no env vars.
