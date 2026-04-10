@@ -69,7 +69,11 @@ object `my-service` extends Module {
 
 ## Scala Entry Point
 
-Every `Main.scala` must include a `@JSExportTopLevel("main")` function that calls `TyrianIOApp.launch`. Without it the ScalaJS linker produces no output.
+Every `Main.scala` must include a `@JSExportTopLevel` **val** (not `def`) that calls `TyrianIOApp.launch`. Without it the ScalaJS linker produces no output.
+
+**Critical**: use `val`, not `def`. A `def` creates a named export function that nobody calls. A `val` executes its right-hand side at module load time, which is what actually mounts the app. ES module scripts are deferred so the DOM is ready when the val initializes.
+
+**Critical**: use `"#app"` (CSS ID selector), not `"app"` (which selects a `<app>` tag).
 
 ```scala
 import tyrian.*
@@ -91,15 +95,10 @@ object Model:
 enum Msg:
   case NoOp
 
-// Maps "app" CSS selector to the Main app object
-@JSExportTopLevel("main")
-def main(): Unit =
-  TyrianIOApp.launch(Map("app" -> Main))
-```
-
-The `"app"` key in `TyrianIOApp.launch` must match the element id in `index.html`:
-```html
-<div id="app"></div>
+// val — RHS executes at module load time (ES module scripts are deferred, DOM is ready)
+// "#app" is the CSS selector for <div id="app"> — bare "app" selects a <app> tag
+@JSExportTopLevel("tyrianMain")
+val tyrianMain: Unit = TyrianIOApp.launch(Map("#app" -> Main))
 ```
 
 ## Mill Commands

@@ -26,6 +26,8 @@ object Model:
 enum Msg:
   case NoOp
 
-@JSExportTopLevel("main")
-def main(): Unit =
-  TyrianIOApp.launch(Map("app" -> Main))
+// val (not def) so TyrianIOApp.launch executes at module load time.
+// ES module scripts are deferred — DOM is ready when this runs.
+// "#app" is the CSS selector for <div id="app">.
+@JSExportTopLevel("tyrianMain")
+val tyrianMain: Unit = TyrianIOApp.launch(Map("#app" -> Main))
