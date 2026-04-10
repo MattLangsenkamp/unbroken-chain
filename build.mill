@@ -34,7 +34,7 @@ trait ServiceModule extends ScalaModule with DockerModule {
 trait CrossPlatform extends Module {
   trait Shared extends ScalaModule {
     def scalaVersion = scalaVer
-    override def sources = Seq(PathRef(millSourcePath / os.up / "src"))
+    override def sources = Seq(PathRef(moduleDir / os.up / "src"))
   }
   object jvm extends Shared
   object js extends Shared with ScalaJSModule {
@@ -44,11 +44,11 @@ trait CrossPlatform extends Module {
 
 // Mixin for per-service Tyrian SPA modules.
 // npm artifacts (package.json, node_modules) are scoped to <service>/presentation/.
-trait PresentationModule extends ScalaJSModule with ScalablyTypedModule {
+trait PresentationModule extends ScalaJSModule with ScalablyTyped {
   def scalaVersion   = scalaVer
   def scalaJSVersion = scalaJSVer
   override def mvnDeps = tyrianDeps
-  override def scalablyTypedPackageJson = Task { PathRef(millSourcePath / "package.json") }
+  override def scalablyTypedPackageJson = Task { PathRef(moduleDir / "package.json") }
 }
 
 object `provider-gateways` extends Module {
