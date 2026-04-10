@@ -1,8 +1,11 @@
 import tyrian.*
 import tyrian.Html.*
 import cats.effect.IO
+import scala.scalajs.js.annotation.JSExportTopLevel
 
 object Main extends TyrianIOApp[Msg, Model]:
+
+  def router: Location => Msg = _ => Msg.NoOp
 
   def init(flags: Map[String, String]): (Model, Cmd[IO, Msg]) =
     (Model.init, Cmd.None)
@@ -22,3 +25,7 @@ object Model:
 
 enum Msg:
   case NoOp
+
+@JSExportTopLevel("main")
+def main(): Unit =
+  TyrianIOApp.launch(Map("app" -> Main))

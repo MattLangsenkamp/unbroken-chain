@@ -15,6 +15,16 @@
 
 set -e
 
+# Vite 6 requires Node >= 18. Load nvm and switch if current version is too old.
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+# shellcheck source=/dev/null
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+if node -e "if (process.version < 'v18') process.exit(1)" 2>/dev/null; then
+  : # already >= 18
+else
+  nvm use 20 || nvm use 18
+fi
+
 PRESENTATION_DIR="${1:?Usage: $0 <presentation_dir> <image_name> [cluster_name]}"
 IMAGE_NAME="${2:?Usage: $0 <presentation_dir> <image_name> [cluster_name]}"
 CLUSTER_NAME="${3:-}"
@@ -36,26 +46,34 @@ echo "    Module: $MILL_MODULE"
 echo ""
 
 # ---------------------------------------------------------------------------
-# 1. Compile Scala.js
+# 1. npm install (must run before Mill so ScalablyTyped can find node_modules)
 # ---------------------------------------------------------------------------
-echo "--- [1/4] Compiling Scala.js (fullLinkJS) ---"
-cd "$REPO_ROOT"
-./mill "${MILL_MODULE}.fullLinkJS"
-echo ""
-
-# ---------------------------------------------------------------------------
-# 2. npm install
-# ---------------------------------------------------------------------------
-echo "--- [2/4] Installing npm dependencies ---"
+echo "--- [1/4] Installing npm dependencies ---"
 cd "$FULL_PRESENTATION_DIR"
 npm install
 echo ""
 
 # ---------------------------------------------------------------------------
-# 3. Vite bundle (SCALA_JS_DEST → absolute path → vite.config.js derives relative path)
+# 2. Compile Scala.js
+# ---------------------------------------------------------------------------
+echo "--- [2/4] Compiling Scala.js (fullLinkJS) ---"
+cd "$REPO_ROOT"
+./mill "${MILL_MODULE}.fullLinkJS"
+echo ""
+
+# ---------------------------------------------------------------------------
+# 3. Vite bundle
+# Vite can't bundle files outside its root, so copy the ScalaJS output into
+# a temp dir inside the presentation dir before bundling. vite.config.js
+# converts SCALA_JS_DEST (absolute) to a relative path for the script src.
 # ---------------------------------------------------------------------------
 echo "--- [3/4] Bundling with Vite ---"
-SCALA_JS_DEST="$SCALA_JS_OUT" npm run build
+cd "$FULL_PRESENTATION_DIR"
+SCALA_JS_STAGE_DIR="$FULL_PRESENTATION_DIR/.scala-js-out"
+mkdir -p "$SCALA_JS_STAGE_DIR"
+cp "$SCALA_JS_OUT" "$SCALA_JS_STAGE_DIR/main.js"
+SCALA_JS_DEST="$SCALA_JS_STAGE_DIR/main.js" npm run build
+rm -rf "$SCALA_JS_STAGE_DIR"
 echo ""
 
 # ---------------------------------------------------------------------------

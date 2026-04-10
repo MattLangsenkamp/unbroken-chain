@@ -34,9 +34,12 @@ export default defineConfig({
   plugins: [
     {
       name: 'scala-js-main',
-      // Runs in both dev (on each request) and build (during bundle)
-      transformIndexHtml(html) {
-        return html.replace('__SCALA_JS_MAIN__', scalaJsMain)
+      // 'pre' order ensures placeholder is replaced before Vite resolves script src imports
+      transformIndexHtml: {
+        order: 'pre',
+        handler(html) {
+          return html.replace('__SCALA_JS_MAIN__', scalaJsMain)
+        }
       }
     }
   ]

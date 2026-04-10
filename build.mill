@@ -6,6 +6,7 @@ import mill.*
 import mill.scalalib.*
 import mill.scalajslib.*
 import mill.contrib.docker.DockerModule
+import mill.scalajslib.api.ModuleKind
 import com.github.lolgab.mill.scalablytyped.*
 
 val scalaVer   = "3.6.4"
@@ -16,7 +17,9 @@ val zioDeps = Seq(
 )
 
 val tyrianDeps = Seq(
-  mvn"io.indigoengine::tyrian-io:0.14.0"
+  // Single colon + explicit _sjs1_3 suffix: Mill doesn't auto-add ScalaJS platform suffix
+  // to deps defined outside a module, so we use the exact Maven artifact name.
+  mvn"io.indigoengine:tyrian-io_sjs1_3:0.14.0"
 )
 
 trait ServiceModule extends ScalaModule with DockerModule {
@@ -44,11 +47,19 @@ trait CrossPlatform extends Module {
 
 // Mixin for per-service Tyrian SPA modules.
 // npm artifacts (package.json, node_modules) are scoped to <service>/presentation/.
-trait PresentationModule extends ScalaJSModule with ScalablyTyped {
+// To wrap npm libraries with TypeScript definitions, also mix in WithScalablyTyped.
+trait PresentationModule extends ScalaJSModule {
   def scalaVersion   = scalaVer
   def scalaJSVersion = scalaJSVer
   override def mvnDeps = tyrianDeps
-  // Scope npm artifacts to <service>/presentation/ rather than the repo root
+  // ESModule is required for Tyrian/Cats Effect's @JSExportTopLevel entry point.
+  override def moduleKind = ModuleKind.ESModule
+}
+
+// Mix this into a PresentationModule to generate Scala.js facades for npm packages
+// that have TypeScript definitions. Requires ≥1 typed npm package in package.json.
+trait WithScalablyTyped extends ScalablyTyped {
+  // Scope npm artifacts to this module's directory rather than the repo root
   override def scalablyTypedBasePath    = Task { moduleDir }
   override def scalablyTypedPackageJson = Task.Source { moduleDir / "package.json" }
 }
