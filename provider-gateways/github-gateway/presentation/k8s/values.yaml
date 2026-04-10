@@ -1,5 +1,9 @@
 replicaCount: 1
 
+ingress:
+  enabled: true
+  host: github.localhost
+
 image:
   repository: "unbrokenchain/github-gateway-presentation"
   tag: latest

@@ -1,5 +1,9 @@
 replicaCount: 1
 
+ingress:
+  enabled: true
+  host: ubc.localhost
+
 image:
   repository: "unbrokenchain/ubc-control-plane-presentation"
   tag: latest

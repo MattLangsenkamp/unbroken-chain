@@ -25,6 +25,11 @@ migrations:
     tag: latest
     pullPolicy: IfNotPresent
 
+ingress:
+  enabled: true
+  host: api.localhost
+  path: /control-plane/
+
 extraEnv: []
 
 resources: {}
