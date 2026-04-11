@@ -123,6 +123,11 @@ deploy_service() {
     --values "$chart_dir/values.yaml" \
     --wait \
     --timeout 2m
+  # Force pods to restart so k3d-imported images are picked up.
+  # imagePullPolicy: IfNotPresent means k8s won't re-pull an already-present tag;
+  # a rollout restart replaces pods and loads the newly imported image.
+  kubectl rollout restart deployment/"$name" -n "$NAMESPACE" 2>/dev/null || true
+  kubectl rollout status deployment/"$name" -n "$NAMESPACE" --timeout=2m 2>/dev/null || true
 }
 
 deploy_service github-gateway              "$REPO_ROOT/provider-gateways/github-gateway/k8s"
