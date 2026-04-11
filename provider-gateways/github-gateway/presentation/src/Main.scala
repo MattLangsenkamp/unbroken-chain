@@ -3,7 +3,13 @@ import tyrian.Html.*
 import cats.effect.IO
 import scala.scalajs.js.annotation.JSExportTopLevel
 
+// @JSExportTopLevel on the object causes it to be initialized at module load time.
+// TyrianIOApp.$init$ then calls this.main([]) via unsafeRunAndForget.
+@JSExportTopLevel("TyrianApp")
 object Main extends TyrianIOApp[Msg, Model]:
+
+  // Called by TyrianIOApp.$init$ — mounts the app to <div id="app">
+  def main(args: Array[String]): Unit = launch("app")
 
   def router: Location => Msg = _ => Msg.NoOp
 
@@ -25,9 +31,3 @@ object Model:
 
 enum Msg:
   case NoOp
-
-// val (not def) so TyrianIOApp.launch executes at module load time.
-// ES module scripts are deferred — DOM is ready when this runs.
-// "#app" is the CSS selector for <div id="app">.
-@JSExportTopLevel("tyrianMain")
-val tyrianMain: Unit = TyrianIOApp.launch(Map("#app" -> Main))

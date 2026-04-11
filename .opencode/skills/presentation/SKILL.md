@@ -69,11 +69,11 @@ object `my-service` extends Module {
 
 ## Scala Entry Point
 
-Every `Main.scala` must include a `@JSExportTopLevel` **val** (not `def`) that calls `TyrianIOApp.launch`. Without it the ScalaJS linker produces no output.
+Every `Main.scala` must put `@JSExportTopLevel` on the **object** that extends `TyrianIOApp`. The annotation causes ScalaJS to export the object, which triggers its `$init$` method at module load time. `TyrianIOApp.$init$` calls `unsafeRunAndForget` which internally calls `this.main([])` — that's what actually mounts the app.
 
-**Critical**: use `val`, not `def`. A `def` creates a named export function that nobody calls. A `val` executes its right-hand side at module load time, which is what actually mounts the app. ES module scripts are deferred so the DOM is ready when the val initializes.
+**Critical**: `@JSExportTopLevel` goes on the **object**, not on a separate `val` or `def`. A top-level `val` or `def` export is an exported function that nothing calls; the object export is what triggers initialization.
 
-**Critical**: use `"#app"` (CSS ID selector), not `"app"` (which selects a `<app>` tag).
+**Critical**: `def main(args: Array[String]): Unit = launch("app")` uses the **instance method** `launch(elementId: String)` — it takes a bare element ID, not a CSS selector. Use `"app"`, not `"#app"`.
 
 ```scala
 import tyrian.*
@@ -81,7 +81,14 @@ import tyrian.Html.*
 import cats.effect.IO
 import scala.scalajs.js.annotation.JSExportTopLevel
 
+// @JSExportTopLevel on the object causes it to be initialized at module load time.
+// TyrianIOApp.$init$ then calls this.main([]) via unsafeRunAndForget.
+@JSExportTopLevel("TyrianApp")
 object Main extends TyrianIOApp[Msg, Model]:
+
+  // Called by TyrianIOApp.$init$ — mounts the app to <div id="app">
+  def main(args: Array[String]): Unit = launch("app")
+
   def router: Location => Msg = _ => Msg.NoOp   // required in Tyrian 0.14.0
   def init(flags: Map[String, String]): (Model, Cmd[IO, Msg]) = (Model.init, Cmd.None)
   def update(model: Model): Msg => (Model, Cmd[IO, Msg]) = case Msg.NoOp => (model, Cmd.None)
@@ -94,11 +101,6 @@ object Model:
 
 enum Msg:
   case NoOp
-
-// val — RHS executes at module load time (ES module scripts are deferred, DOM is ready)
-// "#app" is the CSS selector for <div id="app"> — bare "app" selects a <app> tag
-@JSExportTopLevel("tyrianMain")
-val tyrianMain: Unit = TyrianIOApp.launch(Map("#app" -> Main))
 ```
 
 ## Mill Commands
