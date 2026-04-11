@@ -178,7 +178,11 @@ umbrella/                        # infra chart — no service dependencies
 2. Install/upgrade operators (CloudNativePG, RabbitMQ, OTel, ESO) — wait for each
 3. Create namespace and `local-credentials` Secret if absent
 4. `helm upgrade --install unbroken-chain-infra umbrella/`
-5. `helm upgrade --install <name> <service>/k8s/` for each service
+5. `helm upgrade --install <name> <service>/k8s/` for each service, then `kubectl rollout restart` + `rollout status`
+
+### Why the rollout restart?
+
+All service charts use `imagePullPolicy: IfNotPresent`. When a new image is imported via `k3d image import`, k8s does not replace running pods — it only uses the new image when a pod is actually replaced. Backend services avoid this problem implicitly because their Deployment spec changes whenever their ConfigMap changes (which Helm detects as a diff and triggers a rolling update). **Presentation services have no ConfigMap**, so their spec is identical between deploys and Helm leaves existing pods running. The explicit `kubectl rollout restart` after each `helm upgrade` ensures every service, including static ones, always runs the latest imported image.
 
 ## Installed Operators
 

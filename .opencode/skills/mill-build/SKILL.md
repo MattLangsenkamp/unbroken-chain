@@ -126,7 +126,10 @@ val zioDeps = Seq(
 )
 
 val tyrianDeps = Seq(
-  mvn"io.indigoengine:::tyrian-io:0.14.0"
+  // Single colon + explicit _sjs1_3 suffix required.
+  // Mill doesn't auto-add the ScalaJS platform suffix to deps defined outside a module.
+  // ::: adds the full Scala version (_3.6.4), not the platform suffix (_sjs1_3).
+  mvn"io.indigoengine:tyrian-io_sjs1_3:0.14.0"
 )
 ```
 
@@ -155,18 +158,25 @@ object myService extends Module {
 
 ### PresentationModule — Tyrian SPA frontend
 
-Every per-service Tyrian app extends `PresentationModule`. npm artifacts are scoped to the presentation directory (not repo root):
+Every per-service Tyrian app extends `PresentationModule`. `ScalablyTyped` is NOT in the base trait — opt in via `WithScalablyTyped` only when you have npm packages with TypeScript definitions. Build tools (`vite`, `typescript`) don't count; adding ScalablyTyped when there are no typed packages causes "All libraries in package.json ignored" and a compile failure.
 
 ```scala
-trait PresentationModule extends ScalaJSModule with ScalablyTypedModule {
+trait PresentationModule extends ScalaJSModule {
   def scalaVersion   = scalaVer
   def scalaJSVersion = scalaJSVer
   override def mvnDeps = tyrianDeps
-  override def scalablyTypedPackageJson = Task { PathRef(millSourcePath / "package.json") }
+  override def moduleKind = ModuleKind.ESModule  // required — without it linker produces no output
+}
+
+// Opt in when you have npm packages with TypeScript definitions
+trait WithScalablyTyped extends ScalablyTyped {
+  override def scalablyTypedBasePath    = Task { moduleDir }
+  override def scalablyTypedPackageJson = Task.Source { moduleDir / "package.json" }
 }
 
 object myService extends Module {
-  object presentation extends PresentationModule
+  object presentation extends PresentationModule   // base — no ScalablyTyped
+  // object presentation extends PresentationModule with WithScalablyTyped  // opt-in
   object server extends ServiceModule { ... }
 }
 ```
@@ -218,15 +228,23 @@ object myService extends Module {
 ## Adding Dependencies
 
 Use `mvn"groupId::artifactId:version"` format:
-- `::` for Scala libraries (adds Scala version suffix automatically)
+- `::` for Scala libraries (adds `_3` suffix automatically) — use inside a module definition
 - `:` for Java libraries (no suffix)
-- `:::` for Scala.js full cross-version libraries (e.g. Tyrian)
+- `:::` for full cross-version Scala libraries (adds `_3.6.4` — rarely needed)
+
+**ScalaJS platform suffix caveat**: `::` and `:::` on deps defined in a `val` outside a module do NOT add the `_sjs1` platform suffix. For Tyrian, use an explicit artifact name with single `:`:
 
 ```scala
+// In a top-level val (outside any module) — must use explicit platform artifact name
+val tyrianDeps = Seq(
+  mvn"io.indigoengine:tyrian-io_sjs1_3:0.14.0"   // single : + explicit _sjs1_3
+)
+
+// Inside a ScalaJSModule — :: picks up _sjs1_3 correctly
 override def mvnDeps = super.mvnDeps() ++ Seq(
-  mvn"dev.zio::zio:2.1.17",                    // Scala library
-  mvn"org.apache.lucene:lucene-core:9.9.1",    // Java library
-  mvn"io.indigoengine:::tyrian-io:0.14.0"      // Scala.js full cross-version
+  mvn"dev.zio::zio:2.1.17",                    // Scala library → _3
+  mvn"org.apache.lucene:lucene-core:9.9.1",    // Java library → no suffix
+  mvn"io.indigoengine::tyrian-io:0.14.0"       // inside module → _sjs1_3
 )
 ```
 
@@ -281,6 +299,10 @@ object `provider-gateways` extends Module {
 | `Agg` not found | Use `Seq` instead (Mill 1.x change) |
 | `ivyDeps` not found | Use `mvnDeps` instead (Mill 1.x change) |
 | ScalaJS module not found | Ensure `import mill.scalajslib.*` is present |
+| `ModuleKind` not found | Add `import mill.scalajslib.api.ModuleKind` |
+| ScalaJS linker produces empty output | `moduleKind = ModuleKind.ESModule` is required; also need `@JSExportTopLevel` on the app object |
+| ScalablyTyped "All libraries ignored" | Only mix in `WithScalablyTyped` when you have npm packages with TypeScript definitions — `vite`/`typescript` don't count |
+| ScalablyTyped fails at compile | `npm install` must run before `./mill compile` — ScalablyTyped reads `node_modules` during compilation |
 
 ## Additional Resources
 
