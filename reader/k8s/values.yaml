@@ -19,6 +19,11 @@ rabbitmq:
 otel:
   endpoint: "http://otel-collector:4317"
 
+ingress:
+  enabled: true
+  host: api.localhost
+  path: /reader/
+
 extraEnv: []
 
 resources: {}

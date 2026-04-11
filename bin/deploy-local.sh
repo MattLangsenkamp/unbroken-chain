@@ -123,17 +123,36 @@ deploy_service() {
     --values "$chart_dir/values.yaml" \
     --wait \
     --timeout 2m
+  # Force pods to restart so k3d-imported images are picked up.
+  # imagePullPolicy: IfNotPresent means k8s won't re-pull an already-present tag;
+  # a rollout restart replaces pods and loads the newly imported image.
+  kubectl rollout restart deployment/"$name" -n "$NAMESPACE" 2>/dev/null || true
+  kubectl rollout status deployment/"$name" -n "$NAMESPACE" --timeout=2m 2>/dev/null || true
 }
 
-deploy_service github-gateway    "$REPO_ROOT/provider-gateways/github-gateway/k8s"
-deploy_service reader             "$REPO_ROOT/reader/k8s"
-deploy_service writer             "$REPO_ROOT/writer/k8s"
-deploy_service extraction-service "$REPO_ROOT/extraction-service/k8s"
-deploy_service ubc-control-plane  "$REPO_ROOT/ubc-control-plane/k8s"
+deploy_service github-gateway              "$REPO_ROOT/provider-gateways/github-gateway/k8s"
+deploy_service github-gateway-presentation "$REPO_ROOT/provider-gateways/github-gateway/presentation/k8s"
+deploy_service reader                      "$REPO_ROOT/reader/k8s"
+deploy_service writer                      "$REPO_ROOT/writer/k8s"
+deploy_service extraction-service          "$REPO_ROOT/extraction-service/k8s"
+deploy_service ubc-control-plane           "$REPO_ROOT/ubc-control-plane/k8s"
+deploy_service ubc-control-plane-presentation "$REPO_ROOT/ubc-control-plane/presentation/k8s"
 
 echo ""
 echo "✅ Deployment complete!"
-echo "   Grafana:    http://localhost:3000"
-echo "   Namespace:  $NAMESPACE"
+echo ""
+echo "   SPAs"
+echo "     UBC Control Plane:  http://ubc.localhost:8080"
+echo "     GitHub Gateway:     http://github.localhost:8080"
+echo ""
+echo "   APIs  (prefix stripped before reaching service)"
+echo "     Control Plane:      http://api.localhost:8080/control-plane/"
+echo "     GitHub Gateway:     http://api.localhost:8080/github-gateway/"
+echo "     Reader:             http://api.localhost:8080/reader/"
+echo ""
+echo "   Observability"
+echo "     Grafana:            http://localhost:3000"
+echo ""
+echo "   Namespace: $NAMESPACE"
 echo "   Run 'make k9s' to inspect the cluster."
 echo ""

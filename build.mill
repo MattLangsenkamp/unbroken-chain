@@ -1,15 +1,25 @@
-//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION"]
+//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION", "com.github.lolgab::mill-scalablytyped::0.4.1"]
 
 package build
 
 import mill.*
 import mill.scalalib.*
+import mill.scalajslib.*
 import mill.contrib.docker.DockerModule
+import mill.scalajslib.api.ModuleKind
+import com.github.lolgab.mill.scalablytyped.*
 
-val scalaVer = "3.3.7"
+val scalaVer   = "3.6.4"
+val scalaJSVer = "1.19.0"
 
 val zioDeps = Seq(
   mvn"dev.zio::zio:2.1.17"
+)
+
+val tyrianDeps = Seq(
+  // Single colon + explicit _sjs1_3 suffix: Mill doesn't auto-add ScalaJS platform suffix
+  // to deps defined outside a module, so we use the exact Maven artifact name.
+  mvn"io.indigoengine:tyrian-io_sjs1_3:0.14.0"
 )
 
 trait ServiceModule extends ScalaModule with DockerModule {
@@ -21,8 +31,42 @@ trait ServiceModule extends ScalaModule with DockerModule {
   }
 }
 
+// Convention for modules cross-compiled to both JVM and Scala.js.
+// Use for domainPublic and api layers that the frontend needs to consume.
+// Sources live in <module>/src/ and are shared by both jvm and js sub-modules.
+trait CrossPlatform extends Module {
+  trait Shared extends ScalaModule {
+    def scalaVersion = scalaVer
+    override def sources = Seq(PathRef(moduleDir / os.up / "src"))
+  }
+  object jvm extends Shared
+  object js extends Shared with ScalaJSModule {
+    def scalaJSVersion = scalaJSVer
+  }
+}
+
+// Mixin for per-service Tyrian SPA modules.
+// npm artifacts (package.json, node_modules) are scoped to <service>/presentation/.
+// To wrap npm libraries with TypeScript definitions, also mix in WithScalablyTyped.
+trait PresentationModule extends ScalaJSModule {
+  def scalaVersion   = scalaVer
+  def scalaJSVersion = scalaJSVer
+  override def mvnDeps = tyrianDeps
+  // ESModule is required for Tyrian/Cats Effect's @JSExportTopLevel entry point.
+  override def moduleKind = ModuleKind.ESModule
+}
+
+// Mix this into a PresentationModule to generate Scala.js facades for npm packages
+// that have TypeScript definitions. Requires ≥1 typed npm package in package.json.
+trait WithScalablyTyped extends ScalablyTyped {
+  // Scope npm artifacts to this module's directory rather than the repo root
+  override def scalablyTypedBasePath    = Task { moduleDir }
+  override def scalablyTypedPackageJson = Task.Source { moduleDir / "package.json" }
+}
+
 object `provider-gateways` extends Module {
   object `github-gateway` extends Module {
+    object presentation extends PresentationModule
     object server extends ServiceModule {
       object docker extends ServiceDockerConfig {
         def tags = List("unbrokenchain/github-gateway:latest")
@@ -56,6 +100,7 @@ object `extraction-service` extends Module {
 }
 
 object `ubc-control-plane` extends Module {
+  object presentation extends PresentationModule
   object server extends ServiceModule {
     object docker extends ServiceDockerConfig {
       def tags = List("unbrokenchain/ubc-control-plane:latest")

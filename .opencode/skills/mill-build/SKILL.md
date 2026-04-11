@@ -25,11 +25,20 @@ This project uses **programmatic build configuration** (`build.mill`):
 ```
 build.mill                # Build configuration (Mill 1.x uses .mill extension)
 <service>/
-  domainPublic/src/       # Public domain types
+  server/src/             # Entry point / wiring
+  presentation/src/       # Tyrian SPA (if service has a frontend)
+  k8s/                    # Helm chart
+```
+
+For services that adopt the full 5-layer pattern, the layout is:
+```
+<service>/
+  domainPublic/src/       # Public domain types (cross-compiled JVM + JS if needed)
   domainPrivate/src/      # Internal types
-  api/src/                # Endpoint definitions
+  api/src/                # Endpoint definitions (cross-compiled JVM + JS if needed)
   services/src/           # Service implementations
   server/src/             # Entry point / wiring
+  presentation/src/       # Tyrian SPA (optional)
 ```
 
 **Source file placement**: Source files go directly in the `src/` directory — do NOT use maven-style nested directories (e.g., `src/com/example/`). Place `.scala` files directly in `<module>/src/`.
@@ -61,10 +70,19 @@ build.mill                # Build configuration (Mill 1.x uses .mill extension)
 ./mill <module>.run              # Run a module's main class
 ```
 
-### Docker
+### Docker (JVM services)
 ```bash
-./mill <service>.server.docker.build    # Build Docker image for a service
+./mill <service>.server.docker.build    # Build Docker image for a JVM service
 ```
+
+### Scala.js (presentation modules)
+```bash
+./mill <service>.presentation.fastLinkJS          # Dev build — fast, no DCE
+./mill <service>.presentation.fullLinkJS          # Production build — optimised, DCE
+./mill -w <service>.presentation.fastLinkJS       # Watch mode for dev
+```
+
+Output lands in `out/<service>/presentation/{fast,full}LinkJS.dest/main.js`.
 
 ## Mill 1.x Changes
 
@@ -81,47 +99,45 @@ Mill 1.x introduces several breaking changes from 0.11.x:
 
 ### Build Header
 
-Mill 1.x uses a header comment for plugin dependencies:
+Mill 1.x uses a header comment for plugin dependencies. This project uses both `mill-contrib-docker` and `mill-scalablytyped`:
 
 ```scala
-//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION"]
+//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION", "com.github.lolgab::mill-scalablytyped::0.4.1"]
 
 package build
 
 import mill.*
 import mill.scalalib.*
+import mill.scalajslib.*
 import mill.contrib.docker.DockerModule
+import com.github.lolgab.mill.scalablytyped.*
 ```
 
 ## Module Configuration
 
-Define all modules in `build.mill`. Dependency groups are declared as top-level `val`s and composed per module — never inline individual deps inside module definitions.
+Define all modules in `build.mill`. Dependency groups are declared as top-level `val`s — never inline individual deps inside module definitions.
 
 ```scala
-//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION"]
-
-package build
-
-import mill.*
-import mill.scalalib.*
-import mill.contrib.docker.DockerModule
-
-val scalaVer = "3.3.7"
+val scalaVer   = "3.6.4"
+val scalaJSVer = "1.19.0"
 
 val zioDeps = Seq(
-  mvn"dev.zio::zio:2.1.17",
-  mvn"dev.zio::zio-streams:2.1.17"
+  mvn"dev.zio::zio:2.1.17"
 )
 
-val zioHttpDeps = Seq(
-  mvn"dev.zio::zio-http:3.0.1"
+val tyrianDeps = Seq(
+  // Single colon + explicit _sjs1_3 suffix required.
+  // Mill doesn't auto-add the ScalaJS platform suffix to deps defined outside a module.
+  // ::: adds the full Scala version (_3.6.4), not the platform suffix (_sjs1_3).
+  mvn"io.indigoengine:tyrian-io_sjs1_3:0.14.0"
 )
+```
 
-val tapirDeps = Seq(
-  mvn"com.softwaremill.sttp.tapir::tapir-core:1.11.10"
-)
+Note the `:::` (triple colon) for Tyrian — this is required for Scala.js full cross-version libraries.
 
-// Shared trait for service modules with Docker support
+### ServiceModule — JVM backend services
+
+```scala
 trait ServiceModule extends ScalaModule with DockerModule {
   def scalaVersion = scalaVer
   override def mvnDeps = super.mvnDeps() ++ zioDeps
@@ -132,31 +148,7 @@ trait ServiceModule extends ScalaModule with DockerModule {
 }
 
 object myService extends Module {
-  object domainPublic extends ScalaModule {
-    def scalaVersion = scalaVer
-  }
-
-  object domainPrivate extends ScalaModule {
-    def scalaVersion = scalaVer
-    def moduleDeps = Seq(domainPublic)
-  }
-
-  object api extends ScalaModule {
-    def scalaVersion = scalaVer
-    def moduleDeps = Seq(domainPublic)
-    override def mvnDeps = super.mvnDeps() ++ tapirDeps
-  }
-
-  object services extends ScalaModule {
-    def scalaVersion = scalaVer
-    def moduleDeps = Seq(domainPublic, domainPrivate, api)
-    override def mvnDeps = super.mvnDeps() ++ zioDeps
-  }
-
   object server extends ServiceModule {
-    def moduleDeps = Seq(domainPublic, domainPrivate, api, services)
-    override def mvnDeps = super.mvnDeps() ++ zioHttpDeps
-
     object docker extends ServiceDockerConfig {
       def tags = List("unbrokenchain/my-service:latest")
     }
@@ -164,74 +156,129 @@ object myService extends Module {
 }
 ```
 
+### PresentationModule — Tyrian SPA frontend
+
+Every per-service Tyrian app extends `PresentationModule`. `ScalablyTyped` is NOT in the base trait — opt in via `WithScalablyTyped` only when you have npm packages with TypeScript definitions. Build tools (`vite`, `typescript`) don't count; adding ScalablyTyped when there are no typed packages causes "All libraries in package.json ignored" and a compile failure.
+
+```scala
+trait PresentationModule extends ScalaJSModule {
+  def scalaVersion   = scalaVer
+  def scalaJSVersion = scalaJSVer
+  override def mvnDeps = tyrianDeps
+  override def moduleKind = ModuleKind.ESModule  // required — without it linker produces no output
+}
+
+// Opt in when you have npm packages with TypeScript definitions
+trait WithScalablyTyped extends ScalablyTyped {
+  override def scalablyTypedBasePath    = Task { moduleDir }
+  override def scalablyTypedPackageJson = Task.Source { moduleDir / "package.json" }
+}
+
+object myService extends Module {
+  object presentation extends PresentationModule   // base — no ScalablyTyped
+  // object presentation extends PresentationModule with WithScalablyTyped  // opt-in
+  object server extends ServiceModule { ... }
+}
+```
+
+See `.opencode/skills/presentation/SKILL.md` for the full presentation workflow.
+
+### CrossPlatform — shared JVM + Scala.js modules
+
+Use for `domainPublic` and `api` layers that the frontend needs to consume. Sources live in `<module>/src/` and are compiled to both targets:
+
+```scala
+trait CrossPlatform extends Module {
+  trait Shared extends ScalaModule {
+    def scalaVersion = scalaVer
+    override def sources = Seq(PathRef(millSourcePath / os.up / "src"))
+  }
+  object jvm extends Shared
+  object js extends Shared with ScalaJSModule {
+    def scalaJSVersion = scalaJSVer
+  }
+}
+
+object myService extends Module {
+  object domainPublic extends CrossPlatform
+
+  // api with explicit per-platform deps
+  object api extends Module {
+    trait Shared extends ScalaModule {
+      def scalaVersion = scalaVer
+      override def sources = Seq(PathRef(millSourcePath / os.up / "src"))
+    }
+    object jvm extends Shared { def moduleDeps = Seq(domainPublic.jvm) }
+    object js  extends Shared with ScalaJSModule {
+      def scalaJSVersion = scalaJSVer
+      def moduleDeps = Seq(domainPublic.js)
+    }
+  }
+
+  object server extends ServiceModule {
+    def moduleDeps = Seq(domainPublic.jvm, api.jvm)
+  }
+
+  object presentation extends PresentationModule {
+    override def moduleDeps = Seq(domainPublic.js, api.js)
+  }
+}
+```
+
 ## Adding Dependencies
 
 Use `mvn"groupId::artifactId:version"` format:
-- `::` for Scala libraries (adds Scala version suffix automatically)
+- `::` for Scala libraries (adds `_3` suffix automatically) — use inside a module definition
 - `:` for Java libraries (no suffix)
+- `:::` for full cross-version Scala libraries (adds `_3.6.4` — rarely needed)
+
+**ScalaJS platform suffix caveat**: `::` and `:::` on deps defined in a `val` outside a module do NOT add the `_sjs1` platform suffix. For Tyrian, use an explicit artifact name with single `:`:
 
 ```scala
+// In a top-level val (outside any module) — must use explicit platform artifact name
+val tyrianDeps = Seq(
+  mvn"io.indigoengine:tyrian-io_sjs1_3:0.14.0"   // single : + explicit _sjs1_3
+)
+
+// Inside a ScalaJSModule — :: picks up _sjs1_3 correctly
 override def mvnDeps = super.mvnDeps() ++ Seq(
-  mvn"dev.zio::zio:2.1.17",                   // Scala library
-  mvn"org.apache.lucene:lucene-core:9.9.1"    // Java library
+  mvn"dev.zio::zio:2.1.17",                    // Scala library → _3
+  mvn"org.apache.lucene:lucene-core:9.9.1",    // Java library → no suffix
+  mvn"io.indigoengine::tyrian-io:0.14.0"       // inside module → _sjs1_3
 )
 ```
 
-## Centralized Scala Version
+## Centralized Versions
 
-Always define `scalaVersion` as a shared `val` at the top of `build.mill` and reference it in every module. Never hardcode it per module.
+Always use the shared `val`s at the top of `build.mill`. Never hardcode versions per module:
+
+| Val | Value | Used by |
+|---|---|---|
+| `scalaVer` | `"3.6.4"` | All modules |
+| `scalaJSVer` | `"1.19.0"` | All ScalaJS modules |
 
 ## Dependency Direction
 
-The enforced module dependency graph is:
+The enforced module dependency graph for a full-stack service is:
 
 ```
-domainPublic
-    ↑         ↑
-domainPrivate  api
-    ↑         ↑
-       services
-          ↑
-        server
-```
-
-Cross-service dependencies are declared explicitly in `moduleDeps`:
-```scala
-def moduleDeps = Seq(domainPublic, api, otherService.domainPublic)
-```
-
-## Creating a New Service
-
-1. Create directories:
-```bash
-mkdir -p <service>/{domainPublic,domainPrivate,api,services,server}/src
-```
-
-2. Add the service object to `build.mill` following the template above.
-
-3. Verify and test:
-```bash
-./mill resolve <service>.__
-./mill <service>.server.compile
+domainPublic.jvm / domainPublic.js
+         ↑                  ↑
+  domainPrivate         api.jvm / api.js
+         ↑                  ↑
+       services          server      presentation
+           ↑               ↑              ↑
+           └───────────────┘    domainPublic.js, api.js
 ```
 
 ## Provider Gateways
 
-Provider gateway services live under the `provider-gateways/` directory:
-
-```
-provider-gateways/
-  github-gateway/
-    server/src/
-  gitlab-gateway/
-    server/src/
-```
-
-In `build.mill`, these are nested under a `provider-gateways` module:
+Provider gateway services live under the `provider-gateways/` directory and are nested in `build.mill`:
 
 ```scala
 object `provider-gateways` extends Module {
   object `github-gateway` extends Module {
+    object presentation extends PresentationModule
     object server extends ServiceModule {
       object docker extends ServiceDockerConfig {
         def tags = List("unbrokenchain/github-gateway:latest")
@@ -247,20 +294,15 @@ object `provider-gateways` extends Module {
 |---|---|
 | Modules not recognized | Run `./mill clean && ./mill resolve __` to refresh |
 | Scala version mismatch | Ensure all modules use the shared `scalaVer` val |
-| Dependency not found | Check `::` vs `:` for Scala vs Java libraries |
+| Dependency not found | Check `::` vs `:` vs `:::` for library type |
 | Circular dependency error | Review `moduleDeps` — cycles are not allowed |
 | `Agg` not found | Use `Seq` instead (Mill 1.x change) |
 | `ivyDeps` not found | Use `mvnDeps` instead (Mill 1.x change) |
-
-## Service Architecture
-
-Each service follows this 5-layer pattern:
-
-1. **domainPublic** — Public types safe for other services to consume
-2. **domainPrivate** — Internal types that never leave the service boundary
-3. **api** — Declarative, effect-agnostic endpoint definitions
-4. **services** — ZIO service implementations and business logic
-5. **server** — `ZIOAppDefault` entry point; wires all layers together
+| ScalaJS module not found | Ensure `import mill.scalajslib.*` is present |
+| `ModuleKind` not found | Add `import mill.scalajslib.api.ModuleKind` |
+| ScalaJS linker produces empty output | `moduleKind = ModuleKind.ESModule` is required; also need `@JSExportTopLevel` on the app object |
+| ScalablyTyped "All libraries ignored" | Only mix in `WithScalablyTyped` when you have npm packages with TypeScript definitions — `vite`/`typescript` don't count |
+| ScalablyTyped fails at compile | `npm install` must run before `./mill compile` — ScalablyTyped reads `node_modules` during compilation |
 
 ## Additional Resources
 

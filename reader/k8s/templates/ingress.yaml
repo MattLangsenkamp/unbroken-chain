@@ -1,0 +1,24 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: "{{ .Release.Namespace }}-strip-reader-prefix@kubernetescrd"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Chart.Name }}
+                port:
+                  number: 8080
+{{- end }}

@@ -141,4 +141,24 @@ git add bin/my-script.sh
 | `make stop` | `bin/stop-local-env.sh` | Delete the local k3d cluster |
 | `make kubeconfig` | `bin/kubeconfig.sh` | Set kubectl context to the local cluster |
 | `make k9s` | `bin/k9s.sh` | Launch k9s for the local cluster |
+| `make build-images` | _(inline + scripts)_ | Build all JVM and presentation Docker images |
+| `make build-presentations` | `bin/build-presentation.sh` | Build all presentation nginx images |
+| `make build-ubc-presentation` | `bin/build-presentation.sh` | Build ubc-control-plane presentation image |
+| `make build-github-gateway-presentation` | `bin/build-presentation.sh` | Build github-gateway presentation image |
+| `make load-images` | `bin/load-images.sh` | Import all images into k3d |
+| `make deploy-images` | _(build-images + load-images)_ | Build and import all images |
+| `make deploy-app` | `bin/deploy-local.sh` | Deploy full stack to local k3d cluster |
+| `make prepare-migrations` | `bin/build-migrations.sh` | Build and load all migration images |
+| `make psql-github-gateway` | `bin/psql.sh` | Open psql for github_gateway database |
+| `make psql-control-plane` | `bin/psql.sh` | Open psql for ubc_control_plane database |
 | `make help` | _(inline)_ | List all available targets |
+
+## Makefile Variables
+
+| Variable | Default | Override example |
+|---|---|---|
+| `CLUSTER_NAME` | `unbroken-chain` | `make start CLUSTER_NAME=my-cluster` |
+| `UBC_PRESENTATION_IMAGE` | `unbrokenchain/ubc-control-plane-presentation:latest` | `make build-ubc-presentation UBC_PRESENTATION_IMAGE=myrepo/img:v1` |
+| `GITHUB_GATEWAY_PRESENTATION_IMAGE` | `unbrokenchain/github-gateway-presentation:latest` | `make build-github-gateway-presentation GITHUB_GATEWAY_PRESENTATION_IMAGE=myrepo/img:v1` |
+
+Presentation targets pass `$(CLUSTER_NAME)` to the script, so `make build-ubc-presentation CLUSTER_NAME=my-k3d` will build **and** import into k3d in one step.
