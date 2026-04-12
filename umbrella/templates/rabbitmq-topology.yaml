@@ -1,0 +1,243 @@
+{{- $ns := .Release.Namespace -}}
+{{- $cluster := .Values.rabbitmq.clusterName -}}
+{{- $topo := .Values.rabbitmq.topology -}}
+
+# =============================================================================
+# RabbitMQ Messaging Topology
+# Managed by the RabbitMQ Messaging Topology Operator.
+#
+# Pipeline:
+#   providers ──► ingestion (topic) ──► ingestion.queue ──► extraction-service
+#                                                      └──► ingestion.dlq  (via ingestion.dlx on nack/expire)
+#
+#   extraction-service ──► tokenized (topic) ──► tokenized.queue ──► writer
+#                                                               └──► tokenized.dlq (via tokenized.dlx on nack/expire)
+#
+#   writer ──► segments.fanout (fanout) ──► (per-reader ephemeral queues, app-managed)
+#
+# Notes:
+#   - All pipeline queues are quorum queues (durable, replicated).
+#   - "ingestion" and "tokenized" are topic exchanges with binding key "#" so
+#     publishers may use any routing key — no coordination required.
+#   - DLX routing uses a fixed dead-letter routing key ("dead") so messages are
+#     always sent to the DLQ regardless of their original routing key.
+#   - Per-reader queues for segments.fanout are NOT declared here. Each reader
+#     instance declares its own auto-delete queue at startup and binds it to
+#     segments.fanout. Those queues are ephemeral by design (no DLQ needed).
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Exchanges
+# ---------------------------------------------------------------------------
+---
+# Ingestion: provider gateways publish normalised messages here.
+# Topic type — routing key is ignored (binding uses "#"), so any key is fine.
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata:
+  name: ingestion
+  namespace: {{ $ns }}
+spec:
+  name: {{ $topo.exchanges.ingestion }}
+  type: topic
+  durable: true
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+# Dead-letter exchange for ingestion.queue.
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata:
+  name: ingestion-dlx
+  namespace: {{ $ns }}
+spec:
+  name: {{ $topo.exchanges.ingestionDlx }}
+  type: direct
+  durable: true
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+# Tokenized: extraction-service publishes tokenised data here.
+# Topic type — routing key is ignored (binding uses "#").
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata:
+  name: tokenized
+  namespace: {{ $ns }}
+spec:
+  name: {{ $topo.exchanges.tokenized }}
+  type: topic
+  durable: true
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+# Dead-letter exchange for tokenized.queue.
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata:
+  name: tokenized-dlx
+  namespace: {{ $ns }}
+spec:
+  name: {{ $topo.exchanges.tokenizedDlx }}
+  type: direct
+  durable: true
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+# Segments fanout: writer broadcasts newly written segments to all reader instances.
+# Fanout type — every bound queue receives every message. Per-reader queues are
+# declared by the application at startup and are NOT listed here.
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata:
+  name: segments-fanout
+  namespace: {{ $ns }}
+spec:
+  name: {{ $topo.exchanges.segmentsFanout }}
+  type: fanout
+  durable: true
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+
+# ---------------------------------------------------------------------------
+# Queues — quorum queues for durability and exactly-once delivery guarantees.
+# ---------------------------------------------------------------------------
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Queue
+metadata:
+  name: ingestion-queue
+  namespace: {{ $ns }}
+spec:
+  name: {{ $topo.queues.ingestion }}
+  durable: true
+  arguments:
+    x-queue-type: quorum
+    x-dead-letter-exchange: {{ $topo.exchanges.ingestionDlx }}
+    x-dead-letter-routing-key: dead
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Queue
+metadata:
+  name: ingestion-dlq
+  namespace: {{ $ns }}
+spec:
+  name: {{ $topo.queues.ingestionDlq }}
+  durable: true
+  arguments:
+    x-queue-type: quorum
+    {{- if $topo.dlqMessageTtlMs }}
+    x-message-ttl: {{ $topo.dlqMessageTtlMs }}
+    {{- end }}
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Queue
+metadata:
+  name: tokenized-queue
+  namespace: {{ $ns }}
+spec:
+  name: {{ $topo.queues.tokenized }}
+  durable: true
+  arguments:
+    x-queue-type: quorum
+    x-dead-letter-exchange: {{ $topo.exchanges.tokenizedDlx }}
+    x-dead-letter-routing-key: dead
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Queue
+metadata:
+  name: tokenized-dlq
+  namespace: {{ $ns }}
+spec:
+  name: {{ $topo.queues.tokenizedDlq }}
+  durable: true
+  arguments:
+    x-queue-type: quorum
+    {{- if $topo.dlqMessageTtlMs }}
+    x-message-ttl: {{ $topo.dlqMessageTtlMs }}
+    {{- end }}
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+
+# ---------------------------------------------------------------------------
+# Bindings
+# ---------------------------------------------------------------------------
+---
+# ingestion.queue ← ingestion exchange
+# "#" matches any routing key — providers need no coordination on routing keys.
+apiVersion: rabbitmq.com/v1beta1
+kind: Binding
+metadata:
+  name: ingestion-queue-binding
+  namespace: {{ $ns }}
+spec:
+  source: {{ $topo.exchanges.ingestion }}
+  destination: {{ $topo.queues.ingestion }}
+  destinationType: queue
+  routingKey: "#"
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+# ingestion.dlq ← ingestion.dlx
+# Routing key "dead" matches x-dead-letter-routing-key set on ingestion.queue.
+apiVersion: rabbitmq.com/v1beta1
+kind: Binding
+metadata:
+  name: ingestion-dlq-binding
+  namespace: {{ $ns }}
+spec:
+  source: {{ $topo.exchanges.ingestionDlx }}
+  destination: {{ $topo.queues.ingestionDlq }}
+  destinationType: queue
+  routingKey: dead
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+# tokenized.queue ← tokenized exchange
+# "#" matches any routing key.
+apiVersion: rabbitmq.com/v1beta1
+kind: Binding
+metadata:
+  name: tokenized-queue-binding
+  namespace: {{ $ns }}
+spec:
+  source: {{ $topo.exchanges.tokenized }}
+  destination: {{ $topo.queues.tokenized }}
+  destinationType: queue
+  routingKey: "#"
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}
+---
+# tokenized.dlq ← tokenized.dlx
+# Routing key "dead" matches x-dead-letter-routing-key set on tokenized.queue.
+apiVersion: rabbitmq.com/v1beta1
+kind: Binding
+metadata:
+  name: tokenized-dlq-binding
+  namespace: {{ $ns }}
+spec:
+  source: {{ $topo.exchanges.tokenizedDlx }}
+  destination: {{ $topo.queues.tokenizedDlq }}
+  destinationType: queue
+  routingKey: dead
+  rabbitmqClusterReference:
+    name: {{ $cluster }}
+    namespace: {{ $ns }}

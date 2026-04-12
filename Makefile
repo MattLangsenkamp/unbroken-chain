@@ -4,7 +4,7 @@ GITHUB_GATEWAY_PRESENTATION_IMAGE ?= unbrokenchain/github-gateway-presentation:l
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations
+.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -72,6 +72,22 @@ psql-github-gateway:
 ## psql-control-plane : open psql session for the ubc_control_plane database
 psql-control-plane:
 	@$(SCRIPT_DIR)/psql.sh ubc_control_plane
+
+## rabbitmq-ui : port-forward RabbitMQ management UI to localhost:15672 (prints credentials)
+rabbitmq-ui:
+	@$(SCRIPT_DIR)/rabbitmq-admin.sh ui $(CLUSTER_NAME)
+
+## rabbitmq-queues : list all queues with message and consumer counts
+rabbitmq-queues:
+	@$(SCRIPT_DIR)/rabbitmq-admin.sh queues $(CLUSTER_NAME)
+
+## rabbitmq-exchanges : list all exchanges with type and durability
+rabbitmq-exchanges:
+	@$(SCRIPT_DIR)/rabbitmq-admin.sh exchanges $(CLUSTER_NAME)
+
+## rabbitmq-bindings : list all bindings (source → destination)
+rabbitmq-bindings:
+	@$(SCRIPT_DIR)/rabbitmq-admin.sh bindings $(CLUSTER_NAME)
 
 ## help : list available targets
 help:
