@@ -22,6 +22,10 @@ Services and infra are deployed separately. The **infra chart** (`umbrella/`) ow
 - **Infra chart** at `umbrella/` is infra-only: Postgres cluster, RabbitMQ cluster, OTel collector, ESO secret store + ExternalSecrets. It has no service chart dependencies.
 - **Operators are never bundled** as Helm chart dependencies — installed exclusively by `bin/deploy-local.sh` step 2
 - **RabbitMQ Cluster Operator** is installed via `kubectl apply` (official manifest), not Helm — bitnami images are not available on Docker Hub
+- **RabbitMQ Messaging Topology Operator** declares exchanges, queues, and bindings as k8s CRDs (`Exchange`, `Queue`, `Binding`). All topology lives in `umbrella/templates/rabbitmq-topology.yaml`. Requires cert-manager for its admission webhook.
+- **Per-reader ephemeral queues** (for `segments.fanout`) are declared by the application at startup — they are auto-delete and not in the Helm chart. Only the fanout exchange is operator-managed.
+- **DLQ pattern**: main queues carry `x-dead-letter-exchange` + `x-dead-letter-routing-key: dead`. A companion DLX (direct exchange) routes to the DLQ using routing key `dead`. This decouples dead-letter routing from the original message routing key.
+- **Queue inspection**: `make rabbitmq-ui` (browser), `make rabbitmq-queues`, `make rabbitmq-exchanges`, `make rabbitmq-bindings` — all delegate to `bin/rabbitmq-admin.sh`.
 - **Credentials** flow through ESO: `local-credentials` Secret → `ClusterSecretStore` → `ExternalSecret` → service-specific Secret. `local-credentials` must include `postgres-username`, `postgres-password`, and `rabbitmq-password`.
 - **`make deploy-app`** runs `bin/deploy-local.sh` (idempotent, safe to re-run)
 - **`make k9s`** opens k9s across all namespaces
@@ -34,6 +38,9 @@ Services and infra are deployed separately. The **infra chart** (`umbrella/`) ow
 | `ExternalSecret` | `external-secrets.io/v1` |
 | `OpenTelemetryCollector` | `opentelemetry.io/v1beta1` (v1alpha1 is deprecated) |
 | `RabbitmqCluster` | `rabbitmq.com/v1beta1` |
+| `Exchange` | `rabbitmq.com/v1beta1` |
+| `Queue` | `rabbitmq.com/v1beta1` |
+| `Binding` | `rabbitmq.com/v1beta1` |
 | `Cluster` (CNPG) | `postgresql.cnpg.io/v1` |
 | `Middleware` (Traefik) | `traefik.io/v1alpha1` |
 | `Ingress` | `networking.k8s.io/v1` |
@@ -148,6 +155,7 @@ umbrella/                        # infra chart — no service dependencies
     postgres-cluster.yaml        # CloudNativePG Cluster CR
     databases.yaml               # Database CR per Postgres-backed service
     rabbitmq-cluster.yaml        # RabbitmqCluster CR
+    rabbitmq-topology.yaml       # Exchange / Queue / Binding CRDs (Topology Operator)
     otel-collector.yaml          # grafana/otel-lgtm Deployment + OpenTelemetryCollector CR
     eso-secret-store.yaml        # ClusterSecretStore + RBAC
     external-secrets.yaml        # ExternalSecret per credential
@@ -175,7 +183,7 @@ umbrella/                        # infra chart — no service dependencies
 ## deploy-local.sh — Order of Operations
 
 1. Pull and import `grafana/otel-lgtm` into k3d
-2. Install/upgrade operators (CloudNativePG, RabbitMQ, OTel, ESO) — wait for each
+2. Install/upgrade operators (cert-manager, CloudNativePG, RabbitMQ Cluster, RabbitMQ Topology, OTel, ESO) — wait for each
 3. Create namespace and `local-credentials` Secret if absent
 4. `helm upgrade --install unbroken-chain-infra umbrella/`
 5. `helm upgrade --install <name> <service>/k8s/` for each service, then `kubectl rollout restart` + `rollout status`
@@ -188,8 +196,10 @@ All service charts use `imagePullPolicy: IfNotPresent`. When a new image is impo
 
 | Operator | Install method | Source |
 |---|---|---|
+| cert-manager | `helm upgrade --install` | `https://charts.jetstack.io` |
 | CloudNativePG | `helm upgrade --install` | `https://cloudnative-pg.github.io/charts` |
 | RabbitMQ Cluster Operator | `kubectl apply -f` | GitHub release manifest |
+| RabbitMQ Messaging Topology Operator | `kubectl apply -f` | GitHub release manifest (with-certmanager variant) |
 | OpenTelemetry Operator | `helm upgrade --install` | `https://open-telemetry.github.io/opentelemetry-helm-charts` |
 | External Secrets Operator | `helm upgrade --install` | `https://charts.external-secrets.io` |
 

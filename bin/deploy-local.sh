@@ -41,6 +41,14 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "--- [2/5] Installing operators ---"
 
+echo "  cert-manager (required by RabbitMQ Messaging Topology Operator webhook)..."
+helm upgrade --install cert-manager cert-manager \
+  --repo https://charts.jetstack.io \
+  --namespace cert-manager \
+  --create-namespace \
+  --set installCRDs=true \
+  --wait
+
 echo "  CloudNativePG..."
 helm upgrade --install cloudnative-pg cloudnative-pg \
   --repo https://cloudnative-pg.github.io/charts \
@@ -51,6 +59,10 @@ helm upgrade --install cloudnative-pg cloudnative-pg \
 echo "  RabbitMQ Cluster Operator..."
 kubectl apply -f "https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml"
 kubectl rollout status deployment/rabbitmq-cluster-operator -n rabbitmq-system --timeout=5m
+
+echo "  RabbitMQ Messaging Topology Operator..."
+kubectl apply -f "https://github.com/rabbitmq/messaging-topology-operator/releases/latest/download/messaging-topology-operator-with-certmanager.yaml"
+kubectl rollout status deployment/messaging-topology-operator -n rabbitmq-system --timeout=5m
 
 echo "  OpenTelemetry Operator..."
 helm upgrade --install opentelemetry-operator opentelemetry-operator \

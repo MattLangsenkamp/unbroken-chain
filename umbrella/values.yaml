@@ -26,6 +26,26 @@ rabbitmq:
   clusterName: unbroken-chain-rabbitmq
   replicas: 1
 
+  topology:
+    # Set to a positive integer (milliseconds) to expire dead-lettered messages
+    # after that duration. Leave empty ("") to accumulate indefinitely — useful
+    # for replaying failures manually.
+    # Example: 604800000 = 7 days
+    dlqMessageTtlMs: ""
+
+    exchanges:
+      ingestion: ingestion
+      ingestionDlx: ingestion.dlx
+      tokenized: tokenized
+      tokenizedDlx: tokenized.dlx
+      segmentsFanout: segments.fanout
+
+    queues:
+      ingestion: ingestion.queue
+      ingestionDlq: ingestion.dlq
+      tokenized: tokenized.queue
+      tokenizedDlq: tokenized.dlq
+
 # ---------------------------------------------------------------------------
 # Observability — grafana/otel-lgtm + OpenTelemetry Collector
 # ---------------------------------------------------------------------------
