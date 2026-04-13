@@ -119,7 +119,7 @@ object `provider-gateways` extends Module {
 
         object `zio-json` extends ScalaModule {
           def scalaVersion = scalaVer
-          override def moduleDeps = Seq(domainPrivate)
+          override def moduleDeps = Seq(domainPrivate, domainPublicAdapterExtensions.`zio-json`)
           override def mvnDeps = zioJsonDeps
         }
 
