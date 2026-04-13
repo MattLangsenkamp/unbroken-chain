@@ -11,8 +11,6 @@ import zio.*
 import javax.sql.DataSource
 import java.time.Instant
 
-// Flat row type used for DB reads and writes.
-// `derives DbCodec` picks up the given DbCodec instances imported above.
 case class TokenRow(
   id: Long,
   userId: String,
@@ -44,11 +42,11 @@ object TokenRow:
         expiresAt = row.expiresAt
       )
 
-class MagnumTokenRepository(ds: DataSource) extends TokenRepository:
+class MagnumTokenRepository(xa: TransactorZIO) extends TokenRepository:
 
   def save(token: InternalToken): Task[Unit] =
     val row = TokenRow.fromDomain(token)
-    transact(ds) {
+    xa.transact {
       sql"""
         INSERT INTO github_tokens (user_id, token, scopes, created_at, expires_at)
         VALUES (${row.userId}, ${row.token}, ${row.scopes}, ${row.createdAt}, ${row.expiresAt})
@@ -60,19 +58,19 @@ class MagnumTokenRepository(ds: DataSource) extends TokenRepository:
     }.unit
 
   def findByUserId(userId: UserId): Task[Option[InternalToken]] =
-    connect(ds) {
+    xa.connect {
       sql"""
         SELECT id, user_id, token, scopes, created_at, expires_at
         FROM github_tokens
         WHERE user_id = ${userId.value}
-      """.query[TokenRow].option()
+      """.query[TokenRow].run().headOption
     }.map(_.map(_.toDomain))
 
   def delete(id: TokenId): Task[Unit] =
-    transact(ds) {
+    xa.transact {
       sql"DELETE FROM github_tokens WHERE id = ${id.value}".update.run()
     }.unit
 
 object MagnumTokenRepository:
-  val layer: ZLayer[DataSource, Nothing, TokenRepository] =
+  val layer: ZLayer[TransactorZIO, Nothing, TokenRepository] =
     ZLayer.fromFunction(new MagnumTokenRepository(_))

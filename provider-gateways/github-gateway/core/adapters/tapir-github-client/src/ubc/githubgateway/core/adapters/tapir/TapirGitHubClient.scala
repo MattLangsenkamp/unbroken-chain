@@ -4,6 +4,7 @@ import ubc.githubgateway.core.ports.GitHubPort
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
 import sttp.tapir.*
+import sttp.tapir.generic.auto.*
 import sttp.tapir.json.zio.*
 import sttp.tapir.client.sttp.*
 import sttp.client3.*

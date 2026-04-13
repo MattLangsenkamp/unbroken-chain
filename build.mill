@@ -42,8 +42,8 @@ val tapirServerDeps = tapirBaseDeps ++ Seq(
 )
 
 val magnumDeps = Seq(
-  mvn"com.augustnagro::magnum:1.3.0",
-  mvn"com.augustnagro::magnum-zio:1.3.0"
+  mvn"com.augustnagro::magnum:2.0.0-M3",
+  mvn"com.augustnagro::magnumzio:2.0.0-M3"
 )
 
 trait ServiceModule extends ScalaModule with DockerModule {
@@ -61,7 +61,7 @@ trait ServiceModule extends ScalaModule with DockerModule {
 trait CrossPlatform extends Module {
   trait Shared extends ScalaModule {
     def scalaVersion = scalaVer
-    override def sources = Seq(PathRef(moduleDir / os.up / "src"))
+    override def sources = Task.Sources(moduleDir / os.up / "src")
   }
   object jvm extends Shared
   object js extends Shared with ScalaJSModule {
@@ -181,9 +181,9 @@ object `provider-gateways` extends Module {
       // frontend can share the same types without a second definition.
       // Depends only on domainPublic — never on domainPrivate or any adapter extension.
       object `api-defn` extends Module {
-        private trait Shared extends ScalaModule {
+        trait Shared extends ScalaModule {
           def scalaVersion = scalaVer
-          override def sources = Seq(PathRef(moduleDir / os.up / "src"))
+          override def sources = Task.Sources(moduleDir / os.up / "src")
           override def mvnDeps = zioDeps
         }
         object jvm extends Shared {
