@@ -2,7 +2,9 @@ package ubc.githubgateway.core.adapters.tapir
 
 import ubc.githubgateway.core.ports.GitHubPort
 import ubc.githubgateway.domain.*
+import neotype.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
+import neotype.interop.tapir.given
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.zio.*
@@ -39,14 +41,14 @@ class TapirGitHubClient(backend: SttpBackend[Task, Any]) extends GitHubPort:
   def getRepo(owner: RepoOwner, name: RepoName): Task[GitHubRepo] =
     SttpClientInterpreter()
       .toRequestThrowDecodeFailures(getRepoEndpoint, Some(baseUri))
-      .apply((owner.value, name.value))
+      .apply((owner.unwrap, name.unwrap))
       .send(backend)
       .flatMap(r => ZIO.fromEither(r.body).mapError(e => Exception(e)))
 
   def listRepos(owner: RepoOwner): Task[List[GitHubRepo]] =
     SttpClientInterpreter()
       .toRequestThrowDecodeFailures(listReposEndpoint, Some(baseUri))
-      .apply(owner.value)
+      .apply(owner.unwrap)
       .send(backend)
       .flatMap(r => ZIO.fromEither(r.body).mapError(e => Exception(e)))
 

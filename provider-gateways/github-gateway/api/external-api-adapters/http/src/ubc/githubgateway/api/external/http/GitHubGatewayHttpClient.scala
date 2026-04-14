@@ -3,6 +3,7 @@ package ubc.githubgateway.api.external.http
 import ubc.githubgateway.api.GitHubGatewayApi
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
+import neotype.interop.tapir.given
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.zio.*

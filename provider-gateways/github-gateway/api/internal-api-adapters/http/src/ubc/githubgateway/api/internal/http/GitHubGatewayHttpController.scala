@@ -5,6 +5,7 @@ import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.internal.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
+import neotype.interop.tapir.given
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.zio.*
 import sttp.tapir.server.ziohttp.*
