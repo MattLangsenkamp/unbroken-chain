@@ -1,7 +1,7 @@
 package ubc.githubgateway.api
 
 import ubc.githubgateway.domain.*
-import zio.*
+import zio.Task
 
 // Semantic contract for the GitHub Gateway service.
 // Depends only on domainPublic — nothing private leaks across the service boundary.
@@ -12,10 +12,3 @@ trait GitHubGatewayApi:
   def listRepos(owner: String): Task[List[GitHubRepo]]
   def triggerSync(owner: String, repoName: String): Task[Unit]
 
-object GitHubGatewayApi:
-  def getRepo(owner: String, repoName: String): ZIO[GitHubGatewayApi, Throwable, GitHubRepo] =
-    ZIO.serviceWithZIO[GitHubGatewayApi](_.getRepo(owner, repoName))
-  def listRepos(owner: String): ZIO[GitHubGatewayApi, Throwable, List[GitHubRepo]] =
-    ZIO.serviceWithZIO[GitHubGatewayApi](_.listRepos(owner))
-  def triggerSync(owner: String, repoName: String): ZIO[GitHubGatewayApi, Throwable, Unit] =
-    ZIO.serviceWithZIO[GitHubGatewayApi](_.triggerSync(owner, repoName))

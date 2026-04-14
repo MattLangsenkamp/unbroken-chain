@@ -121,6 +121,15 @@ trait MyService:
   def doThing(input: String): Task[Unit]
 ```
 
+**NEVER add accessor methods to the trait's companion object.** The accessor pattern (`ZIO.serviceWithZIO` wrappers in the companion) is an anti-pattern that was dropped from ZIO's recommended practices. Callers inject the service as a constructor dependency or use `ZIO.serviceWithZIO` at the call site when needed.
+
+```scala
+// ❌ NEVER do this
+object MyService:
+  def doThing(input: String): ZIO[MyService, Throwable, Unit] =
+    ZIO.serviceWithZIO[MyService](_.doThing(input))
+```
+
 **2. `Live` implementation — `final case class` extending the trait**
 
 ```scala
@@ -246,3 +255,56 @@ object HealthEndpoint:
       .in("health")
       .out(stringBody)
 ```
+
+---
+
+## Repository / DB Adapter Pattern
+
+Repositories are driven adapters that implement a port trait and live in `core/adapters/<library>-<name>-repository`.
+
+### Prefer domain types directly
+
+**Do not introduce a row model unless the DB schema genuinely cannot be expressed with domain types.** Magnum's `DbCodec.derived` works for any case class as long as all field types have `DbCodec` instances in scope. Provide those instances in the domain's adapter-extension module (e.g. `domainPublicAdapterExtensions/magnum`, `domainPrivateAdapterExtensions/magnum`).
+
+```scala
+// ✅ Preferred — derive directly on the domain type
+private given DbCodec[MyEntity] = DbCodec.derived[MyEntity]
+
+class MyRepository(xa: TransactorZIO) extends MyPort:
+  def findById(id: MyId): Task[Option[MyEntity]] =
+    xa.connect {
+      sql"SELECT ... FROM my_table WHERE id = $id".query[MyEntity].run().headOption
+    }
+```
+
+### When a row model IS needed
+
+If the DB schema diverges from the domain model (e.g. normalised columns for a collection stored as a delimited string, or a legacy schema), introduce a minimal row case class in the adapter and use [Chimney](https://github.com/scalalandio/chimney) for the domain↔row transformation:
+
+```scala
+import io.scalaland.chimney.dsl.*
+
+case class MyEntityRow(id: Long, name: String, tags: String) derives DbCodec
+
+object MyEntityRow:
+  def fromDomain(e: MyEntity): MyEntityRow = e.into[MyEntityRow]
+    .withFieldComputed(_.tags, _.tags.mkString(","))
+    .transform
+
+  extension (row: MyEntityRow)
+    def toDomain: MyEntity = row.into[MyEntity]
+      .withFieldComputed(_.tags, _.tags.split(",").toList.filter(_.nonEmpty))
+      .transform
+```
+
+### ZIO integration (Magnum 2.x)
+
+Use `TransactorZIO` from `com.augustnagro::magnumzio`. Inject it via `ZLayer`:
+
+```scala
+object MyRepository:
+  val layer: ZLayer[TransactorZIO, Nothing, MyPort] =
+    ZLayer.fromFunction(new MyRepository(_))
+```
+
+Wire `TransactorZIO.layer` in the `server` module, which itself needs a `DataSource` (HikariCP).
