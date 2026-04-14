@@ -1,8 +1,0 @@
-{
-    "value": "qref:v1:036a59ff:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-sbt-bridge/3.8.2/scala3-sbt-bridge-3.8.2.jar",
-    "valueHash": -1820016577,
-    "inputsHash": 974612012,
-    "millVersion": "1.1.5",
-    "millJvmVersion": "21.0.10",
-    "classLoaderSigHash": 1359908518
-}

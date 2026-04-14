@@ -1,2 +1,0 @@
-Detected 1 (out of 1) non-platform dependencies. This is often an error due to a missing second colon (:) before the version.
-Found dev.zio::zio:2.1.17, did you mean dev.zio::zio::2.1.17 ?
