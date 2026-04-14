@@ -4,7 +4,9 @@ import ubc.githubgateway.core.ports.GitHubPort
 import ubc.githubgateway.domain.*
 import neotype.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
+import ubc.githubgateway.domain.RepoOwner.given, ubc.githubgateway.domain.RepoName.given
 import neotype.interop.tapir.given
+import neotype.*
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.zio.*

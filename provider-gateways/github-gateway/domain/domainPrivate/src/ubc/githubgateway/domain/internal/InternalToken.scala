@@ -1,10 +1,14 @@
 package ubc.githubgateway.domain.internal
 
 import ubc.githubgateway.domain.{GitHubToken, TokenId}
+import neotype.*
 import java.time.Instant
 
-case class UserId(value: String)
-case class TokenScope(value: String)
+object UserId extends Newtype[String]
+type UserId = UserId.Type
+
+object TokenScope extends Newtype[String]
+type TokenScope = TokenScope.Type
 
 case class InternalToken(
   id: TokenId,

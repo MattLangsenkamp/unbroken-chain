@@ -3,6 +3,8 @@ package ubc.githubgateway.core
 import ubc.githubgateway.core.ports.*
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.internal.*
+import UserId.given
+import neotype.*
 import zio.*
 import java.time.Instant
 
@@ -22,14 +24,14 @@ case class GitHubGatewayService(github: GitHubPort, tokenRepo: TokenRepository):
   def fetchRepo(userId: UserId, owner: RepoOwner, name: RepoName): Task[GitHubRepo] =
     for
       maybeToken <- tokenRepo.findByUserId(userId)
-      _          <- ZIO.fail(Exception(s"No token for user ${userId.value}")).when(maybeToken.isEmpty)
+      _          <- ZIO.fail(Exception(s"No token for user ${userId.unwrap}")).when(maybeToken.isEmpty)
       repo       <- github.getRepo(owner, name)
     yield repo
 
   def listUserRepos(userId: UserId, owner: RepoOwner): Task[List[GitHubRepo]] =
     for
       maybeToken <- tokenRepo.findByUserId(userId)
-      _          <- ZIO.fail(Exception(s"No token for user ${userId.value}")).when(maybeToken.isEmpty)
+      _          <- ZIO.fail(Exception(s"No token for user ${userId.unwrap}")).when(maybeToken.isEmpty)
       repos      <- github.listRepos(owner)
     yield repos
 

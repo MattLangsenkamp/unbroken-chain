@@ -118,6 +118,7 @@ object `provider-gateways` extends Module {
       object domainPrivate extends ScalaModule {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(domainPublic.jvm)
+        override def mvnDeps = super.mvnDeps() ++ neotypeDeps
       }
 
       object domainPublicAdapterExtensions extends Module {

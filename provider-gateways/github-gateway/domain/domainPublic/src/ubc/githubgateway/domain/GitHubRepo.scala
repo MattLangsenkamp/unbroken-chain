@@ -1,9 +1,18 @@
 package ubc.githubgateway.domain
 
-case class GitHubRepoId(value: Long)
-case class RepoName(value: String)
-case class RepoOwner(value: String)
-case class RepoUrl(value: String)
+import neotype.*
+
+object GitHubRepoId extends Newtype[Long]
+type GitHubRepoId = GitHubRepoId.Type
+
+object RepoName extends Newtype[String]
+type RepoName = RepoName.Type
+
+object RepoOwner extends Newtype[String]
+type RepoOwner = RepoOwner.Type
+
+object RepoUrl extends Newtype[String]
+type RepoUrl = RepoUrl.Type
 
 case class GitHubRepo(
   id: GitHubRepoId,
