@@ -1,0 +1,10 @@
+{
+    "value": [
+        "ubc.extractionservice.server.Server"
+    ],
+    "valueHash": -1260424457,
+    "inputsHash": 1005303565,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

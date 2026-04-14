@@ -1,0 +1,11 @@
+{
+    "value": [
+        "com.augustnagro::magnum:2.0.0-M3",
+        "com.augustnagro::magnumzio:2.0.0-M3"
+    ],
+    "valueHash": 273810777,
+    "inputsHash": -280484266,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

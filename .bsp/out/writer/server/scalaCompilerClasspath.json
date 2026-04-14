@@ -1,0 +1,21 @@
+{
+    "value": [
+        "qref:v1:5b4514bd:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-compiler_3/3.6.4/scala3-compiler_3-3.6.4.jar",
+        "qref:v1:e2a6a868:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.6.4/scala3-library_3-3.6.4.jar",
+        "qref:v1:90acf17a:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-interfaces/3.6.4/scala3-interfaces-3.6.4.jar",
+        "qref:v1:9e15ad00:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/tasty-core_3/3.6.4/tasty-core_3-3.6.4.jar",
+        "qref:v1:bee2745d:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-asm/9.7.1-scala-1/scala-asm-9.7.1-scala-1.jar",
+        "qref:v1:19dad165:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/compiler-interface/1.10.4/compiler-interface-1.10.4.jar",
+        "qref:v1:20c06ac6:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-reader/3.27.1/jline-reader-3.27.1.jar",
+        "qref:v1:c61e37e4:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-terminal/3.27.1/jline-terminal-3.27.1.jar",
+        "qref:v1:7bbf0b4d:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-terminal-jni/3.27.1/jline-terminal-jni-3.27.1.jar",
+        "qref:v1:f3eb0863:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.15/scala-library-2.13.15.jar",
+        "qref:v1:e39c4c45:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/util-interface/1.10.4/util-interface-1.10.4.jar",
+        "qref:v1:5abc76a8:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-native/3.27.1/jline-native-3.27.1.jar"
+    ],
+    "valueHash": 1857840795,
+    "inputsHash": 118833966,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

@@ -1,0 +1,10 @@
+{
+    "value": [
+        "ref:v0:aafdcfb4:/home/mattlang/Documents/projects/unbroken-chain/build.mill"
+    ],
+    "valueHash": -855576580,
+    "inputsHash": -537189320,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1359908518
+}

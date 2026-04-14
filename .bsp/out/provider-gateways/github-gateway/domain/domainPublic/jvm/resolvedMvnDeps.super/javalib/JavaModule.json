@@ -1,0 +1,14 @@
+{
+    "value": [
+        "qref:v1:e2a6a868:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.6.4/scala3-library_3-3.6.4.jar",
+        "qref:v1:0dfa24cc:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/neotype_3/0.4.10/neotype_3-0.4.10.jar",
+        "qref:v1:f3eb0863:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.15/scala-library-2.13.15.jar",
+        "qref:v1:6a67e1cc:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/neotype-internal_3/0.4.10/neotype-internal_3-0.4.10.jar",
+        "qref:v1:8e96feb9:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/comptime_3/0.4.10/comptime_3-0.4.10.jar"
+    ],
+    "valueHash": 931563273,
+    "inputsHash": -187260464,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

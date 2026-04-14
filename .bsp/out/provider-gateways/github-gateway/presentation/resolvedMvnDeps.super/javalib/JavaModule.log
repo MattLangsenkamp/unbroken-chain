@@ -1,0 +1,2 @@
+Detected 1 (out of 1) non-platform dependencies. This is often an error due to a missing second colon (:) before the version.
+Found io.indigoengine:tyrian-io_sjs1_3:0.14.0, did you mean io.indigoengine:tyrian-io_sjs1_3::0.14.0 ?

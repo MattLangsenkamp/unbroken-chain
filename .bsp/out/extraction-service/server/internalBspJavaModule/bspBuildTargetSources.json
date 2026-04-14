@@ -1,0 +1,15 @@
+{
+    "value": {
+        "sources": [
+            "file:///home/mattlang/Documents/projects/unbroken-chain/extraction-service/server/src/"
+        ],
+        "generatedSources": [
+            "file:///home/mattlang/Documents/projects/unbroken-chain/.bsp/out/extraction-service/server/compileGeneratedSources.dest/"
+        ]
+    },
+    "valueHash": -2025459397,
+    "inputsHash": -1932486763,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

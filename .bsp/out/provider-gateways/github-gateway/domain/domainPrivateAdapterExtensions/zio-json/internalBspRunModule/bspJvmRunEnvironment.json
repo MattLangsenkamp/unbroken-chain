@@ -1,0 +1,46 @@
+{
+    "value": {
+        "runClasspath": [
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.6.4/scala3-library_3-3.6.4.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-json_3/0.8.0/zio-json_3-0.8.0.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/neotype_3/0.4.10/neotype_3-0.4.10.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/neotype-zio-json_3/0.4.10/neotype-zio-json_3-0.4.10.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.15/scala-library-2.13.15.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio_3/2.1.23/zio_3-2.1.23.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-streams_3/2.1.23/zio-streams_3-2.1.23.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/com/softwaremill/magnolia1_3/magnolia_3/1.3.18/magnolia_3-1.3.18.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/neotype-internal_3/0.4.10/neotype-internal_3-0.4.10.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/comptime_3/0.4.10/comptime_3-0.4.10.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-internal-macros_3/2.1.23/zio-internal-macros_3-2.1.23.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-stacktracer_3/2.1.23/zio-stacktracer_3-2.1.23.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect_3/3.0.7/izumi-reflect_3-3.0.7.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-collection-compat_3/2.13.0/scala-collection-compat_3-2.13.0.jar",
+            "file:///home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect-thirdparty-boopickle-shaded_3/3.0.7/izumi-reflect-thirdparty-boopickle-shaded_3-3.0.7.jar",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublic/jvm/compile-resources",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublic/jvm/resources",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPublic/jvm/compile.dest/classes/",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPrivate/compile-resources",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPrivate/resources",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPrivate/compile.dest/classes/",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublicAdapterExtensions/zio-json/compile-resources",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublicAdapterExtensions/zio-json/resources",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPublicAdapterExtensions/zio-json/compile.dest/classes/",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPrivateAdapterExtensions/zio-json/compile-resources",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPrivateAdapterExtensions/zio-json/resources",
+            "file:///home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPrivateAdapterExtensions/zio-json/compile.dest/classes/"
+        ],
+        "forkArgs": [],
+        "forkWorkingDir": "file:///home/mattlang/Documents/projects/unbroken-chain/",
+        "forkEnv": {
+            "PATH": "/home/mattlang/.cache/coursier/arc/https/cdn.azul.com/zulu/bin/zulu21.48.15-ca-jdk21.0.10-linux_x64.tar.gz/zulu21.48.15-ca-jdk21.0.10-linux_x64/bin:/home/mattlang/.cache/coursier/arc/https/github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.1%252B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.1_8.tar.gz/jdk-25.0.1+8/bin:/home/mattlang/.opencode/bin:/usr/local/cuda/bin:/home/mattlang/.local/bin:/home/mattlang/.nvm/versions/node/v16.20.0/bin:/home/mattlang/anaconda3/condabin:/home/mattlang/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/mattlang/.local/share/JetBrains/Toolbox/scripts:/home/mattlang/.local/share/coursier/bin:/home/mattlang/.cache/scalacli/local-repo/bin/scala-cli:/home/mattlang/.cache/coursier/arc/https/github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.1%252B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.1_8.tar.gz/jdk-25.0.1+8/bin:/home/mattlang/.local/share/coursier/bin:/home/mattlang/.cache/scalacli/local-repo/bin/scala-cli:/home/mattlang/.cache/coursier/arc/https/github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.1%252B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.1_8.tar.gz/jdk-25.0.1+8/bin:/usr/local/go/bin:/home/mattlang/.pulumi/bin",
+            "MILL_WORKSPACE_ROOT": "/home/mattlang/Documents/projects/unbroken-chain"
+        },
+        "mainClass": null,
+        "localMainClasses": []
+    },
+    "valueHash": 1720980407,
+    "inputsHash": -1711270167,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

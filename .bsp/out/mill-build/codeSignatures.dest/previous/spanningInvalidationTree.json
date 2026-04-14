@@ -1,0 +1,22 @@
+{
+  "def build_.package_$provider$minusgateways$github$minusgateway$api$external$minusapi$minusadapters$http$#mvnDeps$$anonfun$14$$anonfun$1(scala.collection.immutable.Seq,mill.api.TaskCtx)mill.api.daemon.Result": {
+    "call build_.package_$provider$minusgateways$github$minusgateway$api$external$minusapi$minusadapters$http$!mvnDeps$$anonfun$14$$anonfun$1(scala.collection.immutable.Seq,mill.api.TaskCtx)mill.api.daemon.Result": {
+      "def build_.package_$provider$minusgateways$github$minusgateway$api$external$minusapi$minusadapters$http$.$deserializeLambda$(java.lang.invoke.SerializedLambda)java.lang.Object": {},
+      "def build_.package_$provider$minusgateways$github$minusgateway$api$external$minusapi$minusadapters$http$#mvnDeps$$anonfun$14()mill.api.Task$Simple": {
+        "call build_.package_$provider$minusgateways$github$minusgateway$api$external$minusapi$minusadapters$http$!mvnDeps$$anonfun$14()mill.api.Task$Simple": {
+          "def build_.package_$provider$minusgateways$github$minusgateway$api$external$minusapi$minusadapters$http$#mvnDeps()mill.api.Task$Simple": {}
+        }
+      }
+    }
+  },
+  "def build_.package_$provider$minusgateways$github$minusgateway$api$internal$minusapi$minusadapters$http$#mvnDeps$$anonfun$13$$anonfun$1(scala.collection.immutable.Seq,mill.api.TaskCtx)mill.api.daemon.Result": {
+    "call build_.package_$provider$minusgateways$github$minusgateway$api$internal$minusapi$minusadapters$http$!mvnDeps$$anonfun$13$$anonfun$1(scala.collection.immutable.Seq,mill.api.TaskCtx)mill.api.daemon.Result": {
+      "def build_.package_$provider$minusgateways$github$minusgateway$api$internal$minusapi$minusadapters$http$.$deserializeLambda$(java.lang.invoke.SerializedLambda)java.lang.Object": {},
+      "def build_.package_$provider$minusgateways$github$minusgateway$api$internal$minusapi$minusadapters$http$#mvnDeps$$anonfun$13()mill.api.Task$Simple": {
+        "call build_.package_$provider$minusgateways$github$minusgateway$api$internal$minusapi$minusadapters$http$!mvnDeps$$anonfun$13()mill.api.Task$Simple": {
+          "def build_.package_$provider$minusgateways$github$minusgateway$api$internal$minusapi$minusadapters$http$#mvnDeps()mill.api.Task$Simple": {}
+        }
+      }
+    }
+  }
+}

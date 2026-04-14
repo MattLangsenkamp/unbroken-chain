@@ -1,0 +1,16 @@
+{
+    "value": {
+        "$type": "DestPath",
+        "subPath": "",
+        "segments": [
+            "ubc-control-plane",
+            "presentation",
+            "compiledClassesAndSemanticDbFiles"
+        ]
+    },
+    "valueHash": 1965068468,
+    "inputsHash": -750665736,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

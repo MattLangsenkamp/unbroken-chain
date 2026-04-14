@@ -1,0 +1,40 @@
+compiling 1 Scala source to .bsp/out/provider-gateways/github-gateway/domain/domainPrivateAdapterExtensions/zio-json/semanticDbDataDetailed.dest/classes ...
+[error] provider-gateways/github-gateway/domain/domainPrivateAdapterExtensions/zio-json/src/ubc/githubgateway/domain/internal/adapters/json/PrivateJsonCodecs.scala:9:61
+  given JsonCodec[UserId]        = summon[JsonCodec[UserId]]
+                                                            ^
+No given instance of type zio.json.JsonCodec[ubc.githubgateway.domain.internal.UserId] was found for parameter x of method summon in object Predef.
+I found:
+
+    neotype.interop.ziojson.codec[A, ubc.githubgateway.domain.internal.UserId](
+      neotype.ValidatedWrappedType.newtypeValidated[A,
+        ubc.githubgateway.domain.internal.UserId](
+        /* missing */
+          summon[
+            neotype.Newtype.WithType[A, ubc.githubgateway.domain.internal.UserId]]
+        ,
+      ???),
+    ???)
+
+But no implicit values were found that match type neotype.Newtype.WithType[A, ubc.githubgateway.domain.internal.UserId].
+
+[error] provider-gateways/github-gateway/domain/domainPrivateAdapterExtensions/zio-json/src/ubc/githubgateway/domain/internal/adapters/json/PrivateJsonCodecs.scala:10:65
+  given JsonCodec[TokenScope]    = summon[JsonCodec[TokenScope]]
+                                                                ^
+No given instance of type zio.json.JsonCodec[ubc.githubgateway.domain.internal.TokenScope] was found for parameter x of method summon in object Predef.
+I found:
+
+    neotype.interop.ziojson.codec[A, ubc.githubgateway.domain.internal.TokenScope](
+      neotype.ValidatedWrappedType.newtypeValidated[A,
+        ubc.githubgateway.domain.internal.TokenScope](
+        /* missing */
+          summon[
+            neotype.Newtype.WithType[A, ubc.githubgateway.domain.internal.TokenScope
+              ]
+          ]
+        ,
+      ???),
+    ???)
+
+But no implicit values were found that match type neotype.Newtype.WithType[A, ubc.githubgateway.domain.internal.TokenScope].
+
+[error] two errors found

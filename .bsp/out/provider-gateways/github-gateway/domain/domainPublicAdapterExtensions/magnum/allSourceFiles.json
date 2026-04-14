@@ -1,0 +1,10 @@
+{
+    "value": [
+        "ref:v0:c31431a0:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublicAdapterExtensions/magnum/src/ubc/githubgateway/domain/adapters/magnum/PublicMagnumCodecs.scala"
+    ],
+    "valueHash": 912914245,
+    "inputsHash": -1851088458,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

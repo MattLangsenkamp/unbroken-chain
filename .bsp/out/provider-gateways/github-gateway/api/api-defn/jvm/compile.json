@@ -1,0 +1,11 @@
+{
+    "value": {
+        "analysisFile": "/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/api/api-defn/jvm/compile.dest/zinc",
+        "classes": "ref:v0:a899e045:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/api/api-defn/jvm/compile.dest/classes"
+    },
+    "valueHash": -1319572374,
+    "inputsHash": 237327394,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

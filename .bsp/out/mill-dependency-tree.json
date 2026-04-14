@@ -1,0 +1,283 @@
+{
+  "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.internalBspJavaModule.bspBuildTargetScalaMainClasses": {
+    "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.allLocalMainClasses": {
+      "mill.javalib.classgraph.ClassgraphWorkerModule/classgraphWorker": {
+        "mill.javalib.classgraph.ClassgraphWorkerModule/classgraphWorkerClassloader": {
+          "mill.javalib.classgraph.ClassgraphWorkerModule/classgraphWorkerClasspath": {
+            "mill.javalib.classgraph.ClassgraphWorkerModule/repositories": {},
+            "mill.javalib.classgraph.ClassgraphWorkerModule/checkGradleModules": {}
+          }
+        }
+      },
+      "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.localRunClasspath": {
+        "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.localRunClasspath.super.RunModule": {},
+        "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.resources": {},
+        "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.compile": {
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.scalaVersion": {},
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.javacOptions": {},
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.mandatoryJavacOptions": {},
+          "mill.javalib.JvmWorkerModule/internalWorker": {
+            "mill.javalib.JvmWorkerModule/repositories": {},
+            "mill.javalib.JvmWorkerModule/checkGradleModules": {},
+            "mill.javalib.JvmWorkerModule/classpath": {},
+            "mill.javalib.JvmWorkerModule/internalWorkerClassLoader": {},
+            "mill.javalib.JvmWorkerModule/zincLogDebug": {},
+            "mill.javalib.JvmWorkerModule/useFileLocks": {}
+          },
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.upstreamCompileOutput": {
+            "provider-gateways.github-gateway.domain.domainPublic.jvm.compile": {
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.scalaVersion": {},
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.javacOptions": {},
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.mandatoryJavacOptions": {},
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.upstreamCompileOutput": {},
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.allSourceFiles": {
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.allSources": {
+                  "provider-gateways.github-gateway.domain.domainPublic.jvm.sources": {},
+                  "provider-gateways.github-gateway.domain.domainPublic.jvm.generatedSources": {}
+                },
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.wrappedSources": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.compileClasspath": {
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.resolvedMvnDeps": {
+                  "provider-gateways.github-gateway.domain.domainPublic.jvm.resolvedMvnDeps.super.javalib.JavaModule": {
+                    "provider-gateways.github-gateway.domain.domainPublic.jvm.resolvedDepsWarnNonPlatform": {},
+                    "provider-gateways.github-gateway.domain.domainPublic.jvm.mandatoryMvnDeps": {
+                      "provider-gateways.github-gateway.domain.domainPublic.jvm.mandatoryMvnDeps.super.javalib.JavaModule": {}
+                    },
+                    "provider-gateways.github-gateway.domain.domainPublic.jvm.compileMvnDeps": {},
+                    "provider-gateways.github-gateway.domain.domainPublic.jvm.runMvnDeps": {},
+                    "provider-gateways.github-gateway.domain.domainPublic.jvm.bomMvnDeps": {},
+                    "provider-gateways.github-gateway.domain.domainPublic.jvm.depManagement": {},
+                    "provider-gateways.github-gateway.domain.domainPublic.jvm.transitiveCoursierProjects": {},
+                    "provider-gateways.github-gateway.domain.domainPublic.jvm.artifactTypes": {}
+                  }
+                }
+              },
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.allScalacOptions": {
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.mandatoryScalacOptions": {},
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.enablePluginScalacOptions": {},
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.scalacOptions": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.scalaCompilerClasspath": {
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.platformSuffix": {},
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.scalaLibraryMvnDeps": {},
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.checkGradleModules": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.scalacPluginClasspath": {
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.scalacPluginMvnDeps": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.scalaCompilerBridge": {},
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.zincIncrementalCompilation": {},
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.zincAuxiliaryClassFileExtensions": {
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.zincAuxiliaryClassFileExtensions.super.javalib.JavaModule": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.javaHome": {
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.jvmVersion": {
+                  "provider-gateways.github-gateway.domain.domainPublic.jvm.jvmId": {}
+                },
+                "provider-gateways.github-gateway.domain.domainPublic.jvm.jvmIndexVersion": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.zincReportCachedProblems": {}
+            },
+            "provider-gateways.github-gateway.domain.domainPrivate.compile": {
+              "provider-gateways.github-gateway.domain.domainPrivate.scalaVersion": {},
+              "provider-gateways.github-gateway.domain.domainPrivate.javacOptions": {},
+              "provider-gateways.github-gateway.domain.domainPrivate.mandatoryJavacOptions": {},
+              "provider-gateways.github-gateway.domain.domainPrivate.upstreamCompileOutput": {},
+              "provider-gateways.github-gateway.domain.domainPrivate.allSourceFiles": {
+                "provider-gateways.github-gateway.domain.domainPrivate.allSources": {
+                  "provider-gateways.github-gateway.domain.domainPrivate.sources": {},
+                  "provider-gateways.github-gateway.domain.domainPrivate.generatedSources": {}
+                },
+                "provider-gateways.github-gateway.domain.domainPrivate.wrappedSources": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPrivate.compileClasspath": {
+                "provider-gateways.github-gateway.domain.domainPrivate.resolvedMvnDeps": {
+                  "provider-gateways.github-gateway.domain.domainPrivate.resolvedMvnDeps.super.javalib.JavaModule": {
+                    "provider-gateways.github-gateway.domain.domainPrivate.resolvedDepsWarnNonPlatform": {},
+                    "provider-gateways.github-gateway.domain.domainPrivate.artifactTypes": {}
+                  }
+                }
+              },
+              "provider-gateways.github-gateway.domain.domainPrivate.allScalacOptions": {
+                "provider-gateways.github-gateway.domain.domainPrivate.mandatoryScalacOptions": {},
+                "provider-gateways.github-gateway.domain.domainPrivate.enablePluginScalacOptions": {},
+                "provider-gateways.github-gateway.domain.domainPrivate.scalacOptions": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPrivate.scalaCompilerClasspath": {
+                "provider-gateways.github-gateway.domain.domainPrivate.platformSuffix": {},
+                "provider-gateways.github-gateway.domain.domainPrivate.scalaLibraryMvnDeps": {},
+                "provider-gateways.github-gateway.domain.domainPrivate.checkGradleModules": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPrivate.scalacPluginClasspath": {
+                "provider-gateways.github-gateway.domain.domainPrivate.scalacPluginMvnDeps": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPrivate.scalaCompilerBridge": {},
+              "provider-gateways.github-gateway.domain.domainPrivate.zincIncrementalCompilation": {},
+              "provider-gateways.github-gateway.domain.domainPrivate.zincAuxiliaryClassFileExtensions": {
+                "provider-gateways.github-gateway.domain.domainPrivate.zincAuxiliaryClassFileExtensions.super.javalib.JavaModule": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPrivate.javaHome": {
+                "provider-gateways.github-gateway.domain.domainPrivate.jvmVersion": {
+                  "provider-gateways.github-gateway.domain.domainPrivate.jvmId": {}
+                },
+                "provider-gateways.github-gateway.domain.domainPrivate.jvmIndexVersion": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPrivate.zincReportCachedProblems": {}
+            },
+            "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.compile": {
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.scalaVersion": {},
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.javacOptions": {},
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.mandatoryJavacOptions": {},
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.upstreamCompileOutput": {},
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.allSourceFiles": {
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.allSources": {
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.sources": {},
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.generatedSources": {}
+                },
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.wrappedSources": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.compileClasspath": {
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.resolvedMvnDeps": {
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.resolvedMvnDeps.super.javalib.JavaModule": {
+                    "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.resolvedDepsWarnNonPlatform": {},
+                    "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.artifactTypes": {}
+                  }
+                }
+              },
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.allScalacOptions": {
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.mandatoryScalacOptions": {},
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.enablePluginScalacOptions": {},
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.scalacOptions": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.scalaCompilerClasspath": {
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.platformSuffix": {},
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.scalaLibraryMvnDeps": {},
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.checkGradleModules": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.scalacPluginClasspath": {
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.scalacPluginMvnDeps": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.scalaCompilerBridge": {},
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.zincIncrementalCompilation": {},
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.zincAuxiliaryClassFileExtensions": {
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.zincAuxiliaryClassFileExtensions.super.javalib.JavaModule": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.javaHome": {
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.jvmVersion": {
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.jvmId": {}
+                },
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.jvmIndexVersion": {}
+              },
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.zincReportCachedProblems": {}
+            }
+          },
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.allSourceFiles": {
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.allSources": {
+              "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.sources": {},
+              "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.generatedSources": {}
+            },
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.wrappedSources": {}
+          },
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.compileClasspath": {
+            "provider-gateways.github-gateway.domain.domainPublic.jvm.localCompileClasspath": {
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.unmanagedClasspath": {},
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.unmanagedClasspathExistenceCheck": {},
+              "provider-gateways.github-gateway.domain.domainPublic.jvm.compileResources": {}
+            },
+            "provider-gateways.github-gateway.domain.domainPrivate.localCompileClasspath": {
+              "provider-gateways.github-gateway.domain.domainPrivate.unmanagedClasspath": {},
+              "provider-gateways.github-gateway.domain.domainPrivate.unmanagedClasspathExistenceCheck": {},
+              "provider-gateways.github-gateway.domain.domainPrivate.compileResources": {}
+            },
+            "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.localCompileClasspath": {
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.unmanagedClasspath": {},
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.unmanagedClasspathExistenceCheck": {},
+              "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.compileResources": {}
+            },
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.resolvedMvnDeps": {
+              "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.resolvedMvnDeps.super.javalib.JavaModule": {
+                "provider-gateways.github-gateway.domain.domainPrivate.mvnDeps": {
+                  "provider-gateways.github-gateway.domain.domainPrivate.mvnDeps.super.mill.javalib.JavaModule": {}
+                },
+                "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.mvnDeps": {},
+                "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.resolvedDepsWarnNonPlatform": {},
+                "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.mvnDeps": {},
+                "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.mandatoryMvnDeps": {
+                  "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.mandatoryMvnDeps.super.javalib.JavaModule": {}
+                },
+                "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.compileMvnDeps": {},
+                "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.runMvnDeps": {},
+                "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.bomMvnDeps": {},
+                "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.depManagement": {},
+                "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.transitiveCoursierProjects": {
+                  "provider-gateways.github-gateway.domain.domainPublic.jvm.mvnDeps": {
+                    "provider-gateways.github-gateway.domain.domainPublic.jvm.mvnDeps.super.mill.javalib.JavaModule": {}
+                  },
+                  "provider-gateways.github-gateway.domain.domainPrivate.mandatoryMvnDeps": {
+                    "provider-gateways.github-gateway.domain.domainPrivate.mandatoryMvnDeps.super.javalib.JavaModule": {}
+                  },
+                  "provider-gateways.github-gateway.domain.domainPrivate.compileMvnDeps": {},
+                  "provider-gateways.github-gateway.domain.domainPrivate.runMvnDeps": {},
+                  "provider-gateways.github-gateway.domain.domainPrivate.bomMvnDeps": {},
+                  "provider-gateways.github-gateway.domain.domainPrivate.depManagement": {},
+                  "provider-gateways.github-gateway.domain.domainPrivate.transitiveCoursierProjects": {},
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.mandatoryMvnDeps": {
+                    "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.mandatoryMvnDeps.super.javalib.JavaModule": {}
+                  },
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.compileMvnDeps": {},
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.runMvnDeps": {},
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.bomMvnDeps": {},
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.depManagement": {},
+                  "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.transitiveCoursierProjects": {}
+                },
+                "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.artifactTypes": {}
+              }
+            },
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.localCompileClasspath": {
+              "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.unmanagedClasspath": {},
+              "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.unmanagedClasspathExistenceCheck": {},
+              "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.compileResources": {}
+            }
+          },
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.allScalacOptions": {
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.mandatoryScalacOptions": {},
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.enablePluginScalacOptions": {},
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.scalacOptions": {}
+          },
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.scalaCompilerClasspath": {
+            "provider-gateways.github-gateway.domain.domainPublic.jvm.repositories": {},
+            "provider-gateways.github-gateway.domain.domainPrivate.repositories": {},
+            "provider-gateways.github-gateway.domain.domainPublicAdapterExtensions.zio-json.repositories": {},
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.platformSuffix": {},
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.scalaLibraryMvnDeps": {},
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.repositories": {},
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.checkGradleModules": {}
+          },
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.scalacPluginClasspath": {
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.scalacPluginMvnDeps": {}
+          },
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.scalaCompilerBridge": {},
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.zincIncrementalCompilation": {},
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.zincAuxiliaryClassFileExtensions": {
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.zincAuxiliaryClassFileExtensions.super.javalib.JavaModule": {}
+          },
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.zincReportCachedProblems": {}
+        }
+      }
+    },
+    "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.forkArgs": {},
+    "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.allForkEnv": {
+      "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.javaHomePathForkEnv": {
+        "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.javaHome": {
+          "mill.javalib.CoursierConfigModule/coursierEnv": {},
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.jvmVersion": {
+            "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.jvmId": {}
+          },
+          "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.jvmIndexVersion": {}
+        }
+      },
+      "provider-gateways.github-gateway.domain.domainPrivateAdapterExtensions.zio-json.forkEnv": {}
+    }
+  }
+}

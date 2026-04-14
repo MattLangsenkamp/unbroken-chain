@@ -1,0 +1,11 @@
+{
+    "value": [
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/reader/server/resources",
+        "ref:v0:8396b044:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/reader/server/compile.dest/classes"
+    ],
+    "valueHash": -961967155,
+    "inputsHash": 903564348,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

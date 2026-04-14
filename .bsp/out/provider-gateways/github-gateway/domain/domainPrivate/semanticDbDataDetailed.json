@@ -1,0 +1,14 @@
+{
+    "value": {
+        "compilationResult": {
+            "analysisFile": "/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPrivate/semanticDbDataDetailed.dest/zinc",
+            "classes": "ref:v0:9f99d081:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPrivate/semanticDbDataDetailed.dest/classes"
+        },
+        "semanticDbFiles": "ref:v0:9f99d081:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPrivate/semanticDbDataDetailed.dest/data"
+    },
+    "valueHash": 117483716,
+    "inputsHash": 1841184938,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

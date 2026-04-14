@@ -1,0 +1,50 @@
+compiling 1 Scala source to .bsp/out/provider-gateways/github-gateway/core/core-impl/compile.dest/classes ...
+[error] provider-gateways/github-gateway/core/core-impl/src/ubc/githubgateway/core/GitHubGatewayService.scala:16:16
+      userId = userId,
+               ^^^^^^
+Found:    (userId : ubc.githubgateway.domain.internal.UserId)
+Required: ubc.githubgateway.domain.internal.UserId²
+
+where:    UserId  is a class in package ubc.githubgateway.domain.internal
+          UserId² is a type in the top-level definitions in package internal which is an alias of ubc.githubgateway.domain.internal.UserId.Type
+
+
+[error] provider-gateways/github-gateway/core/core-impl/src/ubc/githubgateway/core/GitHubGatewayService.scala:27:69
+      _          <- ZIO.fail(Exception(s"No token for user ${userId.unwrap}")).when(maybeToken.isEmpty)
+                                                                    ^^^^^^
+value unwrap is not a member of ubc.githubgateway.domain.internal.UserId.
+An extension method was tried, but could not be fully constructed:
+
+    neotype.unwrap[A, ubc.githubgateway.domain.internal.UserId](userId)(
+      /* missing */
+        summon[neotype.Newtype.WithType[A, ubc.githubgateway.domain.internal.UserId]
+          ]
+    )
+
+    failed with:
+
+        No given instance of type neotype.Newtype.WithType[A, ubc.githubgateway.domain.internal.UserId] was found for parameter newtype of method unwrap in package neotype
+        
+        where:    A is a type variable
+        
+
+[error] provider-gateways/github-gateway/core/core-impl/src/ubc/githubgateway/core/GitHubGatewayService.scala:34:69
+      _          <- ZIO.fail(Exception(s"No token for user ${userId.unwrap}")).when(maybeToken.isEmpty)
+                                                                    ^^^^^^
+value unwrap is not a member of ubc.githubgateway.domain.internal.UserId.
+An extension method was tried, but could not be fully constructed:
+
+    neotype.unwrap[A, ubc.githubgateway.domain.internal.UserId](userId)(
+      /* missing */
+        summon[neotype.Newtype.WithType[A, ubc.githubgateway.domain.internal.UserId]
+          ]
+    )
+
+    failed with:
+
+        No given instance of type neotype.Newtype.WithType[A, ubc.githubgateway.domain.internal.UserId] was found for parameter newtype of method unwrap in package neotype
+        
+        where:    A is a type variable
+        
+
+[error] three errors found

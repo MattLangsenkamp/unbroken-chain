@@ -1,0 +1,12 @@
+{
+    "value": [
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/mill-build/resources",
+        "ref:v0:e300b5ea:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/mill-build/generatedScriptSources.dest/resources",
+        "ref:v0:6a34de16:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/mill-build/compile.dest/transformed-classes"
+    ],
+    "valueHash": 778951639,
+    "inputsHash": 256531857,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1359908518
+}

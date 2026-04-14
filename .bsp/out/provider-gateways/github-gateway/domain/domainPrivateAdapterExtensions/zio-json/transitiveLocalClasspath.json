@@ -1,0 +1,18 @@
+{
+    "value": [
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublic/jvm/compile-resources",
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublic/jvm/resources",
+        "ref:v0:e3db63a8:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPublic/jvm/compile.dest/classes",
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPrivate/compile-resources",
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPrivate/resources",
+        "ref:v0:40f7017f:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPrivate/compile.dest/classes",
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublicAdapterExtensions/zio-json/compile-resources",
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublicAdapterExtensions/zio-json/resources",
+        "ref:v0:896d206f:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPublicAdapterExtensions/zio-json/compile.dest/classes"
+    ],
+    "valueHash": 1775385619,
+    "inputsHash": -299161126,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

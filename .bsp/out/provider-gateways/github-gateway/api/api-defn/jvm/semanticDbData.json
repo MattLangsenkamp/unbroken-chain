@@ -1,0 +1,8 @@
+{
+    "value": "ref:v0:292ab729:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/api/api-defn/jvm/semanticDbDataDetailed.dest/data",
+    "valueHash": -575163193,
+    "inputsHash": -1867271664,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

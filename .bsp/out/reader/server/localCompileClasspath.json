@@ -1,0 +1,10 @@
+{
+    "value": [
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/reader/server/compile-resources"
+    ],
+    "valueHash": -935473049,
+    "inputsHash": 744078302,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

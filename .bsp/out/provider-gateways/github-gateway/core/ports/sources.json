@@ -1,0 +1,10 @@
+{
+    "value": [
+        "ref:v0:9a68a531:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/core/ports/src"
+    ],
+    "valueHash": 1244064614,
+    "inputsHash": 865662313,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

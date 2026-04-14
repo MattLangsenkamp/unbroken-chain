@@ -1,0 +1,10 @@
+{
+    "value": [
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPrivateAdapterExtensions/zio-json/resources"
+    ],
+    "valueHash": -2063712850,
+    "inputsHash": 1770069092,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

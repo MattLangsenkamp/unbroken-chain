@@ -1,0 +1,17 @@
+{
+    "value": {
+        "$type": "DestPath",
+        "subPath": "",
+        "segments": [
+            "provider-gateways",
+            "github-gateway",
+            "presentation",
+            "compiledClassesAndSemanticDbFiles"
+        ]
+    },
+    "valueHash": -88733239,
+    "inputsHash": -1773195669,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

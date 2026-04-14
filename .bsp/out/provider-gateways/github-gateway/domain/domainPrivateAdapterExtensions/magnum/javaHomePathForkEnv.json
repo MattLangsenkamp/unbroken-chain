@@ -1,0 +1,10 @@
+{
+    "value": {
+        "PATH": "/home/mattlang/.cache/coursier/arc/https/cdn.azul.com/zulu/bin/zulu21.48.15-ca-jdk21.0.10-linux_x64.tar.gz/zulu21.48.15-ca-jdk21.0.10-linux_x64/bin:/home/mattlang/.cache/coursier/arc/https/github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.1%252B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.1_8.tar.gz/jdk-25.0.1+8/bin:/home/mattlang/.opencode/bin:/usr/local/cuda/bin:/home/mattlang/.local/bin:/home/mattlang/.nvm/versions/node/v16.20.0/bin:/home/mattlang/anaconda3/condabin:/home/mattlang/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/mattlang/.local/share/JetBrains/Toolbox/scripts:/home/mattlang/.local/share/coursier/bin:/home/mattlang/.cache/scalacli/local-repo/bin/scala-cli:/home/mattlang/.cache/coursier/arc/https/github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.1%252B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.1_8.tar.gz/jdk-25.0.1+8/bin:/home/mattlang/.local/share/coursier/bin:/home/mattlang/.cache/scalacli/local-repo/bin/scala-cli:/home/mattlang/.cache/coursier/arc/https/github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.1%252B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.1_8.tar.gz/jdk-25.0.1+8/bin:/usr/local/go/bin:/home/mattlang/.pulumi/bin"
+    },
+    "valueHash": -1612019285,
+    "inputsHash": -379707993,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

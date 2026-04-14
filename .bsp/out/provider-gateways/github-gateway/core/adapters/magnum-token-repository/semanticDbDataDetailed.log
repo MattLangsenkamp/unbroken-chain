@@ -1,0 +1,12 @@
+compiling 1 Scala source to .bsp/out/provider-gateways/github-gateway/core/adapters/magnum-token-repository/semanticDbDataDetailed.dest/classes ...
+provider-gateways/github-gateway/core/adapters/magnum-token-repository/src/ubc/githubgateway/core/adapters/magnum/MagnumTokenRepository.scala:19:7
+      sql"""
+      ^^^
+Could not find given DbCodec for token.userId. Using PreparedStatement::setObject instead.
+
+[error] provider-gateways/github-gateway/core/adapters/magnum-token-repository/src/ubc/githubgateway/core/adapters/magnum/MagnumTokenRepository.scala:13:40
+private given DbCodec[InternalToken] = DbCodec.derived[InternalToken]
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Cannot find a DbCodec instance for ubc.githubgateway.domain.internal.InternalToken$package.UserId.Type! Provide one or derive it.
+
+[error] one error found

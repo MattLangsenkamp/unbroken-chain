@@ -1,0 +1,10 @@
+{
+    "value": [
+        "ref:v0:75cf8bca:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/api/internal-api-adapters/http/src"
+    ],
+    "valueHash": 91834137,
+    "inputsHash": 1804210923,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

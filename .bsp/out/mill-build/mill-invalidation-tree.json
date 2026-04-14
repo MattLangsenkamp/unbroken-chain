@@ -1,0 +1,15 @@
+{
+  "resolvedMvnDeps.super.javalib.JavaModule": {
+    "resolvedMvnDeps": {
+      "compileClasspath": {
+        "compile": {
+          "localRunClasspath": {
+            "allLocalMainClasses": {
+              "internalBspJavaModule.bspBuildTargetScalaMainClasses": {}
+            }
+          }
+        }
+      }
+    }
+  }
+}

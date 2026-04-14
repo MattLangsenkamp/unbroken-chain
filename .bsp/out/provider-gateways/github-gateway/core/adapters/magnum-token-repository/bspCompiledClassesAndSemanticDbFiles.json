@@ -1,0 +1,19 @@
+{
+    "value": {
+        "$type": "DestPath",
+        "subPath": "",
+        "segments": [
+            "provider-gateways",
+            "github-gateway",
+            "core",
+            "adapters",
+            "magnum-token-repository",
+            "compiledClassesAndSemanticDbFiles"
+        ]
+    },
+    "valueHash": -374537666,
+    "inputsHash": 668468488,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

@@ -1,0 +1,11 @@
+{
+    "value": {
+        "analysisFile": "/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/mill-build/compile.dest/zinc",
+        "classes": "ref:v0:6a34de16:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/mill-build/compile.dest/transformed-classes"
+    },
+    "valueHash": -16469883,
+    "inputsHash": 809460530,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1359908518
+}

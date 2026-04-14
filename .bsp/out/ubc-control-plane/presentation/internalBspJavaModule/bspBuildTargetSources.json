@@ -1,0 +1,15 @@
+{
+    "value": {
+        "sources": [
+            "file:///home/mattlang/Documents/projects/unbroken-chain/ubc-control-plane/presentation/src/"
+        ],
+        "generatedSources": [
+            "file:///home/mattlang/Documents/projects/unbroken-chain/.bsp/out/ubc-control-plane/presentation/compileGeneratedSources.dest/"
+        ]
+    },
+    "valueHash": -1799849445,
+    "inputsHash": 1260733147,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

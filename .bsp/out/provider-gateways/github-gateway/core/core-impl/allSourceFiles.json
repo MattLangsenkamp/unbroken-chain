@@ -1,0 +1,10 @@
+{
+    "value": [
+        "ref:v0:c0d78a37:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/core/core-impl/src/ubc/githubgateway/core/GitHubGatewayService.scala"
+    ],
+    "valueHash": -1418593461,
+    "inputsHash": 1272593425,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

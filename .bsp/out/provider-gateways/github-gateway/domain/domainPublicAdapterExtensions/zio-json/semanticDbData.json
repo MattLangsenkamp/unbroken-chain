@@ -1,0 +1,8 @@
+{
+    "value": "ref:v0:1bdf55d3:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPublicAdapterExtensions/zio-json/semanticDbDataDetailed.dest/data",
+    "valueHash": -1973225268,
+    "inputsHash": -268643482,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

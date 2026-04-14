@@ -1,0 +1,15 @@
+{
+    "value": [
+        "dev.zio::zio:2.1.17",
+        "com.softwaremill.sttp.tapir::tapir-core:1.11.9",
+        "com.softwaremill.sttp.tapir::tapir-json-zio:1.11.9",
+        "com.softwaremill.sttp.tapir::tapir-sttp-client:1.11.9",
+        "com.softwaremill.sttp.client3::zio:3.9.8",
+        "io.github.kitlangton::neotype-tapir:0.4.10"
+    ],
+    "valueHash": -1637493569,
+    "inputsHash": 103950906,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

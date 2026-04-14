@@ -1,0 +1,1 @@
+{"name":"mill-bsp","argv":["/home/mattlang/.cache/mill/download/1.1.5","--bsp","--jobs","0"],"millVersion":"1.1.5","bspVersion":"2.2.0-M2","languages":["java","scala","kotlin"]}

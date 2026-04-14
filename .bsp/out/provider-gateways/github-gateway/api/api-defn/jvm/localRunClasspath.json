@@ -1,0 +1,11 @@
+{
+    "value": [
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/api/api-defn/jvm/resources",
+        "ref:v0:a899e045:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/api/api-defn/jvm/compile.dest/classes"
+    ],
+    "valueHash": 1509840497,
+    "inputsHash": 1710947777,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}

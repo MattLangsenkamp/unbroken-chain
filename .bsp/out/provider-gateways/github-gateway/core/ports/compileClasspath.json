@@ -1,0 +1,24 @@
+{
+    "value": [
+        "qref:v1:e2a6a868:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.6.4/scala3-library_3-3.6.4.jar",
+        "qref:v1:e9d83acf:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio_3/2.1.17/zio_3-2.1.17.jar",
+        "qref:v1:0dfa24cc:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/neotype_3/0.4.10/neotype_3-0.4.10.jar",
+        "qref:v1:f3eb0863:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.15/scala-library-2.13.15.jar",
+        "qref:v1:7d1167dd:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-internal-macros_3/2.1.17/zio-internal-macros_3-2.1.17.jar",
+        "qref:v1:2e8ebd90:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-stacktracer_3/2.1.17/zio-stacktracer_3-2.1.17.jar",
+        "qref:v1:21f13c3d:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect_3/3.0.1/izumi-reflect_3-3.0.1.jar",
+        "qref:v1:6a67e1cc:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/neotype-internal_3/0.4.10/neotype-internal_3-0.4.10.jar",
+        "qref:v1:8e96feb9:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/kitlangton/comptime_3/0.4.10/comptime_3-0.4.10.jar",
+        "qref:v1:67394c5f:/home/mattlang/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect-thirdparty-boopickle-shaded_3/3.0.1/izumi-reflect-thirdparty-boopickle-shaded_3-3.0.1.jar",
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPublic/jvm/compile-resources",
+        "ref:v0:e3db63a8:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPublic/jvm/compile.dest/classes",
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/domain/domainPrivate/compile-resources",
+        "ref:v0:40f7017f:/home/mattlang/Documents/projects/unbroken-chain/.bsp/out/provider-gateways/github-gateway/domain/domainPrivate/compile.dest/classes",
+        "ref:v0:c984eca8:/home/mattlang/Documents/projects/unbroken-chain/provider-gateways/github-gateway/core/ports/compile-resources"
+    ],
+    "valueHash": 317675116,
+    "inputsHash": -1225382091,
+    "millVersion": "1.1.5",
+    "millJvmVersion": "21.0.10",
+    "classLoaderSigHash": 1674501542
+}
