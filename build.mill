@@ -283,6 +283,10 @@ object `provider-gateways` extends Module {
 
     object presentation extends PresentationModule {
       override def moduleDeps = Seq(api.`external-api-adapters`.`js-http`)
+      override def mvnDeps = super.mvnDeps() ++ Seq(
+        mvn"io.indigoengine:tyrian-zio_sjs1_3:0.14.0",
+        mvn"dev.zio:zio-interop-cats_sjs1_3:23.1.0.3"
+      )
     }
 
     object server extends ServiceModule {

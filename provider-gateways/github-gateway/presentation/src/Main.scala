@@ -1,41 +1,33 @@
 import tyrian.*
 import tyrian.Html.*
-import cats.effect.IO
 import scala.scalajs.js.annotation.JSExportTopLevel
 import ubc.githubgateway.api.GitHubGatewayApi
 import ubc.githubgateway.api.external.http.GitHubGatewayJsClient
 import ubc.githubgateway.domain.GitHubRepo
 import zio.*
+import zio.interop.catz.*
 
 // @JSExportTopLevel on the object causes it to be initialized at module load time.
-// TyrianIOApp.$init$ then calls this.main([]) via unsafeRunAndForget.
+// TyrianZIOApp.$init$ then calls this.main([]) via unsafeRunAndForget.
 @JSExportTopLevel("TyrianApp")
-object Main extends TyrianIOApp[Msg, Model]:
+object Main extends TyrianZIOApp[Msg, Model]:
 
-  // Called by TyrianIOApp.$init$ — mounts the app to <div id="app">
+  // Called by TyrianZIOApp.$init$ — mounts the app to <div id="app">
   def main(args: Array[String]): Unit = launch("app")
-
-  // Bridge ZIO Task → Cats Effect IO using the ZIO JS runtime (event-loop backed).
-  private def runTask[A](task: Task[A]): IO[A] =
-    IO.fromFuture(IO(
-      Unsafe.unsafe { implicit unsafe =>
-        Runtime.default.unsafe.runToFuture(task)
-      }
-    ))
 
   def router: Location => Msg = _ => Msg.NoOp
 
-  def init(flags: Map[String, String]): (Model, Cmd[IO, Msg]) =
+  def init(flags: Map[String, String]): (Model, Cmd[Task, Msg]) =
     val baseUrl = flags.getOrElse("apiBase", "http://localhost:8080")
     val client: GitHubGatewayApi = GitHubGatewayJsClient(baseUrl)
     val fetchCmd = Cmd.Run(
-      runTask(client.listRepos("scala"))
+      client.listRepos("scala")
         .map(Msg.ReposLoaded.apply)
-        .handleError(e => Msg.FetchFailed(e.getMessage))
+        .catchAll(e => ZIO.succeed(Msg.FetchFailed(e.getMessage)))
     )
     (Model.init, fetchCmd)
 
-  def update(model: Model): Msg => (Model, Cmd[IO, Msg]) =
+  def update(model: Model): Msg => (Model, Cmd[Task, Msg]) =
     case Msg.NoOp               => (model, Cmd.None)
     case Msg.ReposLoaded(repos) => (model.copy(repos = repos), Cmd.None)
     case Msg.FetchFailed(err)   => (model.copy(error = Some(err)), Cmd.None)
@@ -52,7 +44,7 @@ object Main extends TyrianIOApp[Msg, Model]:
           ul()(model.repos.map(r => li()(text(s"${r.owner}/${r.name}")))*)
     )
 
-  def subscriptions(model: Model): Sub[IO, Msg] = Sub.None
+  def subscriptions(model: Model): Sub[Task, Msg] = Sub.None
 
 case class Model(repos: List[GitHubRepo] = Nil, error: Option[String] = None)
 object Model:
