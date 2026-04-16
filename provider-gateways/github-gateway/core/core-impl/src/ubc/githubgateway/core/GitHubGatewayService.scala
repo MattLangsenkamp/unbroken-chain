@@ -30,6 +30,7 @@ case class GitHubGatewayService(github: GitHubPort, tokenRepo: TokenRepository):
 
   def listUserRepos(userId: UserId, owner: RepoOwner): Task[List[GitHubRepo]] =
     for
+      _          <- ZIO.log(s"$userId")
       maybeToken <- tokenRepo.findByUserId(userId)
       _          <- ZIO.fail(Exception(s"No token for user ${userId.unwrap}")).when(maybeToken.isEmpty)
       repos      <- github.listRepos(owner)

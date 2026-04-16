@@ -212,6 +212,13 @@ object `provider-gateways` extends Module {
           )
           override def mvnDeps = zioDeps ++ magnumDeps
         }
+
+        // In-memory TokenRepository for local dev and testing — no DB required.
+        object `in-memory-token-repository` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+        }
       }
     }
 
@@ -293,7 +300,7 @@ object `provider-gateways` extends Module {
       override def moduleDeps = Seq(
         core.`core-impl`,
         core.adapters.`tapir-github-client`,
-        core.adapters.`magnum-token-repository`,
+        core.adapters.`in-memory-token-repository`,
         api.`internal-api-adapters`.http
       )
       object docker extends ServiceDockerConfig {
