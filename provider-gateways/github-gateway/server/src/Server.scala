@@ -1,14 +1,21 @@
 package ubc.githubgateway.server
 
 import ubc.githubgateway.api.internal.http.GitHubGatewayHttpController
+import ubc.githubgateway.config.DatabaseConfig
 import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.core.adapters.tapir.TapirGitHubClient
-import ubc.githubgateway.core.adapters.inmemory.InMemoryTokenRepository
+import ubc.githubgateway.core.adapters.magnum.MagnumTokenRepository
+import com.augustnagro.magnum.magzio.TransactorZIO
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio.*
 import zio.http.{Header, Middleware, Response, Routes, Server as ZioServer}
 
 object Server extends ZIOAppDefault:
+
+  // Use environment variables as config source; snakeCase maps e.g.
+  // postgresHost → POSTGRES_HOST, postgresPassword → POSTGRES_PASSWORD.
+  override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
+    Runtime.setConfigProvider(ConfigProvider.envProvider.snakeCase)
 
   // Allow any *.localhost or bare localhost origin — covers local k8s (github.localhost)
   // and vite dev (localhost:5173) without hardcoding ports.
@@ -35,8 +42,11 @@ object Server extends ZIOAppDefault:
 
         // Driven adapters
         TapirGitHubClient.layer,
-        InMemoryTokenRepository.layer,
+        MagnumTokenRepository.layer,
 
         // Infrastructure
+        TransactorZIO.layer,
+        DatabaseConfig.dataSourceLayer,
+        DatabaseConfig.layer,
         HttpClientZioBackend.layer()
       )
