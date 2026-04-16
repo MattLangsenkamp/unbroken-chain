@@ -10,7 +10,7 @@ import mill.scalajslib.api.ModuleKind
 import com.github.lolgab.mill.scalablytyped.*
 
 val scalaVer   = "3.6.4"
-val scalaJSVer = "1.19.0"
+val scalaJSVer = "1.20.2"
 
 val zioDeps = Seq(
   mvn"dev.zio::zio:2.1.17"
@@ -57,6 +57,7 @@ val neotypeZioJsonDeps = Seq(
 val neotypeTapirDeps = Seq(
   mvn"io.github.kitlangton::neotype-tapir:0.4.10"
 )
+
 
 trait ServiceModule extends ScalaModule with DockerModule {
   def scalaVersion = scalaVer
@@ -112,7 +113,11 @@ object `provider-gateways` extends Module {
           override def mvnDeps = super.mvnDeps() ++ neotypeDeps
         }
         object jvm extends Shared
-        object js extends Shared with ScalaJSModule { def scalaJSVersion = scalaJSVer }
+        object js extends Shared with ScalaJSModule {
+          def scalaJSVersion = scalaJSVer
+          // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+          override def mvnDeps = Seq(mvn"io.github.kitlangton:neotype_sjs1_3:0.4.10")
+        }
       }
 
       object domainPrivate extends ScalaModule {
@@ -123,10 +128,24 @@ object `provider-gateways` extends Module {
 
       object domainPublicAdapterExtensions extends Module {
 
-        object `zio-json` extends ScalaModule {
-          def scalaVersion = scalaVer
-          override def moduleDeps = Seq(domainPublic.jvm)
-          override def mvnDeps = zioJsonDeps ++ neotypeZioJsonDeps
+        object `zio-json` extends Module {
+          trait Shared extends ScalaModule {
+            def scalaVersion = scalaVer
+            override def sources = Task.Sources(moduleDir / os.up / "src")
+            override def mvnDeps = zioJsonDeps ++ neotypeZioJsonDeps
+          }
+          object jvm extends Shared {
+            override def moduleDeps = Seq(domainPublic.jvm)
+          }
+          object js extends Shared with ScalaJSModule {
+            def scalaJSVersion = scalaJSVer
+            override def moduleDeps = Seq(domainPublic.js)
+            // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+            override def mvnDeps = Seq(
+              mvn"dev.zio:zio-json_sjs1_3:0.7.3",
+              mvn"io.github.kitlangton:neotype-zio-json_sjs1_3:0.4.10"
+            )
+          }
         }
 
         object magnum extends ScalaModule {
@@ -140,7 +159,7 @@ object `provider-gateways` extends Module {
 
         object `zio-json` extends ScalaModule {
           def scalaVersion = scalaVer
-          override def moduleDeps = Seq(domainPrivate, domainPublicAdapterExtensions.`zio-json`)
+          override def moduleDeps = Seq(domainPrivate, domainPublicAdapterExtensions.`zio-json`.jvm)
           override def mvnDeps = zioJsonDeps
         }
 
@@ -177,7 +196,7 @@ object `provider-gateways` extends Module {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
-            domain.domainPublicAdapterExtensions.`zio-json`
+            domain.domainPublicAdapterExtensions.`zio-json`.jvm
           )
           override def mvnDeps = zioDeps ++ tapirClientDeps ++ neotypeTapirDeps
         }
@@ -192,6 +211,13 @@ object `provider-gateways` extends Module {
             domain.domainPrivateAdapterExtensions.magnum
           )
           override def mvnDeps = zioDeps ++ magnumDeps
+        }
+
+        // In-memory TokenRepository for local dev and testing — no DB required.
+        object `in-memory-token-repository` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
         }
       }
     }
@@ -213,6 +239,8 @@ object `provider-gateways` extends Module {
         object js extends Shared with ScalaJSModule {
           def scalaJSVersion = scalaJSVer
           override def moduleDeps = Seq(domain.domainPublic.js)
+          // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+          override def mvnDeps = Seq(mvn"dev.zio:zio_sjs1_3:2.1.17")
         }
       }
 
@@ -224,7 +252,7 @@ object `provider-gateways` extends Module {
           override def moduleDeps = Seq(
             `api-defn`.jvm,
             core.`core-impl`,
-            domain.domainPublicAdapterExtensions.`zio-json`
+            domain.domainPublicAdapterExtensions.`zio-json`.jvm
           )
           override def mvnDeps = zioDeps ++ tapirServerDeps ++ neotypeTapirDeps
         }
@@ -237,20 +265,42 @@ object `provider-gateways` extends Module {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             `api-defn`.jvm,
-            domain.domainPublicAdapterExtensions.`zio-json`
+            domain.domainPublicAdapterExtensions.`zio-json`.jvm
           )
           override def mvnDeps = zioDeps ++ tapirClientDeps ++ neotypeTapirDeps
+        }
+
+        // Scala.js HTTP client for the Tyrian SPA. FetchZioBackend wraps the browser's fetch
+        // API returning ZIO Task — the same effect type as GitHubGatewayApi, so the JS client
+        // can implement the same port trait as the JVM client.
+        // Explicit _sjs1_3 artifact name required for ScalaJS resolution.
+        object `js-http` extends ScalaJSModule {
+          def scalaVersion = scalaVer
+          def scalaJSVersion = scalaJSVer
+          override def moduleDeps = Seq(
+            `api-defn`.js,
+            domain.domainPublicAdapterExtensions.`zio-json`.js
+          )
+          override def mvnDeps = Seq(
+            mvn"com.softwaremill.sttp.client3:zio_sjs1_3:3.9.8"
+          )
         }
       }
     }
 
-    object presentation extends PresentationModule
+    object presentation extends PresentationModule {
+      override def moduleDeps = Seq(api.`external-api-adapters`.`js-http`)
+      override def mvnDeps = super.mvnDeps() ++ Seq(
+        mvn"io.indigoengine:tyrian-zio_sjs1_3:0.14.0",
+        mvn"dev.zio:zio-interop-cats_sjs1_3:23.1.0.3"
+      )
+    }
 
     object server extends ServiceModule {
       override def moduleDeps = Seq(
         core.`core-impl`,
         core.adapters.`tapir-github-client`,
-        core.adapters.`magnum-token-repository`,
+        core.adapters.`in-memory-token-repository`,
         api.`internal-api-adapters`.http
       )
       object docker extends ServiceDockerConfig {

@@ -3,17 +3,28 @@ package ubc.githubgateway.server
 import ubc.githubgateway.api.internal.http.GitHubGatewayHttpController
 import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.core.adapters.tapir.TapirGitHubClient
-import ubc.githubgateway.core.adapters.magnum.MagnumTokenRepository
-import com.augustnagro.magnum.magzio.TransactorZIO
+import ubc.githubgateway.core.adapters.inmemory.InMemoryTokenRepository
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio.*
-import zio.http.{Response, Routes, Server as ZioServer}
+import zio.http.{Header, Middleware, Response, Routes, Server as ZioServer}
 
 object Server extends ZIOAppDefault:
+
+  // Allow any *.localhost or bare localhost origin — covers local k8s (github.localhost)
+  // and vite dev (localhost:5173) without hardcoding ports.
+  private val corsConfig = Middleware.CorsConfig(
+    allowedOrigin = {
+      case origin @ Header.Origin.Value(_, host, _)
+          if host == "localhost" || host.endsWith(".localhost") =>
+        Some(Header.AccessControlAllowOrigin.Specific(origin))
+      case _ => None
+    }
+  )
+
   def run =
     ZIO
       .serviceWithZIO[Routes[Any, Response]](routes =>
-        ZioServer.serve(routes).provide(ZioServer.default)
+        ZioServer.serve(routes @@ Middleware.cors(corsConfig)).provide(ZioServer.default)
       )
       .provide(
         // HTTP routes wired from core
@@ -24,12 +35,8 @@ object Server extends ZIOAppDefault:
 
         // Driven adapters
         TapirGitHubClient.layer,
-        MagnumTokenRepository.layer,
+        InMemoryTokenRepository.layer,
 
         // Infrastructure
-        HttpClientZioBackend.layer(),
-        TransactorZIO.layer,
-
-        // TODO: wire a real DataSource (HikariCP + config) here
-        ZLayer.fail(new Exception("DataSource not configured"))
+        HttpClientZioBackend.layer()
       )

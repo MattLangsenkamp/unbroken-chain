@@ -17,22 +17,22 @@ import zio.http.{Response, Routes}
 // decodes requests, and immediately delegates to core. No business logic here.
 object GitHubGatewayHttpController:
 
-  private val base = endpoint.in("github-gateway")
-
+  // Traefik strips the /github-gateway prefix before forwarding to this pod,
+  // so routes here begin at /repos/... and /users/... — no prefix.
   val getRepoEndpoint =
-    base.get
+    endpoint.get
       .in("repos" / path[String]("owner") / path[String]("repo"))
       .out(jsonBody[GitHubRepo])
       .errorOut(stringBody)
 
   val listReposEndpoint =
-    base.get
+    endpoint.get
       .in("users" / path[String]("owner") / "repos")
       .out(jsonBody[List[GitHubRepo]])
       .errorOut(stringBody)
 
   val triggerSyncEndpoint =
-    base.post
+    endpoint.post
       .in("repos" / path[String]("owner") / path[String]("repo") / "sync")
       .out(emptyOutput)
       .errorOut(stringBody)
