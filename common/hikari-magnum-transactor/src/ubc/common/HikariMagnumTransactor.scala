@@ -1,24 +1,28 @@
-package ubc.githubgateway.config
+package ubc.common
 
+import com.augustnagro.magnum.magzio.TransactorZIO
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import zio.*
 import zio.config.magnolia.*
 
 import javax.sql.DataSource
 
-final case class DatabaseConfig(
+private final case class DatabaseConfig(
   postgresHost: String,
   postgresDb: String,
   postgresUser: String,
   postgresPassword: String
 ) derives Config
 
-object DatabaseConfig:
+object HikariMagnumTransactor:
 
-  val layer: TaskLayer[DatabaseConfig] =
+  val layer: TaskLayer[TransactorZIO] =
+    configLayer >>> dataSourceLayer >>> TransactorZIO.layer
+
+  private val configLayer: TaskLayer[DatabaseConfig] =
     ZLayer.fromZIO(ZIO.config[DatabaseConfig])
 
-  val dataSourceLayer: ZLayer[DatabaseConfig, Throwable, DataSource] =
+  private val dataSourceLayer: ZLayer[DatabaseConfig, Throwable, DataSource] =
     ZLayer.scoped(
       for
         cfg  <- ZIO.service[DatabaseConfig]

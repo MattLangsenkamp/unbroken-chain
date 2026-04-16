@@ -1,11 +1,10 @@
 package ubc.githubgateway.server
 
 import ubc.githubgateway.api.internal.http.GitHubGatewayHttpController
-import ubc.githubgateway.config.DatabaseConfig
 import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.core.adapters.tapir.TapirGitHubClient
 import ubc.githubgateway.core.adapters.magnum.MagnumTokenRepository
-import com.augustnagro.magnum.magzio.TransactorZIO
+import ubc.common.HikariMagnumTransactor
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio.*
 import zio.http.{Header, Middleware, Response, Routes, Server as ZioServer}
@@ -45,8 +44,6 @@ object Server extends ZIOAppDefault:
         MagnumTokenRepository.layer,
 
         // Infrastructure
-        TransactorZIO.layer,
-        DatabaseConfig.dataSourceLayer,
-        DatabaseConfig.layer,
+        HikariMagnumTransactor.layer,
         HttpClientZioBackend.layer()
       )

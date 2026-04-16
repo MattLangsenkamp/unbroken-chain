@@ -13,7 +13,7 @@ Choose the reference most relevant to your task:
 
 | Reference | When to use it |
 |---|---|
-| [`references/SERVICE_SETUP.md`](references/SERVICE_SETUP.md) | Project structure, build conventions, service patterns, ZIO layer wiring |
+| [`references/SERVICE_SETUP.md`](references/SERVICE_SETUP.md) | Project structure, build conventions, service patterns, ZIO layer wiring, `common` module |
 | [`references/DOMAIN_MODELING.md`](references/DOMAIN_MODELING.md) | Case classes, enums, newtypes, opaque types, JSON codecs |
 | [`references/CONFIGURATION.md`](references/CONFIGURATION.md) | Config classes, environment variables, `zio-config` derivation |
 

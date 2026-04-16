@@ -80,8 +80,16 @@ Cross-service shared infrastructure lives in:
 
 ```
 common/
-  <module-name>/src/   package: common.<modulename>
+  <module-name>/src/   package: ubc.common
 ```
+
+Examples of what belongs in `common`:
+- **DB connection pool** — `hikari-magnum-transactor`: reads `POSTGRES_*` env vars, builds a `HikariDataSource`, exposes `HikariMagnumTransactor.layer: TaskLayer[TransactorZIO]`
+- **Telemetry / OTel** — meter setup, span helpers, log enrichment
+- **Common middlewares** — auth, rate limiting, request ID propagation
+- **Shared HTTP client config** — base URLs, retry policies, circuit breakers
+
+Do **not** put domain types, business logic, or service-specific adapters in `common`. A module belongs in `common` only if at least two services need it identically.
 
 ### domainPublic
 

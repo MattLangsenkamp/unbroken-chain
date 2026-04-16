@@ -292,14 +292,6 @@ object `provider-gateways` extends Module {
       }
     }
 
-    object config extends ScalaModule {
-      def scalaVersion = scalaVer
-      override def mvnDeps = zioDeps ++ zioConfigDeps ++ Seq(
-        mvn"com.zaxxer:HikariCP:5.1.0",
-        mvn"org.postgresql:postgresql:42.7.2"
-      )
-    }
-
     object presentation extends PresentationModule {
       override def moduleDeps = Seq(api.`external-api-adapters`.`js-http`)
       override def mvnDeps = super.mvnDeps() ++ Seq(
@@ -314,12 +306,27 @@ object `provider-gateways` extends Module {
         core.adapters.`tapir-github-client`,
         core.adapters.`magnum-token-repository`,
         api.`internal-api-adapters`.http,
-        config
+        common.`hikari-magnum-transactor`
       )
       object docker extends ServiceDockerConfig {
         def tags = List("unbrokenchain/github-gateway:latest")
       }
     }
+  }
+}
+
+object common extends Module {
+
+  // Postgres connection pool wired to Magnum's TransactorZIO.
+  // Reads POSTGRES_HOST / POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD from the
+  // environment (set ConfigProvider.envProvider.snakeCase in your server's bootstrap).
+  // Exposes a single TaskLayer[TransactorZIO] — wire it in any service that needs DB access.
+  object `hikari-magnum-transactor` extends ScalaModule {
+    def scalaVersion = scalaVer
+    override def mvnDeps = zioDeps ++ zioConfigDeps ++ magnumDeps ++ Seq(
+      mvn"com.zaxxer:HikariCP:5.1.0",
+      mvn"org.postgresql:postgresql:42.7.2"
+    )
   }
 }
 
