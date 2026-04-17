@@ -58,6 +58,10 @@ val neotypeTapirDeps = Seq(
   mvn"io.github.kitlangton::neotype-tapir:0.4.10"
 )
 
+val zioConfigDeps = Seq(
+  mvn"dev.zio::zio-config-magnolia:4.0.3"
+)
+
 
 trait ServiceModule extends ScalaModule with DockerModule {
   def scalaVersion = scalaVer
@@ -300,13 +304,29 @@ object `provider-gateways` extends Module {
       override def moduleDeps = Seq(
         core.`core-impl`,
         core.adapters.`tapir-github-client`,
-        core.adapters.`in-memory-token-repository`,
-        api.`internal-api-adapters`.http
+        core.adapters.`magnum-token-repository`,
+        api.`internal-api-adapters`.http,
+        common.`hikari-magnum-transactor`
       )
       object docker extends ServiceDockerConfig {
         def tags = List("unbrokenchain/github-gateway:latest")
       }
     }
+  }
+}
+
+object common extends Module {
+
+  // Postgres connection pool wired to Magnum's TransactorZIO.
+  // Reads POSTGRES_HOST / POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD from the
+  // environment (set ConfigProvider.envProvider.snakeCase in your server's bootstrap).
+  // Exposes a single TaskLayer[TransactorZIO] — wire it in any service that needs DB access.
+  object `hikari-magnum-transactor` extends ScalaModule {
+    def scalaVersion = scalaVer
+    override def mvnDeps = zioDeps ++ zioConfigDeps ++ magnumDeps ++ Seq(
+      mvn"com.zaxxer:HikariCP:5.1.0",
+      mvn"org.postgresql:postgresql:42.7.2"
+    )
   }
 }
 
