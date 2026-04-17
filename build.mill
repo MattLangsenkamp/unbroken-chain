@@ -81,6 +81,10 @@ val zioConfigDeps = Seq(
   mvn"dev.zio::zio-config-magnolia:4.0.3"
 )
 
+val otelSemconvDeps = Seq(
+  mvn"io.opentelemetry.semconv:opentelemetry-semconv:1.29.0-alpha"
+)
+
 
 trait ServiceModule extends ScalaModule with DockerModule {
   def scalaVersion = scalaVer
@@ -275,7 +279,8 @@ object `provider-gateways` extends Module {
           override def moduleDeps = Seq(
             `api-defn`.jvm,
             core.`core-impl`,
-            domain.domainPublicAdapterExtensions.`zio-json`.jvm
+            domain.domainPublicAdapterExtensions.`zio-json`.jvm,
+            common.`tapir-tracing-interceptor`
           )
           override def mvnDeps = zioDeps ++ tapirServerDeps ++ neotypeTapirDeps
         }
@@ -377,6 +382,14 @@ object common extends Module {
   object `cors-middleware` extends ScalaModule {
     def scalaVersion = scalaVer
     override def mvnDeps = zioHttpDeps
+  }
+
+  // Tapir tracing interceptor: TapirTracingInterceptor.serverOptions(tracing) returns
+  // ZioHttpServerOptions with a TracingInterceptor — gives every Tapir endpoint an OTel
+  // server span with W3C trace-context propagation. Adapted from kinoplan/utils (Apache 2.0).
+  object `tapir-tracing-interceptor` extends ScalaModule {
+    def scalaVersion = scalaVer
+    override def mvnDeps = tapirServerDeps ++ zioOtelDeps ++ otelSemconvDeps
   }
 }
 

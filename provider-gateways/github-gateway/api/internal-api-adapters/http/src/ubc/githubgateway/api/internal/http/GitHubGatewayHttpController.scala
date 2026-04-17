@@ -5,6 +5,7 @@ import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.internal.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
+import ubc.common.TapirTracingInterceptor
 import neotype.interop.tapir.given
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.zio.*
@@ -12,6 +13,7 @@ import sttp.tapir.server.ziohttp.*
 import sttp.tapir.ztapir.*
 import zio.*
 import zio.http.{Response, Routes}
+import zio.telemetry.opentelemetry.tracing.Tracing
 
 // Inbound HTTP adapter. Defines the Tapir endpoint shapes for this service,
 // decodes requests, and immediately delegates to core. No business logic here.
@@ -37,7 +39,9 @@ object GitHubGatewayHttpController:
       .out(emptyOutput)
       .errorOut(stringBody)
 
-  def routes(service: GitHubGatewayService): Routes[Any, Response] =
+  def routes(service: GitHubGatewayService, tracing: Tracing): Routes[Any, Response] =
+    val interpreter = ZioHttpInterpreter(TapirTracingInterceptor.serverOptions(tracing))
+
     val getRepo = getRepoEndpoint.zServerLogic[Any] { case (owner, repo) =>
       service
         .fetchRepo(UserId("stub-user"), RepoOwner(owner), RepoName(repo))
@@ -54,9 +58,9 @@ object GitHubGatewayHttpController:
       ZIO.succeed(())
     }
 
-    ZioHttpInterpreter().toHttp(getRepo) ++
-    ZioHttpInterpreter().toHttp(listRepos) ++
-    ZioHttpInterpreter().toHttp(triggerSync)
+    interpreter.toHttp(getRepo) ++
+    interpreter.toHttp(listRepos) ++
+    interpreter.toHttp(triggerSync)
 
-  val layer: ZLayer[GitHubGatewayService, Nothing, Routes[Any, Response]] =
+  val layer: ZLayer[GitHubGatewayService & Tracing, Nothing, Routes[Any, Response]] =
     ZLayer.fromFunction(routes)
