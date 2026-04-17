@@ -17,7 +17,7 @@ rabbitmq:
   user: user
 
 otel:
-  endpoint: "http://otel-collector-collector:4317"
+  endpoint: "http://otel-collector:4317"
 
 ingress:
   enabled: true
