@@ -4,33 +4,22 @@ import ubc.githubgateway.api.internal.http.GitHubGatewayHttpController
 import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.core.adapters.tapir.TapirGitHubClient
 import ubc.githubgateway.core.adapters.magnum.MagnumTokenRepository
-import ubc.common.HikariMagnumTransactor
+import ubc.common.{BaseTelemetry, CorsMiddleware, HikariMagnumTransactor, ServerLayers}
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio.*
-import zio.http.{Header, Middleware, Response, Routes, Server as ZioServer}
+import zio.http.{Response, Routes, Server as ZioServer}
 
 object Server extends ZIOAppDefault:
 
   // Use environment variables as config source; snakeCase maps e.g.
-  // postgresHost → POSTGRES_HOST, postgresPassword → POSTGRES_PASSWORD.
+  // postgresHost → POSTGRES_HOST, otlpEndpoint → OTLP_ENDPOINT.
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
     Runtime.setConfigProvider(ConfigProvider.envProvider.snakeCase)
-
-  // Allow any *.localhost or bare localhost origin — covers local k8s (github.localhost)
-  // and vite dev (localhost:5173) without hardcoding ports.
-  private val corsConfig = Middleware.CorsConfig(
-    allowedOrigin = {
-      case origin @ Header.Origin.Value(_, host, _)
-          if host == "localhost" || host.endsWith(".localhost") =>
-        Some(Header.AccessControlAllowOrigin.Specific(origin))
-      case _ => None
-    }
-  )
 
   def run =
     ZIO
       .serviceWithZIO[Routes[Any, Response]](routes =>
-        ZioServer.serve(routes @@ Middleware.cors(corsConfig)).provide(ZioServer.default)
+        ZioServer.serve(routes @@ CorsMiddleware.forHosts(List("localhost")))
       )
       .provide(
         // HTTP routes wired from core
@@ -45,5 +34,9 @@ object Server extends ZIOAppDefault:
 
         // Infrastructure
         HikariMagnumTransactor.layer,
-        HttpClientZioBackend.layer()
+        HttpClientZioBackend.layer(),
+
+        // Server lifecycle + telemetry
+        ServerLayers.serverAfterTelemetry,
+        BaseTelemetry.live("github-gateway")
       )

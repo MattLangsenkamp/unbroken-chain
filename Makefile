@@ -4,7 +4,7 @@ GITHUB_GATEWAY_PRESENTATION_IMAGE ?= unbrokenchain/github-gateway-presentation:l
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings
+.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings full-github-gateway full-reader full-writer full-extraction-service full-ubc-control-plane
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -88,6 +88,51 @@ rabbitmq-exchanges:
 ## rabbitmq-bindings : list all bindings (source → destination)
 rabbitmq-bindings:
 	@$(SCRIPT_DIR)/rabbitmq-admin.sh bindings $(CLUSTER_NAME)
+
+## full-github-gateway : build, load, and redeploy the github-gateway service (dev iteration)
+full-github-gateway:
+	@$(SCRIPT_DIR)/full-deploy-service.sh \
+		provider-gateways.github-gateway.server \
+		unbrokenchain/github-gateway:latest \
+		github-gateway \
+		provider-gateways/github-gateway/k8s \
+		$(CLUSTER_NAME)
+
+## full-reader : build, load, and redeploy the reader service (dev iteration)
+full-reader:
+	@$(SCRIPT_DIR)/full-deploy-service.sh \
+		reader.server \
+		unbrokenchain/reader:latest \
+		reader \
+		reader/k8s \
+		$(CLUSTER_NAME)
+
+## full-writer : build, load, and redeploy the writer service (dev iteration)
+full-writer:
+	@$(SCRIPT_DIR)/full-deploy-service.sh \
+		writer.server \
+		unbrokenchain/writer:latest \
+		writer \
+		writer/k8s \
+		$(CLUSTER_NAME)
+
+## full-extraction-service : build, load, and redeploy the extraction-service (dev iteration)
+full-extraction-service:
+	@$(SCRIPT_DIR)/full-deploy-service.sh \
+		extraction-service.server \
+		unbrokenchain/extraction-service:latest \
+		extraction-service \
+		extraction-service/k8s \
+		$(CLUSTER_NAME)
+
+## full-ubc-control-plane : build, load, and redeploy the ubc-control-plane service (dev iteration)
+full-ubc-control-plane:
+	@$(SCRIPT_DIR)/full-deploy-service.sh \
+		ubc-control-plane.server \
+		unbrokenchain/ubc-control-plane:latest \
+		ubc-control-plane \
+		ubc-control-plane/k8s \
+		$(CLUSTER_NAME)
 
 ## help : list available targets
 help:

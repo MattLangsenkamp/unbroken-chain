@@ -268,6 +268,8 @@ object HealthEndpoint:
 
 ## Repository / DB Adapter Pattern
 
+> For full detail on migrations, column type mapping, DbCodec wiring, and the module dependency graph, see the **[relational-database-modeling skill](../../../../.opencode/skills/relational-database-modeling/SKILL.md)**.
+
 Repositories are driven adapters that implement a port trait and live in `core/adapters/<library>-<name>-repository`.
 
 ### Prefer domain types directly

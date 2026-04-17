@@ -71,6 +71,20 @@ They are consumed in `server` via `provide(...)` but are never exposed outside t
 - New config fields require corresponding environment variables in deployment manifests (Kubernetes ConfigMaps, Docker Compose, etc.)
 - Never read environment variables directly inside service implementations — always go through a config layer
 
+### No silent fallbacks
+
+Never use `orElseSucceed`, `getOrElse`, or hardcoded fallback values on a `ZIO.config[T]` call:
+
+```scala
+// ❌ NEVER do this — a missing or misnamed env var silently uses the wrong value
+ZIO.config[OtelConfig].orElseSucceed(OtelConfig("http://some-default:4317"))
+
+// ✅ Fail loudly at startup so misconfiguration is caught immediately
+ZIO.config[OtelConfig]
+```
+
+A silent default means a misconfigured deployment starts successfully, connects to the wrong endpoint, and produces no telemetry — the failure is invisible until you notice missing data in dashboards. Failing at startup with a structured error message is always preferable.
+
 ---
 
 ## Dependency in build.sc

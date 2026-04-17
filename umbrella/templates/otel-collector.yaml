@@ -60,11 +60,12 @@ spec:
 ---
 # OpenTelemetryCollector CR — managed by the OTel Operator.
 # Acts as a gateway: receives OTLP from services and forwards to otel-lgtm.
-# Services should set: OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+# CR named "otel" so the operator generates Service "otel-collector" (not "otel-collector-collector").
+# Services should point OTLP_ENDPOINT at http://otel-collector:4317
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
-  name: otel-collector
+  name: otel
   namespace: {{ .Release.Namespace }}
 spec:
   mode: deployment
