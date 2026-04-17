@@ -391,6 +391,22 @@ object common extends Module {
     def scalaVersion = scalaVer
     override def mvnDeps = tapirServerDeps ++ zioOtelDeps ++ otelSemconvDeps
   }
+
+  // Reusable ZIO Test database fixture: TestDatabase.suiteLayer / TestDatabase.testLayer.
+  // Provides a PostgreSQL 17 Testcontainers container with Flyway migrations and a
+  // per-test HikariCP connection that rolls back on teardown.
+  //
+  // IMPORTANT: Add this module only to test.moduleDeps of consuming modules — never to
+  // production moduleDeps. Testcontainers and Flyway must not appear on production classpaths.
+  object `db-test-support` extends ScalaModule {
+    def scalaVersion = scalaVer
+    override def mvnDeps = zioDeps ++ magnumDeps ++ Seq(
+      mvn"com.zaxxer:HikariCP:5.1.0",
+      mvn"org.postgresql:postgresql:42.7.2",
+      mvn"org.testcontainers:postgresql:1.20.4",
+      mvn"org.flywaydb:flyway-core:10.21.0"
+    )
+  }
 }
 
 object reader extends Module {
