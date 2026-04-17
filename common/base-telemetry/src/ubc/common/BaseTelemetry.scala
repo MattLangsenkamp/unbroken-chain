@@ -26,7 +26,7 @@ import java.time.Duration as JDuration
 type TelemetryEnv = OpenTelemetry & Tracing & Meter & ContextStorage & Baggage
 
 // Driven by OTLP_ENDPOINT env var (set ConfigProvider.envProvider.snakeCase in server bootstrap).
-// Falls back to the in-cluster collector address when the env var is absent.
+// Missing or wrong value aborts startup with a structured error — no silent fallback.
 private final case class OtelConfig(otlpEndpoint: String) derives Config
 
 object BaseTelemetry:
@@ -87,7 +87,7 @@ object BaseTelemetry:
   private def sdkLayer(serviceName: String): TaskLayer[OpenTelemetry] =
     ZLayer.scoped:
       for
-        cfg    <- ZIO.config[OtelConfig].orElseSucceed(OtelConfig("http://otel-collector-collector:4317"))
+        cfg    <- ZIO.config[OtelConfig]
         tracer <- traceProvider(cfg.otlpEndpoint, serviceName)
         meter  <- metricProvider(cfg.otlpEndpoint, serviceName)
         logger <- logProvider(cfg.otlpEndpoint, serviceName)
