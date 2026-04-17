@@ -16,9 +16,6 @@ private final case class DatabaseConfig(
 
 object HikariMagnumTransactor:
 
-  val layer: TaskLayer[TransactorZIO] =
-    configLayer >>> dataSourceLayer >>> TransactorZIO.layer
-
   private val configLayer: TaskLayer[DatabaseConfig] =
     ZLayer.fromZIO(ZIO.config[DatabaseConfig])
 
@@ -37,3 +34,6 @@ object HikariMagnumTransactor:
                 )(p => ZIO.attempt(p.close()).orDie)
       yield pool
     )
+
+  val layer: TaskLayer[TransactorZIO] =
+    configLayer >>> dataSourceLayer >>> TransactorZIO.layer
