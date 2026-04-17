@@ -87,7 +87,7 @@ object BaseTelemetry:
   private def sdkLayer(serviceName: String): TaskLayer[OpenTelemetry] =
     ZLayer.scoped:
       for
-        cfg    <- ZIO.config[OtelConfig].orElseSucceed(OtelConfig("http://otel-collector:4317"))
+        cfg    <- ZIO.config[OtelConfig].orElseSucceed(OtelConfig("http://otel-collector-collector:4317"))
         tracer <- traceProvider(cfg.otlpEndpoint, serviceName)
         meter  <- metricProvider(cfg.otlpEndpoint, serviceName)
         logger <- logProvider(cfg.otlpEndpoint, serviceName)

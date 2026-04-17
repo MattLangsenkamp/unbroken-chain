@@ -4,7 +4,7 @@ GITHUB_GATEWAY_PRESENTATION_IMAGE ?= unbrokenchain/github-gateway-presentation:l
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings
+.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings full-github-gateway full-reader full-writer full-extraction-service full-ubc-control-plane
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -88,6 +88,51 @@ rabbitmq-exchanges:
 ## rabbitmq-bindings : list all bindings (source → destination)
 rabbitmq-bindings:
 	@$(SCRIPT_DIR)/rabbitmq-admin.sh bindings $(CLUSTER_NAME)
+
+## full-github-gateway : build, load, and redeploy the github-gateway service (dev iteration)
+full-github-gateway:
+	./mill 'provider-gateways.github-gateway.server.docker.build'
+	k3d image import unbrokenchain/github-gateway:latest --cluster $(CLUSTER_NAME)
+	helm upgrade --install github-gateway provider-gateways/github-gateway/k8s \
+		--namespace unbroken-chain --values provider-gateways/github-gateway/k8s/values.yaml --wait
+	kubectl rollout restart deployment/github-gateway -n unbroken-chain
+	kubectl rollout status deployment/github-gateway -n unbroken-chain --timeout=2m
+
+## full-reader : build, load, and redeploy the reader service (dev iteration)
+full-reader:
+	./mill 'reader.server.docker.build'
+	k3d image import unbrokenchain/reader:latest --cluster $(CLUSTER_NAME)
+	helm upgrade --install reader reader/k8s \
+		--namespace unbroken-chain --values reader/k8s/values.yaml --wait
+	kubectl rollout restart deployment/reader -n unbroken-chain
+	kubectl rollout status deployment/reader -n unbroken-chain --timeout=2m
+
+## full-writer : build, load, and redeploy the writer service (dev iteration)
+full-writer:
+	./mill 'writer.server.docker.build'
+	k3d image import unbrokenchain/writer:latest --cluster $(CLUSTER_NAME)
+	helm upgrade --install writer writer/k8s \
+		--namespace unbroken-chain --values writer/k8s/values.yaml --wait
+	kubectl rollout restart deployment/writer -n unbroken-chain
+	kubectl rollout status deployment/writer -n unbroken-chain --timeout=2m
+
+## full-extraction-service : build, load, and redeploy the extraction-service (dev iteration)
+full-extraction-service:
+	./mill 'extraction-service.server.docker.build'
+	k3d image import unbrokenchain/extraction-service:latest --cluster $(CLUSTER_NAME)
+	helm upgrade --install extraction-service extraction-service/k8s \
+		--namespace unbroken-chain --values extraction-service/k8s/values.yaml --wait
+	kubectl rollout restart deployment/extraction-service -n unbroken-chain
+	kubectl rollout status deployment/extraction-service -n unbroken-chain --timeout=2m
+
+## full-ubc-control-plane : build, load, and redeploy the ubc-control-plane service (dev iteration)
+full-ubc-control-plane:
+	./mill 'ubc-control-plane.server.docker.build'
+	k3d image import unbrokenchain/ubc-control-plane:latest --cluster $(CLUSTER_NAME)
+	helm upgrade --install ubc-control-plane ubc-control-plane/k8s \
+		--namespace unbroken-chain --values ubc-control-plane/k8s/values.yaml --wait
+	kubectl rollout restart deployment/ubc-control-plane -n unbroken-chain
+	kubectl rollout status deployment/ubc-control-plane -n unbroken-chain --timeout=2m
 
 ## help : list available targets
 help:

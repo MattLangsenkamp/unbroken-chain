@@ -58,7 +58,7 @@ otel:
     otlpHttpPort: 4318
   collector:
     # Services should set OTEL_EXPORTER_OTLP_ENDPOINT to this
-    endpoint: "http://otel-collector:4317"
+    endpoint: "http://otel-collector-collector:4317"
 
 # ---------------------------------------------------------------------------
 # External Secrets Operator — Kubernetes-backed local store

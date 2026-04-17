@@ -5,7 +5,7 @@ metadata:
 data:
   RABBITMQ_HOST: {{ .Values.rabbitmq.host | quote }}
   RABBITMQ_USER: {{ .Values.rabbitmq.user | quote }}
-  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.otel.endpoint | quote }}
+  OTLP_ENDPOINT: {{ .Values.otel.endpoint | quote }}
   OTEL_SERVICE_NAME: {{ .Chart.Name | quote }}
   {{- if .Values.postgres.enabled }}
   POSTGRES_HOST: {{ .Values.postgres.host | quote }}
