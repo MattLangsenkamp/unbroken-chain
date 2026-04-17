@@ -174,20 +174,26 @@ private given DbCodec[MyEntity] = DbCodec.derived[MyEntity]
 
 ## Module dependency graph
 
+`core/ports` knows only about domain types — it is completely ignorant of infrastructure. The adapter extension modules are a parallel branch that exists solely for the repository adapter.
+
 ```
-domainPublic
-    ↑
-domainPublicAdapterExtensions/magnum   ←── PublicMagnumCodecs
-    ↑
-domainPrivate
-    ↑
-domainPrivateAdapterExtensions/magnum  ←── PrivateMagnumCodecs
-    ↑
-core/ports
-    ↑
-core/adapters/magnum-<name>-repository  (imports both codec modules, derives DbCodec, implements port)
-    ↑
-server  (wires HikariMagnumTransactor.layer → MagnumMyRepository.layer)
+domainPublic ◄─────────────────────────────────────────────────────────────────────┐
+    ↑                                                                               │
+domainPrivate ◄──────────────────────────────────────────────────────────────┐     │
+    ↑                                                                         │     │
+core/ports                                                                    │     │
+    ↑                                                                         │     │
+    │          domainPublicAdapterExtensions/magnum  ←── PublicMagnumCodecs  │     │
+    │                          ↑                                              │     │
+    │          domainPrivateAdapterExtensions/magnum ←── PrivateMagnumCodecs │     │
+    │                          ↑                                              │     │
+    └──────────────────────────┤                                              │     │
+                               │                                              │     │
+              core/adapters/magnum-<name>-repository  ────────────────────────┘     │
+              (imports codec modules, derives DbCodec, implements port)             │
+                               ↑                                                    │
+                             server  ───────────────────────────────────────────────┘
+              (wires HikariMagnumTransactor.layer → MagnumMyRepository.layer)
 ```
 
-The repository adapter module declares both codec extension modules in its `moduleDeps` in `build.mill`.
+The repository adapter module declares `core/ports` and both codec extension modules in its `moduleDeps`. The server declares `core/ports`, the repository adapter, and `HikariMagnumTransactor` in its `moduleDeps`.
