@@ -3,8 +3,7 @@ package ubc.githubgateway.core.adapters.magnum
 import com.augustnagro.magnum.*
 import com.augustnagro.magnum.magzio.*
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
-import org.testcontainers.containers.PostgreSQLContainer
-import ubc.common.TestDatabase
+import ubc.common.{PostgresContainer, TestDatabase}
 import ubc.githubgateway.core.ports.TokenRepository
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.internal.*
@@ -28,16 +27,16 @@ object MagnumTokenRepositorySpec extends ZIOSpecDefault:
   // Separate from TestDatabase.testLayer — MagnumTokenRepository manages its own
   // connections via TransactorZIO, so we give it a normal pool rather than the
   // single-connection rollback fixture.
-  private val transactorLayer: ZLayer[PostgreSQLContainer[?], Throwable, TransactorZIO] =
+  private val transactorLayer: ZLayer[PostgresContainer, Throwable, TransactorZIO] =
     ZLayer.scoped {
       for
-        container <- ZIO.service[PostgreSQLContainer[?]]
+        container <- ZIO.service[PostgresContainer]
         ds        <- ZIO.acquireRelease(
           ZIO.attempt {
             val cfg = new HikariConfig()
-            cfg.setJdbcUrl(container.getJdbcUrl())
-            cfg.setUsername(container.getUsername())
-            cfg.setPassword(container.getPassword())
+            cfg.setJdbcUrl(container.getJdbcUrl)
+            cfg.setUsername(container.getUsername)
+            cfg.setPassword(container.getPassword)
             new HikariDataSource(cfg)
           }.mapError(e => RuntimeException(s"HikariCP pool creation failed: ${e.getMessage}", e))
         )(ds => ZIO.attempt(ds.close()).orDie)
