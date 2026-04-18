@@ -16,6 +16,11 @@ val zioDeps = Seq(
   mvn"dev.zio::zio:2.1.17"
 )
 
+val zioTestDeps = Seq(
+  mvn"dev.zio::zio-test:2.1.17",
+  mvn"dev.zio::zio-test-sbt:2.1.17"
+)
+
 val zioJsonDeps = Seq(
   mvn"dev.zio::zio-json:0.7.3"
 )
@@ -238,6 +243,12 @@ object `provider-gateways` extends Module {
             domain.domainPrivateAdapterExtensions.magnum
           )
           override def mvnDeps = zioDeps ++ magnumDeps
+
+          object test extends Tests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+            override def moduleDeps = super.moduleDeps() ++ Seq(common.`db-test-support`)
+          }
         }
 
         // In-memory TokenRepository for local dev and testing — no DB required.
