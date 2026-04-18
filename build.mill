@@ -247,7 +247,7 @@ object `provider-gateways` extends Module {
           object test extends ScalaTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
-            override def moduleDeps = super.moduleDeps() ++ Seq(common.`db-test-support`)
+            override def moduleDeps = super.moduleDeps ++ Seq(common.`db-test-support`)
           }
         }
 
