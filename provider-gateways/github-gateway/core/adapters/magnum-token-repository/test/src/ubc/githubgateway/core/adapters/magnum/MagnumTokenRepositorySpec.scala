@@ -21,7 +21,7 @@ import java.time.Instant
 // with an empty table. Tests run sequentially to avoid inter-test interference.
 object MagnumTokenRepositorySpec extends ZIOSpecDefault:
 
-  private val migrationLocation = "filesystem:provider-gateways/github-gateway/db"
+  private val migrationLocation = "classpath:db/migration"
 
   // Suite-scoped HikariCP pool wired from the Testcontainers container.
   // Separate from TestDatabase.testLayer — MagnumTokenRepository manages its own

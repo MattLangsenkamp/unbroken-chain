@@ -4,7 +4,7 @@ import com.augustnagro.magnum.DbCon
 import com.augustnagro.magnum.magzio.TransactorZIO
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import org.flywaydb.core.Flyway
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import zio.*
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
@@ -14,9 +14,9 @@ import scala.util.Try
 
 /** Non-generic wrapper around `PostgreSQLContainer` so ZIO's Tag macro can
  *  derive a stable `Tag[PostgresContainer]` without the wildcard-type
- *  instability of `Tag[PostgreSQLContainer[?]]`.
+ *  instability of `Tag[PostgreSQLContainer]`.
  */
-final class PostgresContainer(private val underlying: PostgreSQLContainer[?]):
+final class PostgresContainer(private val underlying: PostgreSQLContainer):
   def getJdbcUrl:  String = underlying.getJdbcUrl
   def getUsername: String = underlying.getUsername
   def getPassword: String = underlying.getPassword

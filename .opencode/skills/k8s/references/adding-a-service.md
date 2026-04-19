@@ -106,19 +106,49 @@ This causes `umbrella/templates/databases.yaml` to render a `Database` CR automa
 
 ## 6. Add Flyway migrations (if Postgres-enabled)
 
-Create a `db/` folder alongside the service:
+Create a `db-migrations/` folder alongside the service:
 
 ```
 my-service/
-  db/
+  db-migrations/
     Dockerfile
-    V1__initial.sql
+    resources/
+      db/
+        migration/
+          V1__initial.sql
 ```
 
-**`my-service/db/Dockerfile`** — copy verbatim from any existing service:
+**`my-service/db-migrations/Dockerfile`**:
 ```dockerfile
 FROM flyway/flyway:latest
-COPY . /flyway/sql/
+COPY db-migrations/resources/db/migration/ /flyway/sql/
+```
+
+Note: the Docker build context must be the **service root** (not `db-migrations/`) so the `COPY` path resolves correctly. `bin/build-migrations.sh` handles this automatically.
+
+Add a Mill module for the migrations inside the service in `build.mill` so SQL files land on the test classpath:
+```scala
+object `my-service` extends Module {
+  object `db-migrations` extends JavaModule {
+    override def resources = Task.Sources(moduleDir / "resources")
+  }
+  // ...
+}
+```
+
+Wire it into your repository adapter's test module:
+```scala
+object test extends ScalaTests {
+  override def moduleDeps = super.moduleDeps ++ Seq(
+    common.`db-test-support`,
+    `db-migrations`
+  )
+}
+```
+
+And use `classpath:db/migration` as the migration location in your test spec:
+```scala
+private val migrationLocation = "classpath:db/migration"
 ```
 
 Add the `migrations` block to `my-service/k8s/values.yaml`:
@@ -204,7 +234,7 @@ Also add to `build-images` and `build-presentations`.
 - [ ] `my-service/k8s/` chart created with `image.repository` set
 - [ ] `deploy_service` call added to `bin/deploy-local.sh` step 5
 - [ ] If Postgres: `postgres.enabled: true` and entry in `umbrella/values.yaml` `postgres.databases`
-- [ ] If Postgres: `my-service/db/` created with `Dockerfile` and initial migration
+- [ ] If Postgres: `my-service/db-migrations/` created with `Dockerfile` and initial migration under `resources/db/migration/`
 - [ ] If Postgres: `migrations` block added to `values.yaml` and `migrate-job.yaml` copied into templates
 - [ ] If Postgres: `build-migrations.sh` call added to `prepare-migrations` in Makefile
 - [ ] If presentation: scaffold `my-service/presentation/` from existing, update title/name/image

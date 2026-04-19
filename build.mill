@@ -136,6 +136,10 @@ trait WithScalablyTyped extends ScalablyTyped {
 object `provider-gateways` extends Module {
   object `github-gateway` extends Module {
 
+    object `db-migrations` extends JavaModule {
+      override def resources = Task.Sources(moduleDir / "resources")
+    }
+
     object domain extends Module {
 
       object domainPublic extends Module {
@@ -246,8 +250,11 @@ object `provider-gateways` extends Module {
 
           object test extends ScalaTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
-            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
-            override def moduleDeps = super.moduleDeps ++ Seq(common.`db-test-support`)
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
+            override def moduleDeps = super.moduleDeps ++ Seq(
+              common.`db-test-support`,
+              `db-migrations`
+            )
           }
         }
 
@@ -414,8 +421,9 @@ object common extends Module {
     override def mvnDeps = zioDeps ++ magnumDeps ++ Seq(
       mvn"com.zaxxer:HikariCP:5.1.0",
       mvn"org.postgresql:postgresql:42.7.2",
-      mvn"org.testcontainers:postgresql:1.20.4",
-      mvn"org.flywaydb:flyway-core:10.21.0"
+      mvn"org.testcontainers:testcontainers-postgresql:2.0.4",
+      mvn"org.flywaydb:flyway-core:10.21.0",
+      mvn"org.flywaydb:flyway-database-postgresql:10.21.0"
     )
   }
 }
