@@ -21,15 +21,16 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-DB_DIR="$REPO_ROOT/$SERVICE_DIR/db"
+SERVICE_ROOT="$REPO_ROOT/$SERVICE_DIR"
+DOCKERFILE="$SERVICE_ROOT/db-migrations/Dockerfile"
 
-if [ ! -d "$DB_DIR" ]; then
-  echo "❌ No db/ directory found at $DB_DIR"
+if [ ! -f "$DOCKERFILE" ]; then
+  echo "❌ No db-migrations/Dockerfile found at $DOCKERFILE"
   exit 1
 fi
 
-echo "Building migration image '$IMAGE_NAME' from $SERVICE_DIR/db/..."
-docker build -t "$IMAGE_NAME" "$DB_DIR"
+echo "Building migration image '$IMAGE_NAME' from $SERVICE_DIR/db-migrations/..."
+docker build -t "$IMAGE_NAME" -f "$DOCKERFILE" "$SERVICE_ROOT"
 
 echo "Importing '$IMAGE_NAME' into k3d cluster '$CLUSTER_NAME'..."
 k3d image import "$IMAGE_NAME" --cluster "$CLUSTER_NAME"

@@ -16,6 +16,11 @@ val zioDeps = Seq(
   mvn"dev.zio::zio:2.1.17"
 )
 
+val zioTestDeps = Seq(
+  mvn"dev.zio::zio-test:2.1.17",
+  mvn"dev.zio::zio-test-sbt:2.1.17"
+)
+
 val zioJsonDeps = Seq(
   mvn"dev.zio::zio-json:0.7.3"
 )
@@ -131,6 +136,10 @@ trait WithScalablyTyped extends ScalablyTyped {
 object `provider-gateways` extends Module {
   object `github-gateway` extends Module {
 
+    object `db-migrations` extends JavaModule {
+      override def resources = Task.Sources(moduleDir / "resources")
+    }
+
     object domain extends Module {
 
       object domainPublic extends Module {
@@ -238,6 +247,17 @@ object `provider-gateways` extends Module {
             domain.domainPrivateAdapterExtensions.magnum
           )
           override def mvnDeps = zioDeps ++ magnumDeps
+
+          object test extends ScalaTests {
+            // ZTestFramework is ZIO Test's implementation of the sbt/Mill test Framework interface.
+            // The "sbt" in the package name refers to the shared runner protocol, not the build tool.
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
+            override def moduleDeps = super.moduleDeps ++ Seq(
+              common.`db-test-support`,
+              `db-migrations`
+            )
+          }
         }
 
         // In-memory TokenRepository for local dev and testing — no DB required.
@@ -390,6 +410,23 @@ object common extends Module {
   object `tapir-tracing-interceptor` extends ScalaModule {
     def scalaVersion = scalaVer
     override def mvnDeps = tapirServerDeps ++ zioOtelDeps ++ otelSemconvDeps
+  }
+
+  // Reusable ZIO Test database fixture: TestDatabase.suiteLayer / TestDatabase.testLayer.
+  // Provides a PostgreSQL 17 Testcontainers container with Flyway migrations and a
+  // per-test HikariCP connection that rolls back on teardown.
+  //
+  // IMPORTANT: Add this module only to test.moduleDeps of consuming modules — never to
+  // production moduleDeps. Testcontainers and Flyway must not appear on production classpaths.
+  object `db-test-support` extends ScalaModule {
+    def scalaVersion = scalaVer
+    override def mvnDeps = zioDeps ++ magnumDeps ++ Seq(
+      mvn"com.zaxxer:HikariCP:5.1.0",
+      mvn"org.postgresql:postgresql:42.7.2",
+      mvn"org.testcontainers:testcontainers-postgresql:2.0.4",
+      mvn"org.flywaydb:flyway-core:10.21.0",
+      mvn"org.flywaydb:flyway-database-postgresql:10.21.0"
+    )
   }
 }
 

@@ -11,15 +11,20 @@ This skill covers the full stack from SQL schema to domain type: where migration
 
 ## Migrations
 
-Migrations use [Flyway](https://flywaydb.org/) and live in `<service>/db/`:
+Migrations use [Flyway](https://flywaydb.org/) and live in `<service>/db-migrations/`:
 
 ```
 <service>/
-  db/
-    Dockerfile          # FROM flyway/flyway:latest; COPY . /flyway/sql/
-    V1__initial_schema.sql
-    V2__add_column.sql  # versioned additions — never edit past migrations
+  db-migrations/
+    Dockerfile          # FROM flyway/flyway:latest; COPY db-migrations/resources/db/migration/ /flyway/sql/
+    resources/
+      db/
+        migration/
+          V1__initial_schema.sql
+          V2__add_column.sql  # versioned additions — never edit past migrations
 ```
+
+The SQL files live under `resources/db/migration/` so they land on the JVM classpath and can be referenced as `classpath:db/migration` in tests (via `TestDatabase.suiteLayer`).
 
 ### Naming convention
 
@@ -32,7 +37,10 @@ Migrations use [Flyway](https://flywaydb.org/) and live in `<service>/db/`:
 make prepare-migrations
 
 # Under the hood (bin/build-migrations.sh):
-docker build -t unbrokenchain/<service>-migrations:latest <service>/db/
+# Uses the service root as build context so the Dockerfile can reach db-migrations/resources/
+docker build -t unbrokenchain/<service>-migrations:latest \
+  -f <service>/db-migrations/Dockerfile \
+  <service>/
 k3d image import unbrokenchain/<service>-migrations:latest --cluster unbroken-chain
 ```
 
