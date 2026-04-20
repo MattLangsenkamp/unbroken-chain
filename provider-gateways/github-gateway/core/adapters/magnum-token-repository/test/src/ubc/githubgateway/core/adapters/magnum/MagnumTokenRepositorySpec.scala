@@ -2,8 +2,7 @@ package ubc.githubgateway.core.adapters.magnum
 
 import com.augustnagro.magnum.*
 import com.augustnagro.magnum.magzio.*
-import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
-import ubc.common.{PostgresContainer, TestDatabase}
+import ubc.common.TestDatabase
 import ubc.githubgateway.core.ports.TokenRepository
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.internal.*
@@ -11,7 +10,6 @@ import ubc.githubgateway.domain.adapters.magnum.PublicMagnumCodecs.given
 import ubc.githubgateway.domain.internal.adapters.magnum.PrivateMagnumCodecs.given
 import zio.*
 import zio.test.*
-import javax.sql.DataSource
 import java.time.Instant
 
 // Integration tests for MagnumTokenRepository against a real PostgreSQL instance.
@@ -22,28 +20,6 @@ import java.time.Instant
 object MagnumTokenRepositorySpec extends ZIOSpecDefault:
 
   private val migrationLocation = "classpath:db/migration"
-
-  // Suite-scoped HikariCP pool wired from the Testcontainers container.
-  // Separate from TestDatabase.testLayer — MagnumTokenRepository manages its own
-  // connections via TransactorZIO, so we give it a normal pool rather than the
-  // single-connection rollback fixture.
-  private val transactorLayer: ZLayer[PostgresContainer, Throwable, TransactorZIO] =
-    ZLayer.scoped {
-      for
-        container <- ZIO.service[PostgresContainer]
-        ds        <- ZIO.acquireRelease(
-          ZIO.attempt {
-            val cfg = new HikariConfig()
-            cfg.setJdbcUrl(container.getJdbcUrl)
-            cfg.setUsername(container.getUsername)
-            cfg.setPassword(container.getPassword)
-            new HikariDataSource(cfg)
-          }.mapError(e => RuntimeException(s"HikariCP pool creation failed: ${e.getMessage}", e))
-        )(ds => ZIO.attempt(ds.close()).orDie)
-        xa        <- ZIO.service[TransactorZIO]
-                       .provide(ZLayer.succeed[DataSource](ds), TransactorZIO.layer)
-      yield xa
-    }
 
   // Wipes github_tokens before each test and resets the BIGSERIAL counter so
   // auto-assigned ids are predictable across tests.
@@ -130,6 +106,6 @@ object MagnumTokenRepositorySpec extends ZIOSpecDefault:
     ) @@ TestAspect.before(truncateTokens) @@ TestAspect.sequential)
       .provideShared(
         TestDatabase.suiteLayer(migrationLocation),
-        transactorLayer,
+        TestDatabase.transactorLayer,
         MagnumTokenRepository.layer
       )

@@ -12,23 +12,21 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.sql.DataSource
 import scala.util.Try
 
-/** Non-generic wrapper around `PostgreSQLContainer` so ZIO's Tag macro can
- *  derive a stable `Tag[PostgresContainer]` without the wildcard-type
- *  instability of `Tag[PostgreSQLContainer]`.
- */
-final class PostgresContainer(private val underlying: PostgreSQLContainer):
-  def getJdbcUrl:  String = underlying.getJdbcUrl
-  def getUsername: String = underlying.getUsername
-  def getPassword: String = underlying.getPassword
-  def stop(): Unit        = underlying.stop()
-
 /** Reusable database fixture for repository-layer tests.
  *
- * Typical wiring:
+ * Typical wiring for adapter tests that use TransactorZIO directly:
  * {{{
  * override def spec = suite("MyRepoSuite")(...).provideShared(
- *   TestDatabase.suiteLayer("filesystem:provider-gateways/my-service/db"),
- *   // testLayer must be per-test — use provide, not provideShared
+ *   TestDatabase.suiteLayer("classpath:db/migration"),
+ *   TestDatabase.transactorLayer,
+ *   MyMagnumRepository.layer
+ * )
+ * }}}
+ *
+ * Typical wiring for tests that need a raw DbCon with per-test rollback:
+ * {{{
+ * override def spec = suite("MyRepoSuite")(...).provideShared(
+ *   TestDatabase.suiteLayer("classpath:db/migration")
  * ).provide(TestDatabase.testLayer)
  * }}}
  */
@@ -36,10 +34,10 @@ object TestDatabase:
 
   /** Starts a PostgreSQL 17 Testcontainers container and runs Flyway migrations once for the suite.
    *
-   * @param migrationLocation Flyway location string, e.g. `"filesystem:provider-gateways/my-service/db"`
-   *                          or `"classpath:db/migration"`. Passed directly to Flyway.
+   * @param migrationLocation Flyway location string, e.g. `"classpath:db/migration"`.
+   *                          Passed directly to Flyway.
    */
-  def suiteLayer(migrationLocation: String): ZLayer[Any, Throwable, PostgresContainer] =
+  def suiteLayer(migrationLocation: String): ZLayer[Any, Throwable, PostgreSQLContainer] =
     ZLayer.scoped {
       for
         container <- ZIO.acquireRelease(
@@ -57,7 +55,39 @@ object TestDatabase:
             .load()
             .migrate()
         ).mapError(e => RuntimeException(s"Flyway migration failed at '$migrationLocation': ${e.getMessage}", e))
-      yield PostgresContainer(container)
+      yield container
+    }
+
+  /** Suite-scoped HikariCP pool wired from a Testcontainers container.
+   *
+   *  Use this when the repository under test manages its own connections via
+   *  `TransactorZIO` (i.e. calls `xa.transact` / `xa.connect` internally).
+   *  Pair with `suiteLayer` and use `TRUNCATE` + `TestAspect.sequential` for isolation.
+   *
+   *  {{{
+   *  .provideShared(
+   *    TestDatabase.suiteLayer("classpath:db/migration"),
+   *    TestDatabase.transactorLayer,
+   *    MyMagnumRepository.layer
+   *  )
+   *  }}}
+   */
+  val transactorLayer: ZLayer[PostgreSQLContainer, Throwable, TransactorZIO] =
+    ZLayer.scoped {
+      for
+        container <- ZIO.service[PostgreSQLContainer]
+        ds        <- ZIO.acquireRelease(
+          ZIO.attempt {
+            val cfg = new HikariConfig()
+            cfg.setJdbcUrl(container.getJdbcUrl)
+            cfg.setUsername(container.getUsername)
+            cfg.setPassword(container.getPassword)
+            new HikariDataSource(cfg)
+          }.mapError(e => RuntimeException(s"HikariCP pool creation failed: ${e.getMessage}", e))
+        )(ds => ZIO.attempt(ds.close()).orDie)
+        xa        <- ZIO.service[TransactorZIO]
+                       .provide(ZLayer.succeed[DataSource](ds), TransactorZIO.layer)
+      yield xa
     }
 
   /** Borrows a single connection per test from a HikariCP pool, disables auto-commit, and rolls
@@ -73,10 +103,10 @@ object TestDatabase:
    *  via `TransactorZIO.connect`. A dedicated blocking fiber holds the connection open across
    *  the test and rolls back when the ZLayer scope exits.
    */
-  val testLayer: ZLayer[PostgresContainer, Throwable, DbCon] =
+  val testLayer: ZLayer[PostgreSQLContainer, Throwable, DbCon] =
     ZLayer.scoped {
       for
-        container <- ZIO.service[PostgresContainer]
+        container <- ZIO.service[PostgreSQLContainer]
 
         ds <- ZIO.acquireRelease(
           ZIO.attempt {
