@@ -249,6 +249,8 @@ object `provider-gateways` extends Module {
           override def mvnDeps = zioDeps ++ magnumDeps
 
           object test extends ScalaTests {
+            // ZTestFramework is ZIO Test's implementation of the sbt/Mill test Framework interface.
+            // The "sbt" in the package name refers to the shared runner protocol, not the build tool.
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
             override def moduleDeps = super.moduleDeps ++ Seq(
