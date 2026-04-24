@@ -33,6 +33,23 @@ case class GitHubOrg(
 
 **Never import** Magnum, Tapir, JDBC, or any infrastructure in domain files.
 
+## Adapter-extension modules
+
+Infrastructure-specific codec instances (Magnum `DbCodec`, ZIO JSON codecs, Tapir schema instances) live in separate per-adapter extension modules — never in the domain type itself. This means each infrastructure dependency is pulled in only by the adapter that needs it.
+
+```
+domain/
+  domainPublic/                          # pure types, no infrastructure
+  domainPrivate/                         # internal types, no infrastructure
+  domainPublicAdapterExtensions/
+    magnum/src/.../adapters/magnum/      # DbCodec instances for public types
+    zio-json/src/.../adapters/json/      # JsonCodec derivations (if not derived inline)
+  domainPrivateAdapterExtensions/
+    magnum/src/.../adapters/magnum/      # DbCodec instances for private types
+```
+
+When building the domain layer, define only the core type. The adapter-extension module (and its infrastructure dependency) is added when you build the driven adapter that needs it. This keeps `domainPublic` importable by the frontend (Scala.js) without dragging in JVM-only libraries.
+
 ## TDD cycle (Iron Law — no exceptions)
 
 **RED** — Write one failing test that constructs or uses the type you are about to define.

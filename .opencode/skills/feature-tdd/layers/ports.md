@@ -22,8 +22,9 @@ trait OrgRepository:
 ```
 
 Rules:
-- Import only domain types and `zio.Task` — never Magnum, Tapir, JDBC, or any infrastructure
-- Return `Task[A]` for operations that may fail
+- Import only domain types and ZIO error types — never Magnum, Tapir, JDBC, or any infrastructure
+- Prefer `IO[DomainError, A]` when a domain error type exists for the operation; use `Task[A]` only for unmodeled failures
+- Domain errors live in `domainPrivate` and are adapted from infrastructure errors at the adapter boundary — never let infrastructure exceptions propagate through a port
 - One port per concern — do not bundle unrelated operations
 
 ## In-memory stubs

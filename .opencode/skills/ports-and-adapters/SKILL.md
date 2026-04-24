@@ -7,7 +7,7 @@ description: Use when adding a new port trait, implementing a new adapter (repos
 
 The core domain is isolated from infrastructure through port traits; adapters wire infrastructure to those traits.
 
-- **Port** — a trait in `core/ports/` declaring what the core needs, using domain types and `zio.Task` only. No infrastructure types cross this boundary.
+- **Port** — a trait in `core/ports/` declaring what the core needs, using only domain types and ZIO effect types (`IO[DomainError, A]` preferred; `Task[A]` for unmodeled failures). No infrastructure types cross this boundary.
 - **Driven adapter** (outbound) — implements a port against real infrastructure (e.g., `magnum-token-repository`, `tapir-github-client`). Lives in `core/adapters/`.
 - **Driving adapter** (inbound) — receives external requests and delegates immediately to core. Lives in `api/internal-api-adapters/`. No business logic — request decoding only.
 - **In-memory adapter** — implements a port using `Ref`-backed state. Used for local dev and testing. Also lives in `core/adapters/`.
@@ -46,8 +46,9 @@ trait TokenRepository:
 ```
 
 Rules:
-- Import only domain types and `zio.Task` — never Magnum, Tapir, JDBC, or any infrastructure
-- Return `Task[A]` for operations that can fail with defects, or `IO[E, A]` for typed errors
+- Import only domain types and ZIO effect types — never Magnum, Tapir, JDBC, or any infrastructure
+- Prefer `IO[DomainError, A]` when a domain error type models the failure; use `Task[A]` for unmodeled defects
+- Domain errors live in `domainPrivate`; adapters convert infrastructure errors to them at the boundary
 - One port per concern — don't bundle unrelated operations
 
 ## Adapter modules
@@ -108,15 +109,19 @@ In `build.mill`, `api/internal-api-adapters/<tech>` depends on `api/api-defn` an
 ## Module wiring
 
 ```
-domainPublic / domainPrivate
-        ↑
-   core/ports          api/api-defn
-        ↑                    ↑
-core/adapters/<tech>-<name>  api/internal-api-adapters/<tech>
-        ↑                    ↑
-              server
+domainPublic                 domainPrivate
+     ↑           ↑                 ↑
+api/api-defn   core/ports          |
+     ↑               ↑            ↑
+     |          core/adapters/<tech>-<name>
+     ↑                    ↑
+api/internal-api-adapters/<tech>
+              ↑
+            server
      (only place that picks which adapters to wire)
 ```
+
+`api/api-defn` depends only on `domainPublic` — it must never import `domainPrivate` types.
 
 In `build.mill`, each driven adapter lists `ports` in `moduleDeps` plus its infrastructure deps. Each driving adapter lists `api-defn` and `core-impl`. Adapters never depend on each other.
 
