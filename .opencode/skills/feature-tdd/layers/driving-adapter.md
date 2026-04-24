@@ -61,7 +61,9 @@ object http extends ScalaModule {
 
   object test extends ScalaTests {
     def testFramework = "zio.test.sbt.ZTestFramework"
-    override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ tapirClientDeps
+    override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ tapirClientDeps ++ Seq(
+      mvn"com.softwaremill.sttp.tapir::tapir-stub-server:1.11.9"
+    )
     override def moduleDeps = super.moduleDeps ++ Seq(
       core.adapters.`in-memory-<name>`   // inject in-memory core via this
     )
@@ -98,7 +100,7 @@ object <Feature>HttpControllerSpec extends ZIOSpecDefault:
           .send(backend)
       yield assertTrue(resp.code.isSuccess)
     }
-  ).provide(InMemory<Feature>Service.layer)
+  ).provide(InMemory<name>Repository.layer, <Feature>Service.layer)
 ```
 
 Run: `./mill <service>.api.\`internal-api-adapters\`.http.test`

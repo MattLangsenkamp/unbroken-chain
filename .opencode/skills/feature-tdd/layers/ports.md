@@ -97,7 +97,7 @@ object InMemoryOrgRepositorySpec extends ZIOSpecDefault:
         afterDel <- repo.findById(OrgId(1L))
       yield assertTrue(afterDel.isEmpty)
     }
-  ).provide(InMemoryOrgRepository.layer)
+  ).provide(InMemoryOrgRepository.layer) @@ TestAspect.sequential
 ```
 
 Run: `./mill <service>.core.adapters.\`in-memory-org-repository\`.test`

@@ -14,19 +14,14 @@ import ubc.<service>.domain.*
 import ubc.<service>.domain.internal.*
 import zio.*
 
-trait GitHubOrgService:
-  def linkOrg(userId: UserId, orgName: OrgName): Task[GitHubOrg]
-
-final case class GitHubOrgServiceLive(
-  orgRepo: OrgRepository
-) extends GitHubOrgService:
+case class GitHubOrgService(orgRepo: OrgRepository):
   def linkOrg(userId: UserId, orgName: OrgName): Task[GitHubOrg] =
     // business logic only — no SQL, no HTTP
     ???
 
-object GitHubOrgServiceLive:
+object GitHubOrgService:
   val layer: URLayer[OrgRepository, GitHubOrgService] =
-    ZLayer.fromFunction(GitHubOrgServiceLive.apply)
+    ZLayer.fromFunction(GitHubOrgService.apply)
 ```
 
 Rules:
@@ -73,7 +68,7 @@ object GitHubOrgServiceSpec extends ZIOSpecDefault:
     }
   ).provide(
     InMemoryOrgRepository.layer,
-    GitHubOrgServiceLive.layer
+    GitHubOrgService.layer
   )
 ```
 
@@ -88,9 +83,8 @@ Expected: PASS.
 Repeat for each behaviour.
 
 ## Naming rules
-- Service trait: `<Feature>Service` — no infra in the name
-- Implementation: `<Feature>ServiceLive`
-- Layer: `URLayer[PortDependencies, ServiceTrait]`
+- Service: `<Feature>Service` — plain `case class`, no infra in the name
+- Layer: `URLayer[PortDependencies, <Feature>Service]`
 
 ## Report back
 

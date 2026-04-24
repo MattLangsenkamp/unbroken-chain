@@ -30,9 +30,9 @@ class MagnumOrgRepository(xa: TransactorZIO) extends OrgRepository:
   def save(org: GitHubOrg): Task[Unit] =
     xa.transact {
       sql"""
-        INSERT INTO github_orgs (id, name, created_at)
-        VALUES (${org.id}, ${org.name}, ${org.createdAt})
-        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+        INSERT INTO github_orgs (name, created_at)
+        VALUES (${org.name}, ${org.createdAt})
+        ON CONFLICT (name) DO UPDATE SET created_at = EXCLUDED.created_at
       """.update.run()
     }.unit
 
@@ -102,9 +102,10 @@ object MagnumOrgRepositorySpec extends ZIOSpecDefault:
       test("save persists an org and findById returns it") {
         for
           repo  <- ZIO.service[OrgRepository]
+          // id = 0L is a placeholder — BIGSERIAL assigns the real id (1 for first insert)
           org    = GitHubOrg(OrgId(0L), OrgName("test-org"), Instant.parse("2025-01-01T00:00:00Z"))
           _     <- repo.save(org)
-          found <- repo.findById(OrgId(1L))  // BIGSERIAL assigns id = 1
+          found <- repo.findById(OrgId(1L))
         yield assertTrue(
           found.isDefined,
           found.get.name == OrgName("test-org")
@@ -118,15 +119,15 @@ object MagnumOrgRepositorySpec extends ZIOSpecDefault:
         yield assertTrue(result.isEmpty)
       },
 
-      test("save is an upsert — second save replaces the first") {
+      test("save is an upsert — re-saving same name updates the row") {
         for
           repo    <- ZIO.service[OrgRepository]
-          org      = GitHubOrg(OrgId(0L), OrgName("original"), Instant.parse("2025-01-01T00:00:00Z"))
-          updated  = org.copy(name = OrgName("updated"))
+          org      = GitHubOrg(OrgId(0L), OrgName("my-org"), Instant.parse("2025-01-01T00:00:00Z"))
+          updated  = org.copy(createdAt = Instant.parse("2026-01-01T00:00:00Z"))
           _       <- repo.save(org)
-          _       <- repo.save(updated)
+          _       <- repo.save(updated)       // same name → ON CONFLICT updates
           found   <- repo.findById(OrgId(1L))
-        yield assertTrue(found.get.name == OrgName("updated"))
+        yield assertTrue(found.get.createdAt == Instant.parse("2026-01-01T00:00:00Z"))
       },
 
       test("delete removes the org") {
