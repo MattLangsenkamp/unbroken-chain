@@ -5,7 +5,7 @@ description: Conventions for schema migrations, Magnum repository adapters, and 
 
 # Relational Database Modeling
 
-This skill covers the full stack from SQL schema to domain type: where migrations live, how repositories implement port interfaces, and how to wire Magnum `DbCodec` instances through the adapter extension modules.
+This skill covers the Magnum-specific stack: Flyway migrations, SQL patterns, and DbCodec wiring. For the general ports and adapters architecture (port trait conventions, adapter module layout, in-memory stubs), see **`ports-and-adapters`**.
 
 ---
 
@@ -57,24 +57,6 @@ The Helm chart runs a pre-install/pre-upgrade Job (`k8s/templates/migrate-job.ya
 | `List[T]` (comma-encoded) | `TEXT NOT NULL DEFAULT ''` |
 
 Magnum maps case class fields to columns by name using snake_case (`userId` → `user_id`, `createdAt` → `created_at`). Make your SQL column names match the snake_case of your Scala field names.
-
----
-
-## Port interface
-
-The port trait lives in `core/ports/` and declares what the repository must do in terms of domain types only — no Magnum, no SQL.
-
-```scala
-// core/ports/src/ubc/<service>/core/ports/MyRepository.scala
-package ubc.<service>.core.ports
-
-import zio.*
-
-trait MyRepository:
-  def save(entity: MyEntity): Task[Unit]
-  def findById(id: MyId): Task[Option[MyEntity]]
-  def delete(id: MyId): Task[Unit]
-```
 
 ---
 

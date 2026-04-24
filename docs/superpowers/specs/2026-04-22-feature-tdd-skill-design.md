@@ -68,8 +68,9 @@ For each layer in the plan, in inside-out order:
    - Correctness against the port contract
    - Naming conventions (`ports-and-adapters` skill: port names infra-free, adapter names describe the full stack)
    - Alignment with the plan hypothesis
+   - **Compilation** — runs `./mill __.compile` to verify the entire project still compiles cleanly
 
-   If the audit fails — TDD violated, naming wrong, contract broken — the orchestrator re-dispatches the same layer with the issue noted. It does not proceed to the next layer.
+   If the audit fails — TDD violated, naming wrong, contract broken, or compile error — the orchestrator re-dispatches the same layer with the issue noted. It does not proceed to the next layer.
 
 4. **Commit** — once audit passes, commit on the feature branch with a message describing the layer and iteration, e.g.:
    `feat(github-gateway): implement MagnumOrgRepository with integration tests [layer 3/5]`
@@ -133,5 +134,6 @@ Parallelism is not used — later layers depend on the concrete output of earlie
 | TDD approach | Embedded (abbreviated) in each layer template | Sub-agents start cold — TDD must be present in the prompt |
 | Sub-agent write access | Full write access | Orchestrator audits output rather than applying it |
 | Plan mutability | Hypothesis, revised after each layer | TDD cycles reveal design decisions that can't be known upfront |
+| Compilation check | `./mill __.compile` during audit | Catches integration errors between layers before committing |
 | Commit cadence | After each passing layer audit | Creates stable, recoverable checkpoints |
 | Layer templates | Separate files per layer type | Test infrastructure changes per layer independently of orchestration logic |
