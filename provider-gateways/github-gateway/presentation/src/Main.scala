@@ -2,7 +2,7 @@ import tyrian.*
 import tyrian.Html.*
 import scala.scalajs.js.annotation.JSExportTopLevel
 import ubc.githubgateway.api.GitHubGatewayApi
-import ubc.githubgateway.api.external.http.GitHubGatewayJsClient
+import ubc.githubgateway.api.external.http.SttpFetchGitHubGatewayClient
 import ubc.githubgateway.domain.GitHubRepo
 import zio.*
 import zio.interop.catz.*
@@ -19,7 +19,7 @@ object Main extends TyrianZIOApp[Msg, Model]:
 
   def init(flags: Map[String, String]): (Model, Cmd[Task, Msg]) =
     val baseUrl = flags.getOrElse("apiBase", "http://api.localhost:8080")
-    val client: GitHubGatewayApi = GitHubGatewayJsClient(baseUrl)
+    val client: GitHubGatewayApi = SttpFetchGitHubGatewayClient(baseUrl)
     val fetchCmd = Cmd.Run(
       client.listRepos("scala")
         .map(Msg.ReposLoaded.apply)

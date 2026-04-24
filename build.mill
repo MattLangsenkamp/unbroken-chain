@@ -309,7 +309,9 @@ object `provider-gateways` extends Module {
       // Typed HTTP clients other services import to call this service.
       // Depends only on api-defn and public domain codecs — never on core or private domain.
       object `external-api-adapters` extends Module {
-        object http extends ScalaModule {
+        // JVM client: Tapir endpoint DSL + SttpClientInterpreter. Import this when a
+        // JVM service needs to call the GitHub Gateway over HTTP.
+        object `tapir-sttp-http` extends ScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             `api-defn`.jvm,
@@ -318,11 +320,10 @@ object `provider-gateways` extends Module {
           override def mvnDeps = zioDeps ++ tapirClientDeps ++ neotypeTapirDeps
         }
 
-        // Scala.js HTTP client for the Tyrian SPA. FetchZioBackend wraps the browser's fetch
-        // API returning ZIO Task — the same effect type as GitHubGatewayApi, so the JS client
-        // can implement the same port trait as the JVM client.
+        // Scala.js client: raw sttp + FetchZioBackend (browser Fetch API).
+        // No Tapir — FetchZioBackend returns ZIO Task directly, matching the port trait.
         // Explicit _sjs1_3 artifact name required for ScalaJS resolution.
-        object `js-http` extends ScalaJSModule {
+        object `sttp-fetch-js` extends ScalaJSModule {
           def scalaVersion = scalaVer
           def scalaJSVersion = scalaJSVer
           override def moduleDeps = Seq(
@@ -337,7 +338,7 @@ object `provider-gateways` extends Module {
     }
 
     object presentation extends PresentationModule {
-      override def moduleDeps = Seq(api.`external-api-adapters`.`js-http`)
+      override def moduleDeps = Seq(api.`external-api-adapters`.`sttp-fetch-js`)
       override def mvnDeps = super.mvnDeps() ++ Seq(
         mvn"io.indigoengine:tyrian-zio_sjs1_3:0.14.0",
         mvn"dev.zio:zio-interop-cats_sjs1_3:23.1.0.3"

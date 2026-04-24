@@ -9,10 +9,10 @@ import sttp.model.Uri
 import zio.*
 import zio.json.*
 
-// Scala.js implementation of GitHubGatewayApi backed by FetchZioBackend.
-// FetchZioBackend wraps the browser's Fetch API returning ZIO Task — the same
-// effect type as the port trait, so no impedance mismatch at the boundary.
-class GitHubGatewayJsClient(baseUri: Uri) extends GitHubGatewayApi:
+// Scala.js implementation of GitHubGatewayApi using sttp + FetchZioBackend.
+// FetchZioBackend wraps the browser's native Fetch API, returning ZIO Task —
+// matching the effect type of the port trait with no extra wrapping.
+class SttpFetchGitHubGatewayClient(baseUri: Uri) extends GitHubGatewayApi:
 
   private val backend = FetchZioBackend()
 
@@ -41,6 +41,6 @@ class GitHubGatewayJsClient(baseUri: Uri) extends GitHubGatewayApi:
         ZIO.fromEither(resp.body).mapError(e => Exception(s"HTTP error: $e")).unit
       }
 
-object GitHubGatewayJsClient:
-  def apply(baseUrl: String): GitHubGatewayJsClient =
-    new GitHubGatewayJsClient(Uri.unsafeParse(baseUrl))
+object SttpFetchGitHubGatewayClient:
+  def apply(baseUrl: String): SttpFetchGitHubGatewayClient =
+    new SttpFetchGitHubGatewayClient(Uri.unsafeParse(baseUrl))

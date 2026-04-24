@@ -12,13 +12,11 @@ import sttp.client3.*
 import sttp.model.Uri
 import zio.*
 
-// Typed HTTP client for other services to import when they need to call
-// the GitHub Gateway. Depends only on api-defn and public domain codecs —
-// no core or private domain types cross the boundary.
-//
-// Endpoint shapes mirror GitHubGatewayHttpController so both sides agree
-// on the HTTP contract without sharing server-side code.
-class GitHubGatewayHttpClient(backend: SttpBackend[Task, Any], baseUri: Uri)
+// Tapir + sttp JVM implementation of GitHubGatewayApi. Endpoint shapes are
+// defined with the Tapir DSL and interpreted via SttpClientInterpreter —
+// mirroring GitHubGatewayHttpController so client and server agree on the
+// HTTP contract without sharing server-side code.
+class TapirSttpGitHubGatewayClient(backend: SttpBackend[Task, Any], baseUri: Uri)
     extends GitHubGatewayApi:
 
   private val base = endpoint.in("github-gateway")
@@ -62,6 +60,6 @@ class GitHubGatewayHttpClient(backend: SttpBackend[Task, Any], baseUri: Uri)
       .send(backend)
       .flatMap(r => ZIO.fromEither(r.body).mapError(e => new Exception(e)))
 
-object GitHubGatewayHttpClient:
+object TapirSttpGitHubGatewayClient:
   def layer(baseUri: Uri): ZLayer[SttpBackend[Task, Any], Nothing, GitHubGatewayApi] =
-    ZLayer.fromFunction(new GitHubGatewayHttpClient(_, baseUri))
+    ZLayer.fromFunction(new TapirSttpGitHubGatewayClient(_, baseUri))
