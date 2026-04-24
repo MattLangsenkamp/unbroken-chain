@@ -28,6 +28,24 @@ object PublicMagnumCodecs:
 
 For `domainPrivateAdapterExtensions/magnum`, follow the same pattern for internal types (e.g. `TokenId`, `UserId`).
 
+## Prefer domain types directly — no row models
+
+Once `DbCodec` instances exist for the newtypes a domain case class is built from, Magnum's `DbCodec.derived[GitHubOrg]` works on the domain type directly. Do not introduce a `GitHubOrgRow` shadow type unless the schema cannot be expressed with the domain (see the "Prefer domain types directly" section in `layers/domain.md`).
+
+In the repository adapter:
+```scala
+// Inside core/adapters/magnum-org-repository — derive directly on the domain type
+private given DbCodec[GitHubOrg] = DbCodec.derived[GitHubOrg]
+
+class MagnumOrgRepository(xa: TransactorZIO) extends OrgRepository:
+  def findById(id: OrgId): Task[Option[GitHubOrg]] =
+    xa.connect {
+      sql"SELECT ... FROM github_orgs WHERE id = $id".query[GitHubOrg].run().headOption
+    }
+```
+
+Only introduce a row type when the SQL schema diverges from the domain (e.g. a normalised collection stored as a delimited column). When you do, keep the row case class and the Chimney transformation inside the repo adapter module — never in this extension module.
+
 ## build.mill
 
 Magnum is JVM-only — this module is not cross-compiled:

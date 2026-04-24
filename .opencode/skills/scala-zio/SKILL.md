@@ -27,49 +27,38 @@ Choose the reference most relevant to your task:
 ## Key Principles
 
 - **Immutability everywhere** — `val` only, no `var`
-- **Typed errors** — use `ZIO[R, E, A]` with specific error types, not `Task` everywhere
-- **ZIO Service Pattern** — every service has a trait, a `Live` implementation, a `ZLayer`, and a **test implementation** backed by `Ref` or another in-memory construct
+- **Typed errors** — prefer `IO[DomainError, A]`; use `Task[A]` only for unmodeled defects
+- **ZIO Service Pattern** — services are plain `case class`es taking port deps via constructor; companion exposes a `ZLayer`. No backing trait, no `Live` suffix.
+- **Ports and adapters** — domain logic isolated from infrastructure via port traits; see the `ports-and-adapters` skill
 - **Composition over inheritance** — combine `ZLayer`s rather than subclassing
-- **Derive codecs** — use `derives JsonCodec`, never write codec instances by hand
-- **Wrap primitives** — use newtypes or opaque types for domain values instead of raw `String`/`Int`
+- **Wrap primitives** — use neotype `Newtype` for domain values instead of raw `String`/`Int`
 
 ## Quick Reference
 
-### Basic ZIO Service Pattern
+### Service pattern (plain case class, no trait)
 
 ```scala
-// Trait
-trait MyService:
-  def doThing(input: String): Task[Unit]
+case class MyService(dep: MyDep, repo: MyRepository):
+  def doThing(input: DomainInput): IO[DomainError, Result] = ???
 
-// Live implementation
-final case class MyServiceLive(dep: MyDep) extends MyService:
-  override def doThing(input: String): Task[Unit] = ???
-
-object MyServiceLive:
-  val layer: URLayer[MyDep, MyService] =
-    ZLayer.fromFunction(MyServiceLive.apply)
+object MyService:
+  val layer: URLayer[MyDep & MyRepository, MyService] =
+    ZLayer.fromFunction(MyService.apply)
 ```
 
-### Effect Composition
-
-```scala
-for
-  result <- myService.doThing("input")
-  _      <- ZIO.logInfo(s"Done: $result")
-yield result
-```
-
-### Running Effects
+### Wiring
 
 Only call `.provide(...)` or `ZLayer.make` in the `server` module's `ZIOAppDefault`. Never wire layers inside service implementations.
 
 ```scala
 object Server extends ZIOAppDefault:
-  def run = myProgram.provide(
-    MyServiceLive.layer,
-    MyDepLive.layer
+  def run = appProgram.provide(
+    MyService.layer,
+    MagnumMyRepository.layer,
+    // ... more layers
   )
 ```
 
-For full patterns — service structure, config, domain modeling, and server wiring — see the reference files above.
+For implementing a feature end-to-end (domain types, ports, core, adapters, controllers), use the **`feature-tdd`** skill — its layer templates contain the concrete TDD patterns and build.mill snippets for each layer.
+
+For the architectural rules around ports and adapters, see the **`ports-and-adapters`** skill.

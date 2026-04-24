@@ -32,6 +32,31 @@ case class GitHubOrg(
 
 **Never import** Magnum, Tapir, JDBC, ZIO JSON, or any infrastructure in domain files.
 
+## Prefer domain types directly
+
+Do not introduce a separate "row" or "DTO" type for an adapter unless the schema or wire format genuinely cannot be expressed with the domain type. Any case class whose fields all have codec instances in scope can be serialised directly — no shadow type needed.
+
+Only introduce a row/DTO model when the external shape diverges from the domain (e.g. a normalised collection stored as a delimited string, a legacy schema, a third-party API field that doesn't map cleanly). When you do, keep the row type inside the adapter module and use [Chimney](https://github.com/scalalandio/chimney) for the domain ↔ row transformation:
+
+```scala
+// Inside the adapter module — never in the domain
+import io.scalaland.chimney.dsl.*
+
+case class GitHubOrgRow(id: Long, name: String, tags: String) derives DbCodec
+
+object GitHubOrgRow:
+  def fromDomain(o: GitHubOrg): GitHubOrgRow = o.into[GitHubOrgRow]
+    .withFieldComputed(_.tags, _.tags.mkString(","))
+    .transform
+
+  extension (row: GitHubOrgRow)
+    def toDomain: GitHubOrg = row.into[GitHubOrg]
+      .withFieldComputed(_.tags, _.tags.split(",").toList.filter(_.nonEmpty))
+      .transform
+```
+
+Default to no row type. Add one only when the shape mismatch forces it.
+
 ## Adapter-extension modules
 
 Infrastructure-specific codec instances (Magnum `DbCodec`, ZIO JSON `JsonCodec`, Tapir `Schema`) live in separate per-adapter extension modules — never in the domain type itself. This means each infrastructure dependency is only pulled in by the adapter that actually needs it.
