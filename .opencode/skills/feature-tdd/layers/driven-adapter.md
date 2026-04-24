@@ -221,6 +221,6 @@ Repeat for each port method.
 When complete:
 1. **Adapter implemented** — class name, port it implements, each method
 2. **Tests written** — one line per test: what it verifies
-3. **SQL schema assumptions** — table name, column names and types, any constraints relied upon
+3. **SQL schema assumptions** — table name, column names and types, any constraints relied upon (e.g. `ON CONFLICT (name)` requires `UNIQUE (name)` in the migration)
 4. **Deviations from plan** — anything that changed
 5. **Proposed amendments** — changes needed to the driving adapter layer or server wiring
