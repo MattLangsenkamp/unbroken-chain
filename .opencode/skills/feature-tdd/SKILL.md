@@ -1,6 +1,6 @@
 ---
 name: feature-tdd
-description: Use when implementing a new feature from a spec — full vertical slice across domain types, ports, core logic, driven adapters, and driving adapters. Trigger when handed requirements or a spec for a new capability to build.
+description: Use when implementing a new feature from a spec — full vertical slice across domain types, ports, core logic, driven adapters, and driving adapters.
 ---
 
 # Feature TDD
@@ -44,8 +44,6 @@ Read the spec. Identify which layers this feature needs — not every feature to
 ## Open questions
 [Things that cannot be resolved until a TDD cycle runs]
 ```
-
-Show the plan to the user and get confirmation before proceeding.
 
 ## Phase 2: Execution loop
 
