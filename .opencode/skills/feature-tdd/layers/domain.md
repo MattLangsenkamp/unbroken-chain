@@ -19,23 +19,22 @@ object OrgName extends Newtype[String]
 type OrgName = OrgName.Type
 ```
 
-Use `case class` for multi-field entities. Derive `JsonCodec` for types that cross HTTP boundaries:
+Use `case class` for multi-field entities. Do not derive any codec in the domain type itself:
 ```scala
-import zio.json.JsonCodec
 import java.time.Instant
 
 case class GitHubOrg(
   id: OrgId,
   name: OrgName,
   createdAt: Instant
-) derives JsonCodec
+)
 ```
 
-**Never import** Magnum, Tapir, JDBC, or any infrastructure in domain files.
+**Never import** Magnum, Tapir, JDBC, ZIO JSON, or any infrastructure in domain files.
 
 ## Adapter-extension modules
 
-Infrastructure-specific codec instances (Magnum `DbCodec`, ZIO JSON codecs, Tapir schema instances) live in separate per-adapter extension modules — never in the domain type itself. This means each infrastructure dependency is pulled in only by the adapter that needs it.
+Infrastructure-specific codec instances (Magnum `DbCodec`, ZIO JSON `JsonCodec`, Tapir `Schema`) live in separate per-adapter extension modules — never in the domain type itself. This means each infrastructure dependency is only pulled in by the adapter that actually needs it.
 
 ```
 domain/
@@ -43,12 +42,20 @@ domain/
   domainPrivate/                         # internal types, no infrastructure
   domainPublicAdapterExtensions/
     magnum/src/.../adapters/magnum/      # DbCodec instances for public types
-    zio-json/src/.../adapters/json/      # JsonCodec derivations (if not derived inline)
+    zio-json/src/.../adapters/json/      # JsonCodec instances for public types
   domainPrivateAdapterExtensions/
     magnum/src/.../adapters/magnum/      # DbCodec instances for private types
+    zio-json/src/.../adapters/json/      # JsonCodec instances for private types
 ```
 
-When building the domain layer, define only the core type. The adapter-extension module (and its infrastructure dependency) is added when you build the driven adapter that needs it. This keeps `domainPublic` importable by the frontend (Scala.js) without dragging in JVM-only libraries.
+**Why this matters — it's not just Scala.js:** Pulling infrastructure codecs into the domain type itself poisons every module that imports it:
+- A Scala.js frontend module (`domainPublic.js`) that imports a type with `derives JsonCodec` gets the zio-json JVM codec dragged in at link time, breaking the JS build.
+- A pure JVM adapter (e.g. a Magnum repo) that only needs `DbCodec` would unnecessarily acquire a zio-json compile dependency, inflating its classpath and risking transitive version conflicts.
+- Two adapters that share a domain type but use different serialisation stacks (JSON vs Protobuf, Magnum vs JDBC) would both be forced to depend on the other's library.
+
+Define only the core type here. Adapter-extension modules (and their infrastructure deps) are added when you build the driven adapter that needs them.
+
+See `adapter-extension-examples/` for concrete build.mill and codec patterns.
 
 ## TDD cycle (Iron Law — no exceptions)
 
