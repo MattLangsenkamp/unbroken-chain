@@ -49,8 +49,38 @@ The plan is the standard 5 layers. Each layer is one or more sub-agent dispatche
 
 ## Layers checklist
 
-- [ ] Layer 1 — Domain types
-- [ ] Layer 2 — Ports + in-memory stubs
+- [x] Layer 1 — Domain types  *(commit `13cc009`)*
+- [x] Layer 2 — Ports + in-memory stubs
 - [ ] Layer 3 — Core service
 - [ ] Layer 4 — Driven adapters
 - [ ] Layer 5 — Driving adapter (HTTP)
+
+## Layer 1 deviations
+
+- **`EncryptedBytes` repr changed from `Array[Byte]` → `String` (base64).** TDD revealed neotype on `Array[Byte]` inherits Array's reference-equality `==`, masked by zio-test's `assertTrue` macro rewriting to `sameElements`. Switched to `Newtype[String]` with base64 payload. Magnum codec extension (Layer 4) must translate to/from JDBC `BYTEA` at the boundary.
+- **Test sources path on cross-compiled modules.** Test sources for `domainPublic.jvm` land under `domainPublic/jvm/test/src/`, not `domainPublic/test/src/`, because the `Shared` trait's `sources` override only applies to production code. The test sub-module uses Mill's default path resolution.
+- **Twin newtypes `InstallationId` (local DB surrogate) vs `GhInstallationId` (GitHub-side).** Same pattern for `RepositoryId` vs `GhRepositoryId`. Ports must use the local id for primary-key arguments and the GitHub id only when interacting with GitHub or webhook payloads.
+
+## Amendments propagated to later layers
+
+- Layer 4 Magnum codec for `EncryptedBytes`: `DbCodec[Array[Byte]].biMap(b => EncryptedBytes(Base64.encode(b)), e => Base64.decode(e.unwrap))`.
+- Layer 4 V1 migration: see Layer 1 report — four tables with text-encoded enums and `BYTEA` for the encrypted verifier.
+- Layer 2 ports must distinguish `InstallationId` (local) from `GhInstallationId` (GitHub) in method signatures.
+- Layer 2 `EncryptionKey` newtype is a `String` (base64); the encryption adapter decodes inside, never exposing raw key bytes through the port.
+
+## Layer 2 deviations
+
+- **All repository ports return `Task[A]`, not `IO[DomainError, A]`.** Repos surface infra failures as defects; the `LinkError` / `UnlinkError` / `ReconcileError` family is constructed in the core service. This keeps adapter implementations free of error-channel boilerplate.
+- **`InMemoryGitHubAppClient.layer` is `ZLayer[Any, Nothing, GitHubAppClient & InMemoryGitHubAppClient]`** — single dual binding so core-service tests can `ZIO.serviceWith[InMemoryGitHubAppClient]` for seeding (`seedInstallation`, `seedRepos`) while wiring the port-typed surface. No second `layerWithAccess`.
+- **`InMemoryGitHubAppClient.deleteInstallation` returns `Right(())` even for unseeded installations** — mirrors GitHub's "404 = idempotent success" semantics.
+- **`DeterministicSecureRandom` shares one counter** between `newCodeVerifier` and `newLinkState` — sequential calls produce different counter values, so don't write tests assuming per-method counters.
+- **In-memory `InstallationRepository.deleteByGhInstallationId` does NOT cascade** to `linked_repo`. Postgres relies on `ON DELETE CASCADE`; the in-memory contract expects the core service to handle related deletions explicitly.
+
+## Amendments propagated to Layer 3 / Layer 4
+
+- Use `zio.Clock` directly in core service; tests get `TestClock`.
+- After `GitHubAppClient.getInstallation` (which returns `Installation` with sentinel `id = InstallationId(0L)`), core MUST call `InstallationRepository.upsertByGhInstallationId` to obtain the real local id before exposing the value through any read API.
+- `GitHubAppClient.deleteInstallation` returns `Task[Either[String, Unit]]` — core unlink path uses `.flatMap` over the `Either` to map to `UnlinkError.GitHubFailure`.
+- Layer 4: `WebhookDeliveryRepository.recordIfAbsent` must use `INSERT … ON CONFLICT (delivery_id) DO NOTHING` returning a row count — never SELECT-then-INSERT.
+- Layer 4: `LinkedRepoRepository.replaceSet` runs in a single Magnum transaction.
+- Layer 4: `Crypto` real adapter takes `EncryptionKey` as a constructor arg, AES-GCM, base64-encoded output. `InstallationTokenMinter` real adapter takes the App's `appId` + PEM-encoded private key as constructor args; signs RS256 with TTL ≤ 10 min.

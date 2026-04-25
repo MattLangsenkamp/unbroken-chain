@@ -223,7 +223,8 @@ object `provider-gateways` extends Module {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(
           domain.domainPublic.jvm,
-          domain.domainPrivate
+          domain.domainPrivate,
+          common.pagination
         )
         override def mvnDeps = zioDeps
       }
@@ -270,11 +271,103 @@ object `provider-gateways` extends Module {
           }
         }
 
-        // In-memory TokenRepository for local dev and testing — no DB required.
-        object `in-memory-token-repository` extends ScalaModule {
+        // In-memory InstallationRepository for local dev and testing — no DB required.
+        object `in-memory-installation-repository` extends ScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+
+        // In-memory LinkedRepoRepository for local dev and testing.
+        object `in-memory-linked-repo-repository` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+
+        // In-memory PendingLinkFlowRepository for local dev and testing.
+        object `in-memory-pending-link-flow-repository` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+
+        // In-memory WebhookDeliveryRepository for local dev and testing.
+        object `in-memory-webhook-delivery-repository` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+
+        // In-memory fake of GitHub's REST API for the App. Used by core service tests
+        // that need a deterministic, in-process backend instead of calling github.com.
+        object `in-memory-github-app-client` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+
+        // In-memory InstallationTokenMinter — returns deterministic dummy JWTs for tests.
+        object `in-memory-installation-token-minter` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+
+        // Deterministic SecureRandom — counter-backed; emits predictable verifiers/state nonces
+        // so tests can assert on exact values. Not for production use.
+        object `deterministic-secure-random` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+
+        // No-op Crypto adapter — base64 identity transform. For tests and local dev only;
+        // gives the round-trip property of a real Crypto without the key management.
+        object `noop-crypto` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
         }
       }
     }
