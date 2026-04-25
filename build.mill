@@ -148,7 +148,12 @@ object `provider-gateways` extends Module {
           override def sources = Task.Sources(moduleDir / os.up / "src")
           override def mvnDeps = super.mvnDeps() ++ neotypeDeps
         }
-        object jvm extends Shared
+        object jvm extends Shared {
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
         object js extends Shared with ScalaJSModule {
           def scalaJSVersion = scalaJSVer
           // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
@@ -160,6 +165,11 @@ object `provider-gateways` extends Module {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(domainPublic.jvm)
         override def mvnDeps = super.mvnDeps() ++ neotypeDeps
+
+        object test extends ScalaTests {
+          def testFramework = "zio.test.sbt.ZTestFramework"
+          override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+        }
       }
 
       object domainPublicAdapterExtensions extends Module {
@@ -411,6 +421,18 @@ object common extends Module {
   object `tapir-tracing-interceptor` extends ScalaModule {
     def scalaVersion = scalaVer
     override def mvnDeps = tapirServerDeps ++ zioOtelDeps ++ otelSemconvDeps
+  }
+
+  // Reusable pagination types (Page[A], PageRequest) shared across services.
+  // Pure domain types — no JSON/Magnum codecs here. Codec extensions can come later.
+  object pagination extends ScalaModule {
+    def scalaVersion = scalaVer
+    override def mvnDeps = zioDeps
+
+    object test extends ScalaTests {
+      def testFramework = "zio.test.sbt.ZTestFramework"
+      override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+    }
   }
 
   // Reusable ZIO Test database fixture: TestDatabase.suiteLayer / TestDatabase.testLayer.
