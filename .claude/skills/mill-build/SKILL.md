@@ -181,7 +181,7 @@ object myService extends Module {
 }
 ```
 
-See `.opencode/skills/presentation/SKILL.md` for the full presentation workflow.
+See `.claude/skills/presentation/SKILL.md` for the full presentation workflow.
 
 ### CrossPlatform — shared JVM + Scala.js modules
 

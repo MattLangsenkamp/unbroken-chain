@@ -176,7 +176,7 @@ The Helm hook Job in `migrate-job.yaml` fires as `pre-install,pre-upgrade` — m
 
 ## Adding a Presentation to a Service
 
-If the service needs a Tyrian SPA frontend, follow these additional steps. See `.opencode/skills/presentation/SKILL.md` for full details.
+If the service needs a Tyrian SPA frontend, follow these additional steps. See `.claude/skills/presentation/SKILL.md` for full details.
 
 ### 1. Scaffold the presentation directory
 
