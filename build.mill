@@ -12,13 +12,16 @@ import com.github.lolgab.mill.scalablytyped.*
 val scalaVer   = "3.6.4"
 val scalaJSVer = "1.20.2"
 
+// zio + zio-test must move in lockstep: zio-test's macros reference internal
+// zio APIs by name. neotype-tapir 0.4.10 transitively requires zio-test 2.1.24,
+// so we pin everything to 2.1.24 to keep classpath resolution coherent.
 val zioDeps = Seq(
-  mvn"dev.zio::zio:2.1.17"
+  mvn"dev.zio::zio:2.1.24"
 )
 
 val zioTestDeps = Seq(
-  mvn"dev.zio::zio-test:2.1.17",
-  mvn"dev.zio::zio-test-sbt:2.1.17"
+  mvn"dev.zio::zio-test:2.1.24",
+  mvn"dev.zio::zio-test-sbt:2.1.24"
 )
 
 val zioJsonDeps = Seq(
@@ -181,11 +184,11 @@ object `provider-gateways` extends Module {
             override def mvnDeps = zioJsonDeps ++ neotypeZioJsonDeps
           }
           object jvm extends Shared {
-            override def moduleDeps = Seq(domainPublic.jvm)
+            override def moduleDeps = Seq(domainPublic.jvm, common.pagination.jvm, api.`api-defn`.jvm)
           }
           object js extends Shared with ScalaJSModule {
             def scalaJSVersion = scalaJSVer
-            override def moduleDeps = Seq(domainPublic.js)
+            override def moduleDeps = Seq(domainPublic.js, common.pagination.js, api.`api-defn`.js)
             // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
             override def mvnDeps = Seq(
               mvn"dev.zio:zio-json_sjs1_3:0.7.3",
@@ -224,7 +227,7 @@ object `provider-gateways` extends Module {
         override def moduleDeps = Seq(
           domain.domainPublic.jvm,
           domain.domainPrivate,
-          common.pagination
+          common.pagination.jvm
         )
         override def mvnDeps = zioDeps
       }
@@ -502,11 +505,11 @@ object `provider-gateways` extends Module {
           override def mvnDeps = zioDeps
         }
         object jvm extends Shared {
-          override def moduleDeps = Seq(domain.domainPublic.jvm)
+          override def moduleDeps = Seq(domain.domainPublic.jvm, common.pagination.jvm)
         }
         object js extends Shared with ScalaJSModule {
           def scalaJSVersion = scalaJSVer
-          override def moduleDeps = Seq(domain.domainPublic.js)
+          override def moduleDeps = Seq(domain.domainPublic.js, common.pagination.js)
           // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
           override def mvnDeps = Seq(mvn"dev.zio:zio_sjs1_3:2.1.17")
         }
@@ -517,13 +520,34 @@ object `provider-gateways` extends Module {
       object `internal-api-adapters` extends Module {
         object http extends ScalaModule {
           def scalaVersion = scalaVer
+          // Tapir's Schema derivation for nested generics (Page[Installation]) needs
+          // a higher inline budget than the default 32.
+          override def scalacOptions = super.scalacOptions() ++ Seq("-Xmax-inlines", "64")
           override def moduleDeps = Seq(
             `api-defn`.jvm,
             core.`core-impl`,
             domain.domainPublicAdapterExtensions.`zio-json`.jvm,
-            common.`tapir-tracing-interceptor`
+            common.`tapir-tracing-interceptor`,
+            common.pagination.jvm
           )
-          override def mvnDeps = zioDeps ++ tapirServerDeps ++ neotypeTapirDeps
+          override def mvnDeps = zioDeps ++ tapirServerDeps ++ neotypeTapirDeps ++ zioJsonDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ tapirClientDeps ++ Seq(
+              mvn"com.softwaremill.sttp.tapir::tapir-sttp-stub-server:1.11.9"
+            )
+            override def moduleDeps = super.moduleDeps ++ Seq(
+              core.adapters.`in-memory-installation-repository`,
+              core.adapters.`in-memory-linked-repo-repository`,
+              core.adapters.`in-memory-pending-link-flow-repository`,
+              core.adapters.`in-memory-webhook-delivery-repository`,
+              core.adapters.`in-memory-github-app-client`,
+              core.adapters.`in-memory-installation-token-minter`,
+              core.adapters.`deterministic-secure-random`,
+              core.adapters.`noop-crypto`
+            )
+          }
         }
       }
 
@@ -534,11 +558,20 @@ object `provider-gateways` extends Module {
         // JVM service needs to call the GitHub Gateway over HTTP.
         object `tapir-sttp-http` extends ScalaModule {
           def scalaVersion = scalaVer
+          // Tapir's Schema derivation for nested generics (Page[Installation]) needs
+          // a higher inline budget than the default 32.
+          override def scalacOptions = super.scalacOptions() ++ Seq("-Xmax-inlines", "64")
           override def moduleDeps = Seq(
             `api-defn`.jvm,
-            domain.domainPublicAdapterExtensions.`zio-json`.jvm
+            domain.domainPublicAdapterExtensions.`zio-json`.jvm,
+            common.pagination.jvm
           )
           override def mvnDeps = zioDeps ++ tapirClientDeps ++ neotypeTapirDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
         }
 
         // Scala.js client: raw sttp + FetchZioBackend (browser Fetch API).
@@ -549,7 +582,8 @@ object `provider-gateways` extends Module {
           def scalaJSVersion = scalaJSVer
           override def moduleDeps = Seq(
             `api-defn`.js,
-            domain.domainPublicAdapterExtensions.`zio-json`.js
+            domain.domainPublicAdapterExtensions.`zio-json`.js,
+            common.pagination.js
           )
           override def mvnDeps = Seq(
             mvn"com.softwaremill.sttp.client3:zio_sjs1_3:3.9.8"
@@ -569,16 +603,21 @@ object `provider-gateways` extends Module {
     object server extends ServiceModule {
       override def moduleDeps = Seq(
         core.`core-impl`,
+        core.adapters.`tapir-sttp-github-app-client`,
         core.adapters.`magnum-installation-repository`,
         core.adapters.`magnum-linked-repo-repository`,
         core.adapters.`magnum-pending-link-flow-repository`,
         core.adapters.`magnum-webhook-delivery-repository`,
+        core.adapters.`nimbus-jose-installation-token-minter`,
+        core.adapters.`aes-gcm-crypto`,
+        core.adapters.`java-secure-random-generator`,
         api.`internal-api-adapters`.http,
         common.`hikari-magnum-transactor`,
         common.`base-telemetry`,
         common.`server-utils`,
         common.`cors-middleware`
       )
+      override def mvnDeps = super.mvnDeps() ++ tapirClientDeps ++ zioConfigDeps
       object docker extends ServiceDockerConfig {
         def tags = List("unbrokenchain/github-gateway:latest")
       }
@@ -638,13 +677,25 @@ object common extends Module {
 
   // Reusable pagination types (Page[A], PageRequest) shared across services.
   // Pure domain types — no JSON/Magnum codecs here. Codec extensions can come later.
-  object pagination extends ScalaModule {
-    def scalaVersion = scalaVer
-    override def mvnDeps = zioDeps
-
-    object test extends ScalaTests {
-      def testFramework = "zio.test.sbt.ZTestFramework"
-      override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+  // Cross-compiled (jvm + js) so Scala.js consumers (e.g. typed clients in
+  // external-api-adapters/sttp-fetch-js and Tyrian SPAs) can share the same types.
+  object pagination extends Module {
+    trait Shared extends ScalaModule {
+      def scalaVersion = scalaVer
+      override def sources = Task.Sources(moduleDir / os.up / "src")
+      override def mvnDeps = zioDeps
+    }
+    object jvm extends Shared {
+      object test extends ScalaTests {
+        def testFramework = "zio.test.sbt.ZTestFramework"
+        override def sources = Task.Sources(moduleDir / os.up / os.up / "test" / "src")
+        override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+      }
+    }
+    object js extends Shared with ScalaJSModule {
+      def scalaJSVersion = scalaJSVer
+      // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+      override def mvnDeps = Seq(mvn"dev.zio:zio_sjs1_3:2.1.17")
     }
   }
 

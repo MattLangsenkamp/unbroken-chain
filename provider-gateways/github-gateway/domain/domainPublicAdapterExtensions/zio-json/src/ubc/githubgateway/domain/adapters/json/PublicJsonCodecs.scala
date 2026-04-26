@@ -1,5 +1,7 @@
 package ubc.githubgateway.domain.adapters.json
 
+import ubc.common.pagination.{Page, PageRequest}
+import ubc.githubgateway.api.ApiError
 import ubc.githubgateway.domain.*
 import zio.json.*
 import neotype.interop.ziojson.given
@@ -37,3 +39,12 @@ object PublicJsonCodecs:
   given JsonCodec[LinkedRepo]        = DeriveJsonCodec.gen
   given JsonCodec[LinkInitiation]    = DeriveJsonCodec.gen
   given JsonCodec[ReconcileSummary]  = DeriveJsonCodec.gen
+
+  // Pagination — Page[A] is generic, so derive a codec that picks up an
+  // implicit JsonCodec[A] from the call site.
+  given pageCodec[A](using JsonCodec[A]): JsonCodec[Page[A]] = DeriveJsonCodec.gen
+  given JsonCodec[PageRequest]       = DeriveJsonCodec.gen
+
+  // API error envelope — surfaces stable error codes to clients without leaking
+  // domain-private error variants.
+  given JsonCodec[ApiError] = DeriveJsonCodec.gen

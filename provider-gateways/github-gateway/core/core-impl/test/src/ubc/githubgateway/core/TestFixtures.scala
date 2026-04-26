@@ -13,13 +13,18 @@ object TestFixtures:
 
   val pendingTtl: Duration = 10.minutes
 
+  val successRedirectUrl: String = "http://localhost/link/success"
+  val failureRedirectUrl: String = "http://localhost/link/failure"
+
   val testConfigLayer: ULayer[GitHubGatewayConfig] =
     ZLayer.succeed(
       GitHubGatewayConfig(
-        appId          = appId,
-        appSlug        = appSlug,
-        pendingLinkTtl = pendingTtl,
-        webhookSecret  = webhookSecret
+        appId              = appId,
+        appSlug            = appSlug,
+        pendingLinkTtl     = pendingTtl,
+        webhookSecret      = webhookSecret,
+        successRedirectUrl = successRedirectUrl,
+        failureRedirectUrl = failureRedirectUrl
       )
     )
 

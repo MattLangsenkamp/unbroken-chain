@@ -21,10 +21,18 @@ import zio.Duration
   *   raw bytes of the webhook signing secret — used by the service to verify HMAC-SHA-256
   *   signatures on inbound webhooks. `Array[Byte]` (not a domain newtype) because it's
   *   constructor-only — never persisted, never logged.
+  * @param successRedirectUrl
+  *   absolute URL the driving adapter redirects the user to after a successful link callback
+  * @param failureRedirectUrl
+  *   absolute URL the driving adapter redirects the user to when the link callback fails
+  *   (state-not-found, expired, GitHub failure). The driving adapter appends an `?error=<code>`
+  *   query parameter so the SPA can render a useful message.
   */
 final case class GitHubGatewayConfig(
     appId: AppId,
     appSlug: AppSlug,
     pendingLinkTtl: Duration,
-    webhookSecret: Array[Byte]
+    webhookSecret: Array[Byte],
+    successRedirectUrl: String,
+    failureRedirectUrl: String
 )

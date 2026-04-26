@@ -51,9 +51,18 @@ The plan is the standard 5 layers. Each layer is one or more sub-agent dispatche
 
 - [x] Layer 1 — Domain types  *(commit `13cc009`)*
 - [x] Layer 2 — Ports + in-memory stubs  *(commit `0da9178`)*
-- [x] Layer 3 — Core service
-- [ ] Layer 4 — Driven adapters
-- [ ] Layer 5 — Driving adapter (HTTP)
+- [x] Layer 3 — Core service  *(commit `a20c019`)*
+- [x] Layer 4 — Driven adapters  *(commits `b946fe4` magnum/V1, `027dec3` tapir-sttp, `9f40cd8` jwt+crypto+random)*
+- [ ] Layer 5 — Driving adapter (HTTP) — 5a in progress, 5b (Tyrian SPA) pending
+
+## Layer 5a deviations
+
+- **`common.pagination` cross-compiled** (JVM + JS) so the Scala.js external client and the Tyrian SPA can use `Page` / `PageRequest`. Sources stay under a single `src/` dir; both sub-modules read from it.
+- **`zioDeps` / `zioTestDeps` bumped 2.1.17 → 2.1.24** because `neotype-tapir 0.4.10` transitively pulls zio-test 2.1.24, and the macro/runtime skew breaks compile when both versions are on the test classpath. Whole-repo bump.
+- **`-Xmax-inlines 64`** added to the two Tapir-using modules — the default 32 is exhausted by `Schema.derived[Page[Installation]]`.
+- **`GitHubGatewayConfig` extended** with `successRedirectUrl` and `failureRedirectUrl`. The HTTP controller takes the config in its layer signature and uses these for the callback redirect.
+- **`callback` endpoint never raises through `errorOut`** — all `LinkError` cases are absorbed into a 302 to the failure URL with `?error=<CODE>`. Cleaner than two-branched success/error mapping.
+- **`ApiError` lives in `api-defn`** — codec in `PublicJsonCodecs`. Required adding `api.api-defn.{jvm,js}` as `moduleDeps` of the zio-json adapter extension; no cycle.
 
 ## Layer 1 deviations
 
