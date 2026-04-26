@@ -233,6 +233,21 @@ object `provider-gateways` extends Module {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(ports)
         override def mvnDeps = zioDeps
+
+        object test extends ScalaTests {
+          def testFramework = "zio.test.sbt.ZTestFramework"
+          override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          override def moduleDeps = super.moduleDeps ++ Seq(
+            adapters.`in-memory-installation-repository`,
+            adapters.`in-memory-linked-repo-repository`,
+            adapters.`in-memory-pending-link-flow-repository`,
+            adapters.`in-memory-webhook-delivery-repository`,
+            adapters.`in-memory-github-app-client`,
+            adapters.`in-memory-installation-token-minter`,
+            adapters.`deterministic-secure-random`,
+            adapters.`noop-crypto`
+          )
+        }
       }
 
       object adapters extends Module {

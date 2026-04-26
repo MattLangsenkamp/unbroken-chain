@@ -45,5 +45,28 @@ object InMemoryWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
           ra <- repo.recordIfAbsent(a)
           rb <- repo.recordIfAbsent(b)
         yield assertTrue(ra, rb)
+      },
+      test("updateOutcome rewrites the outcome of an existing row") {
+        for
+          repo <- ZIO.service[WebhookDeliveryRepository]
+          fake <- ZIO.service[InMemoryWebhookDeliveryRepository]
+          delivery = WebhookDelivery(
+            deliveryId = DeliveryId("uuid-update"),
+            eventType  = EventType("installation"),
+            receivedAt = Instant.parse("2026-04-25T12:00:00Z"),
+            outcome    = WebhookOutcome.Processed
+          )
+          _      <- repo.recordIfAbsent(delivery)
+          _      <- repo.updateOutcome(DeliveryId("uuid-update"), WebhookOutcome.Failed)
+          stored <- fake.peek(DeliveryId("uuid-update"))
+        yield assertTrue(stored.exists(_.outcome == WebhookOutcome.Failed))
+      },
+      test("updateOutcome is a no-op when no matching row exists") {
+        for
+          repo <- ZIO.service[WebhookDeliveryRepository]
+          fake <- ZIO.service[InMemoryWebhookDeliveryRepository]
+          _      <- repo.updateOutcome(DeliveryId("uuid-missing"), WebhookOutcome.Failed)
+          stored <- fake.peek(DeliveryId("uuid-missing"))
+        yield assertTrue(stored.isEmpty)
       }
     ).provide(InMemoryWebhookDeliveryRepository.layer)

@@ -2,7 +2,7 @@ package ubc.githubgateway.core.adapters.inmemory
 
 import ubc.githubgateway.core.ports.WebhookDeliveryRepository
 import ubc.githubgateway.domain.DeliveryId
-import ubc.githubgateway.domain.internal.WebhookDelivery
+import ubc.githubgateway.domain.internal.{WebhookDelivery, WebhookOutcome}
 import zio.*
 
 /** Ref-backed [[WebhookDeliveryRepository]] for tests and local dev.
@@ -21,8 +21,29 @@ final class InMemoryWebhookDeliveryRepository(
       else (true, current.updated(delivery.deliveryId, delivery))
     }
 
+  def updateOutcome(deliveryId: DeliveryId, outcome: WebhookOutcome): Task[Unit] =
+    store.update { current =>
+      current.get(deliveryId) match
+        case Some(existing) => current.updated(deliveryId, existing.copy(outcome = outcome))
+        case None           => current
+    }
+
+  // Test-only accessor: read the persisted delivery row.
+  def peek(deliveryId: DeliveryId): UIO[Option[WebhookDelivery]] =
+    store.get.map(_.get(deliveryId))
+
 object InMemoryWebhookDeliveryRepository:
-  val layer: ULayer[WebhookDeliveryRepository] =
-    ZLayer.fromZIO(
-      Ref.make(Map.empty[DeliveryId, WebhookDelivery]).map(new InMemoryWebhookDeliveryRepository(_))
-    )
+  /** Layer that provides BOTH the port-typed binding and the concrete-typed binding so tests
+    * can call the test-only `peek` / seeding helpers.
+    */
+  val layer: ZLayer[Any, Nothing, WebhookDeliveryRepository & InMemoryWebhookDeliveryRepository] =
+    ZLayer
+      .fromZIO(
+        Ref.make(Map.empty[DeliveryId, WebhookDelivery]).map(new InMemoryWebhookDeliveryRepository(_))
+      )
+      .flatMap { env =>
+        val fake = env.get[InMemoryWebhookDeliveryRepository]
+        ZLayer.succeedEnvironment(
+          ZEnvironment[WebhookDeliveryRepository, InMemoryWebhookDeliveryRepository](fake, fake)
+        )
+      }

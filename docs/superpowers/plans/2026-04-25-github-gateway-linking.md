@@ -50,8 +50,8 @@ The plan is the standard 5 layers. Each layer is one or more sub-agent dispatche
 ## Layers checklist
 
 - [x] Layer 1 — Domain types  *(commit `13cc009`)*
-- [x] Layer 2 — Ports + in-memory stubs
-- [ ] Layer 3 — Core service
+- [x] Layer 2 — Ports + in-memory stubs  *(commit `0da9178`)*
+- [x] Layer 3 — Core service
 - [ ] Layer 4 — Driven adapters
 - [ ] Layer 5 — Driving adapter (HTTP)
 
@@ -84,3 +84,30 @@ The plan is the standard 5 layers. Each layer is one or more sub-agent dispatche
 - Layer 4: `WebhookDeliveryRepository.recordIfAbsent` must use `INSERT … ON CONFLICT (delivery_id) DO NOTHING` returning a row count — never SELECT-then-INSERT.
 - Layer 4: `LinkedRepoRepository.replaceSet` runs in a single Magnum transaction.
 - Layer 4: `Crypto` real adapter takes `EncryptionKey` as a constructor arg, AES-GCM, base64-encoded output. `InstallationTokenMinter` real adapter takes the App's `appId` + PEM-encoded private key as constructor args; signs RS256 with TTL ≤ 10 min.
+
+## Layer 3 deviations
+
+- **Added `WebhookDeliveryRepository.updateOutcome(deliveryId, outcome)`** to the port and the in-memory adapter. The Layer-2 port only had `recordIfAbsent`; the core service writes a provisional `Processed` row up-front (for dedup) then rewrites the outcome after dispatch. Layer 4's Magnum adapter must implement `UPDATE webhook_delivery SET outcome = ? WHERE delivery_id = ?` (no-op when zero rows).
+- **Widened `InMemoryWebhookDeliveryRepository.layer`** to `WebhookDeliveryRepository & InMemoryWebhookDeliveryRepository` (dual binding) so tests can `peek` the persisted outcome — mirrors the existing `InMemoryGitHubAppClient` pattern.
+- **`GithubWebhookEvent` ADT lives in `core-impl`** (not in domain). JSON parsing happens in Layer 5's driving adapter; the core never sees JSON.
+- **`callback` uses `acquireReleaseWith`** to bracket the pending-flow row deletion so it always runs regardless of expiry/GitHub-failure outcome (single-use semantics).
+
+## Amendments propagated to Layers 4 / 5
+
+**Layer 4 (driven adapters):**
+- Magnum `WebhookDeliveryRepository` must implement `updateOutcome` (new method).
+- Magnum `PendingLinkFlowRepository.deleteExpired` SQL uses `expires_at <= now` (boundary inclusive) to match `sweepExpiredFlows` semantics.
+- `TapirSttpGitHubAppClient.deleteInstallation` maps HTTP 204 + 404 → `Right(())`, all other non-2xx → `Left(s"$status: $body")`. Service uses the message as `UnlinkError.GitHubFailure(message)`.
+
+**Layer 5 (driving HTTP adapter):**
+- Driving adapter parses JSON into `GithubWebhookEvent` before calling `handleWebhook`. Core never sees JSON.
+- Webhook route MUST pass the raw byte body to `handleWebhook` — HMAC verification is byte-for-byte.
+- Forward `X-Hub-Signature-256` verbatim (with the `sha256=` prefix).
+- Suggested HTTP error mapping:
+  - `LinkError.StateNotFound` / `StateExpired` → 410 Gone
+  - `LinkError.GitHubFailure` → 502 Bad Gateway
+  - `WebhookError.InvalidSignature` → 401
+  - `WebhookError.MalformedPayload` → 400
+  - `ReconcileError.InstallationNotFound` → 404
+  - `ReconcileError.GitHubFailure` / `UnlinkError.GitHubFailure` → 502
+- `Server.scala` will read `GitHubGatewayConfig` from env (`GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_PENDING_LINK_TTL`, `GITHUB_WEBHOOK_SECRET`) via `zio-config`. Add a `GitHubGatewayConfig.live` layer that reads these.
