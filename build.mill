@@ -252,15 +252,20 @@ object `provider-gateways` extends Module {
 
       object adapters extends Module {
 
-        // Outbound HTTP adapter for the GitHub API via Tapir + sttp.
-        // Pull this in when you need to call GitHub; never pulls magnum.
-        object `tapir-github-client` extends ScalaModule {
+        // Outbound HTTP adapter implementing GitHubAppClient against GitHub's REST API
+        // via Tapir endpoint DSL + sttp's ZIO backend. Tests use SttpBackendStub.
+        object `tapir-sttp-github-app-client` extends ScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
             domain.domainPublicAdapterExtensions.`zio-json`.jvm
           )
           override def mvnDeps = zioDeps ++ tapirClientDeps ++ neotypeTapirDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
         }
 
         // Driven port implementation for InstallationRepository via Magnum + Postgres.
@@ -523,7 +528,6 @@ object `provider-gateways` extends Module {
     object server extends ServiceModule {
       override def moduleDeps = Seq(
         core.`core-impl`,
-        core.adapters.`tapir-github-client`,
         core.adapters.`magnum-installation-repository`,
         core.adapters.`magnum-linked-repo-repository`,
         core.adapters.`magnum-pending-link-flow-repository`,
