@@ -11,19 +11,18 @@ import zio.*
 
 /** Real [[InstallationTokenMinter]] backed by `nimbus-jose-jwt` 9.x.
   *
-  * Signs short-lived RS256 App JWTs using the configured RSA private key. The TTL is capped
-  * by GitHub at 10 minutes; the default 9-minute TTL leaves comfortable headroom while
-  * keeping callers from constantly reminting.
+  * Signs short-lived RS256 App JWTs using the configured RSA private key. The TTL is capped by GitHub at 10 minutes;
+  * the default 9-minute TTL leaves comfortable headroom while keeping callers from constantly reminting.
   *
-  * Per GitHub's guidance, `iat` is set to `now - 60s` so that minor clock skew between this
-  * service and GitHub doesn't reject otherwise-valid JWTs.
+  * Per GitHub's guidance, `iat` is set to `now - 60s` so that minor clock skew between this service and GitHub doesn't
+  * reject otherwise-valid JWTs.
   *
   * '''Nimbus null-safety audit''' (nimbus-jose-jwt 9.x):
   *   - `RSASSASigner(RSAPrivateKey)` constructor — does not throw for valid keys; not nullable.
   *   - `JWSHeader(JWSAlgorithm)` constructor — not nullable.
   *   - `JWTClaimsSet.Builder.build()` — returns a non-null `JWTClaimsSet`.
-  *   - `SignedJWT(header, claims).sign(signer)` — returns void; throws `JOSEException` on
-  *     failure (caught by `ZIO.attempt`).
+  *   - `SignedJWT(header, claims).sign(signer)` — returns void; throws `JOSEException` on failure (caught by
+  *     `ZIO.attempt`).
   *   - `signedJwt.serialize()` — returns a non-null `String` per the nimbus 9.x source.
   *
   * No nullable surface is hit, so no thin typesafe wrapper in `common` is required.
@@ -45,17 +44,16 @@ final class NimbusJoseInstallationTokenMinter(
         .expirationTime(java.util.Date.from(now.plus(ttl)))
         .issuer(appId.unwrap.toString)
         .build()
-      signedJwt   = new SignedJWT(header, claims)
-      _           <- ZIO.attempt(signedJwt.sign(signer))
-      serialised  <- ZIO.attempt(signedJwt.serialize())
-    yield AppJwt(serialised)
+      signedJwt = new SignedJWT(header, claims)
+      _          <- ZIO.attempt(signedJwt.sign(signer))
+      serialized <- ZIO.attempt(signedJwt.serialize())
+    yield AppJwt(serialized)
 
 object NimbusJoseInstallationTokenMinter:
 
   /** Build a minter from a PEM-encoded private key string.
     *
-    * The PEM must be PKCS#8 (`-----BEGIN PRIVATE KEY-----`). GitHub's default download
-    * format is PKCS#1; convert with:
+    * The PEM must be PKCS#8 (`-----BEGIN PRIVATE KEY-----`). GitHub's default download format is PKCS#1; convert with:
     * {{{
     *   openssl pkcs8 -topk8 -nocrypt -in pkcs1.pem -out pkcs8.pem
     * }}}
