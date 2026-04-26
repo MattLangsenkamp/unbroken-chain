@@ -263,9 +263,8 @@ object `provider-gateways` extends Module {
           override def mvnDeps = zioDeps ++ tapirClientDeps ++ neotypeTapirDeps
         }
 
-        // Driven port implementation for token persistence via Magnum + Postgres.
-        // Pull this in when you need DB; never pulls tapir/sttp.
-        object `magnum-token-repository` extends ScalaModule {
+        // Driven port implementation for InstallationRepository via Magnum + Postgres.
+        object `magnum-installation-repository` extends ScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -275,8 +274,66 @@ object `provider-gateways` extends Module {
           override def mvnDeps = zioDeps ++ magnumDeps
 
           object test extends ScalaTests {
-            // ZTestFramework is ZIO Test's implementation of the sbt/Mill test Framework interface.
-            // The "sbt" in the package name refers to the shared runner protocol, not the build tool.
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
+            override def moduleDeps = super.moduleDeps ++ Seq(
+              common.`db-test-support`,
+              `db-migrations`
+            )
+          }
+        }
+
+        // Driven port implementation for LinkedRepoRepository via Magnum + Postgres.
+        object `magnum-linked-repo-repository` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(
+            ports,
+            domain.domainPublicAdapterExtensions.magnum,
+            domain.domainPrivateAdapterExtensions.magnum
+          )
+          override def mvnDeps = zioDeps ++ magnumDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
+            override def moduleDeps = super.moduleDeps ++ Seq(
+              common.`db-test-support`,
+              `db-migrations`
+            )
+          }
+        }
+
+        // Driven port implementation for PendingLinkFlowRepository via Magnum + Postgres.
+        object `magnum-pending-link-flow-repository` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(
+            ports,
+            domain.domainPublicAdapterExtensions.magnum,
+            domain.domainPrivateAdapterExtensions.magnum
+          )
+          override def mvnDeps = zioDeps ++ magnumDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
+            override def moduleDeps = super.moduleDeps ++ Seq(
+              common.`db-test-support`,
+              `db-migrations`
+            )
+          }
+        }
+
+        // Driven port implementation for WebhookDeliveryRepository via Magnum + Postgres.
+        object `magnum-webhook-delivery-repository` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(
+            ports,
+            domain.domainPublicAdapterExtensions.magnum,
+            domain.domainPrivateAdapterExtensions.magnum
+          )
+          override def mvnDeps = zioDeps ++ magnumDeps
+
+          object test extends ScalaTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
             override def moduleDeps = super.moduleDeps ++ Seq(
@@ -467,7 +524,10 @@ object `provider-gateways` extends Module {
       override def moduleDeps = Seq(
         core.`core-impl`,
         core.adapters.`tapir-github-client`,
-        core.adapters.`magnum-token-repository`,
+        core.adapters.`magnum-installation-repository`,
+        core.adapters.`magnum-linked-repo-repository`,
+        core.adapters.`magnum-pending-link-flow-repository`,
+        core.adapters.`magnum-webhook-delivery-repository`,
         api.`internal-api-adapters`.http,
         common.`hikari-magnum-transactor`,
         common.`base-telemetry`,

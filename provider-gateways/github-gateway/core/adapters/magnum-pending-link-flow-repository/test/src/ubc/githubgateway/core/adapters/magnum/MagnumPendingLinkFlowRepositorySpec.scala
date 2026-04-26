@@ -1,0 +1,129 @@
+package ubc.githubgateway.core.adapters.magnum
+
+import com.augustnagro.magnum.*
+import com.augustnagro.magnum.magzio.*
+import ubc.common.TestDatabase
+import ubc.githubgateway.core.ports.PendingLinkFlowRepository
+import ubc.githubgateway.domain.{CodeChallenge, LinkState}
+import ubc.githubgateway.domain.internal.{EncryptedBytes, PendingLinkFlow}
+import zio.*
+import zio.test.*
+
+import java.time.Instant
+
+/** Integration tests for [[MagnumPendingLinkFlowRepository]] against a real PostgreSQL.
+  *
+  * Particularly verifies the [[EncryptedBytes]] codec round-trip through the BYTEA column —
+  * domain holds base64 String, column holds raw bytes, codec translates both directions.
+  */
+object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
+
+  private val migrationLocation = "classpath:db/migration"
+
+  private val truncate: URIO[TransactorZIO, Unit] =
+    ZIO.serviceWithZIO[TransactorZIO](
+      _.transact { sql"TRUNCATE TABLE pending_link_flow".update.run() }
+    ).unit.orDie
+
+  // Encode a few well-known byte sequences as base64 — round-trip target.
+  private val verifierBytes: Array[Byte] = "the-secret-verifier".getBytes("UTF-8")
+  private val verifierB64: String = java.util.Base64.getEncoder.encodeToString(verifierBytes)
+
+  private def flow(
+      state: String,
+      expiresAt: Instant = Instant.parse("2025-01-01T00:10:00Z")
+  ): PendingLinkFlow =
+    PendingLinkFlow(
+      state             = LinkState(state),
+      encryptedVerifier = EncryptedBytes(verifierB64),
+      codeChallenge     = CodeChallenge("ch-" + state),
+      createdAt         = Instant.parse("2025-01-01T00:00:00Z"),
+      expiresAt         = expiresAt
+    )
+
+  override def spec =
+    (suite("MagnumPendingLinkFlowRepositorySpec")(
+
+      test("insert + findByState round-trip preserves the EncryptedBytes value through BYTEA codec") {
+        val original = flow("state-1")
+        for
+          repo  <- ZIO.service[PendingLinkFlowRepository]
+          _     <- repo.insert(original)
+          found <- repo.findByState(LinkState("state-1"))
+        yield assertTrue(
+          found.isDefined,
+          found.get.state             == original.state,
+          found.get.encryptedVerifier == original.encryptedVerifier, // base64 String compares by value
+          found.get.codeChallenge     == original.codeChallenge,
+          found.get.createdAt         == original.createdAt,
+          found.get.expiresAt         == original.expiresAt
+        )
+      },
+
+      test("findByState returns None for an unknown state") {
+        for
+          repo   <- ZIO.service[PendingLinkFlowRepository]
+          result <- repo.findByState(LinkState("nope"))
+        yield assertTrue(result.isEmpty)
+      },
+
+      test("deleteByState returns true on hit and the row is gone") {
+        for
+          repo    <- ZIO.service[PendingLinkFlowRepository]
+          _       <- repo.insert(flow("state-1"))
+          deleted <- repo.deleteByState(LinkState("state-1"))
+          after   <- repo.findByState(LinkState("state-1"))
+        yield assertTrue(deleted, after.isEmpty)
+      },
+
+      test("deleteByState returns false on miss") {
+        for
+          repo    <- ZIO.service[PendingLinkFlowRepository]
+          deleted <- repo.deleteByState(LinkState("nothing-here"))
+        yield assertTrue(!deleted)
+      },
+
+      test("deleteExpired is INCLUSIVE of rows whose expires_at == now") {
+        val cutoff = Instant.parse("2025-01-01T00:10:00Z")
+        for
+          repo  <- ZIO.service[PendingLinkFlowRepository]
+          _     <- repo.insert(flow("at-cutoff", expiresAt = cutoff))
+          _     <- repo.insert(flow("future",   expiresAt = cutoff.plusSeconds(60)))
+          n     <- repo.deleteExpired(cutoff)
+          atRow <- repo.findByState(LinkState("at-cutoff"))
+          future <- repo.findByState(LinkState("future"))
+        yield assertTrue(
+          n            == 1, // only the at-cutoff row was swept
+          atRow.isEmpty,
+          future.isDefined
+        )
+      },
+
+      test("deleteExpired returns 0 when no rows are expired") {
+        for
+          repo <- ZIO.service[PendingLinkFlowRepository]
+          _    <- repo.insert(flow("future-1", expiresAt = Instant.parse("2099-01-01T00:00:00Z")))
+          _    <- repo.insert(flow("future-2", expiresAt = Instant.parse("2099-01-02T00:00:00Z")))
+          n    <- repo.deleteExpired(Instant.parse("2025-01-01T00:00:00Z"))
+        yield assertTrue(n == 0)
+      },
+
+      test("deleteExpired returns N when N rows are expired") {
+        val cutoff = Instant.parse("2025-06-01T00:00:00Z")
+        for
+          repo <- ZIO.service[PendingLinkFlowRepository]
+          _    <- repo.insert(flow("e1", expiresAt = Instant.parse("2025-01-01T00:00:00Z")))
+          _    <- repo.insert(flow("e2", expiresAt = Instant.parse("2025-02-01T00:00:00Z")))
+          _    <- repo.insert(flow("e3", expiresAt = Instant.parse("2025-03-01T00:00:00Z")))
+          _    <- repo.insert(flow("future", expiresAt = Instant.parse("2099-01-01T00:00:00Z")))
+          n    <- repo.deleteExpired(cutoff)
+          futureRow <- repo.findByState(LinkState("future"))
+        yield assertTrue(n == 3, futureRow.isDefined)
+      }
+
+    ) @@ TestAspect.before(truncate) @@ TestAspect.sequential)
+      .provideShared(
+        TestDatabase.suiteLayer(migrationLocation),
+        TestDatabase.transactorLayer,
+        MagnumPendingLinkFlowRepository.layer
+      )
