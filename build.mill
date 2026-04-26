@@ -446,6 +446,47 @@ object `provider-gateways` extends Module {
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
         }
+
+        // Real InstallationTokenMinter: signs RS256 App JWTs from a configured RSA private key
+        // using nimbus-jose-jwt. Used by the server bootstrap.
+        object `nimbus-jose-installation-token-minter` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps ++ Seq(
+            mvn"com.nimbusds:nimbus-jose-jwt:9.40"
+          )
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+
+        // Real Crypto adapter: AES-GCM encryption of the PKCE verifier at rest using
+        // javax.crypto. 256-bit key supplied at construction.
+        object `aes-gcm-crypto` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+
+        // Real SecureRandom adapter: java.security.SecureRandom-backed generator for the
+        // PKCE code verifier (RFC 7636) and the link-state nonce.
+        object `java-secure-random-generator` extends ScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(ports)
+          override def mvnDeps = zioDeps
+
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
       }
     }
 
