@@ -53,7 +53,9 @@ The plan is the standard 5 layers. Each layer is one or more sub-agent dispatche
 - [x] Layer 2 — Ports + in-memory stubs  *(commit `0da9178`)*
 - [x] Layer 3 — Core service  *(commit `a20c019`)*
 - [x] Layer 4 — Driven adapters  *(commits `b946fe4` magnum/V1, `027dec3` tapir-sttp, `9f40cd8` jwt+crypto+random)*
-- [ ] Layer 5 — Driving adapter (HTTP) — 5a in progress, 5b (Tyrian SPA) pending
+- [x] Layer 5 — Driving adapter (HTTP)  *(commits `a5f6d83` server stack, `4d9d968` Tyrian SPA)*
+
+All five layers complete. `./mill __.compile` is clean across the whole repo.
 
 ## Layer 5a deviations
 
