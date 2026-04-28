@@ -12,6 +12,14 @@ Implements a full vertical slice from a spec using inside-out TDD. Each layer is
 domain → ports + in-memory stubs → core service → driven adapters → driving adapter
 ```
 
+## When to load `service-setup.md`
+
+Only load `service-setup.md` when creating a **brand-new service** from scratch (a new top-level directory under the repo root, e.g. adding a new gateway alongside `provider-gateways/github-gateway/`). It covers the one-time module skeleton, build.mill registration, and deployment glue.
+
+When adding a feature to an **existing** service, skip `service-setup.md` — the layer templates in `layers/` are sufficient.
+
+`layers/config.md` is referenced by `layers/core.md` and `layers/driven-adapter.md` whenever a layer needs to read config values; load it on demand.
+
 ## Phase 1: Plan (before writing any code)
 
 Read the spec. Identify which layers this feature needs — not every feature touches all five. Save the plan to `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`. Show it to the user and get confirmation before proceeding.

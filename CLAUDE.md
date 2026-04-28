@@ -5,7 +5,6 @@ Project skills live under `.claude/skills/`. Always check that directory before 
 ## Skills
 
 - `.claude/skills/mill-build/` — Mill build commands, module structure, dependency management, ScalaJS/CrossPlatform/PresentationModule traits
-- `.claude/skills/scala-zio/` — Scala 3 / ZIO patterns, domain modeling, configuration, service setup
 - `.claude/skills/make-utils/` — Makefile and bin/ script conventions; all logic lives in bin/
 - `.claude/skills/local-dev/` — Local k3d cluster setup, kubeconfig, k9s, and dev environment lifecycle
 - `.claude/skills/k8s/` — Helm umbrella chart structure, adding services, adding operators

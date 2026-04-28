@@ -8,7 +8,18 @@ Domain types live in:
 - `<service>/domainPublic/src/ubc/<service>/domain/` — types shared with the frontend or other services (cross-compiled JVM + JS)
 - `<service>/domainPrivate/src/ubc/<service>/domain/internal/` — types private to this service (JVM only)
 
-Use neotype `Newtype` for primitive wrappers:
+### Core principles
+
+- All data is **immutable** — `val` everywhere, never `var`
+- Case classes for product types, Scala 3 `enum` for sum types, neotype `Newtype` for primitive wrappers
+- **Avoid raw primitives** (`String`, `Int`, `Float`, `Boolean`) for domain values — wrap them in newtypes
+- **No infrastructure** in domain files — never import Magnum, Tapir, JDBC, ZIO JSON, or any codec library
+
+### Newtypes with neotype
+
+[neotype](https://github.com/kitlangton/neotype) creates zero-cost newtypes with optional compile-time or runtime validation.
+
+Simple newtype (no validation):
 ```scala
 import neotype.*
 
@@ -19,7 +30,27 @@ object OrgName extends Newtype[String]
 type OrgName = OrgName.Type
 ```
 
-Use `case class` for multi-field entities. Do not derive any codec in the domain type itself:
+With validation:
+```scala
+import neotype.*
+
+object Title extends Newtype[String]:
+  override inline def validate(value: String): Boolean | String =
+    if value.nonEmpty then true
+    else "Title must not be empty"
+
+type Title = Title.Type
+```
+
+Constructing and unwrapping:
+```scala
+val id: OrgId   = OrgId(42L)
+val raw: Long   = id.unwrap   // requires `import neotype.*`
+```
+
+### Case classes and enums
+
+`case class` for product types — immutable by default, with structural equality, `copy`, and pattern matching:
 ```scala
 import java.time.Instant
 
@@ -30,7 +61,64 @@ case class GitHubOrg(
 )
 ```
 
-**Never import** Magnum, Tapir, JDBC, ZIO JSON, or any infrastructure in domain files.
+Convenience methods are fine as long as they are **pure** (no side effects, no `Unit` returns):
+```scala
+case class FullName(first: FirstName, last: LastName):
+  def display: String = s"${first.unwrap} ${last.unwrap}"
+```
+
+Scala 3 `enum` for sum types:
+```scala
+enum IngestionSource:
+  case Wikipedia, Wikidata
+
+enum Status:
+  case Active
+  case Inactive(reason: String)
+```
+
+Prefer `enum` over `sealed trait` + `case class`. Reach for `sealed trait` only when variants need to mix in interfaces.
+
+### Newtype vs opaque type
+
+Scala 3 has both. Default to neotype.
+
+| Situation | Use |
+|---|---|
+| Domain ID or value with no validation | `Newtype` — free codecs via adapter-extension modules |
+| Domain value with validation rules | `Newtype` with `validate` override |
+| Internal-only alias, never serialised | `opaque type` |
+| Need full control over representation, no codecs ever | `opaque type` |
+
+Opaque type only makes sense when there are zero codec needs. Once you need a `JsonCodec`, `DbCodec`, or Tapir `Schema`, neotype's interop libraries make this trivial — opaque types do not.
+
+### Model-to-model translations
+
+Conversions between domain models and external representations (e.g. webhook payloads, search-index documents) belong in the **domain package** as Scala 3 extension methods, not in service implementations:
+
+```scala
+package ubc.<service>.domain.internal
+
+import ubc.<service>.domain.IngestionEvent
+import org.apache.lucene.document.{Document, Field, StringField, TextField}
+
+extension (event: IngestionEvent)
+  def toLuceneDocument: Document = ???
+```
+
+This applies only when the translation has no infrastructure dependency on the **input** side. Translations that consume codec instances belong in the adapter-extension module that owns the codec.
+
+### What to avoid
+
+| Pattern | Why | Alternative |
+|---|---|---|
+| `var x = ...` | Mutable state breaks reasoning | `val` + `copy` |
+| `def process(name: String, id: String)` | Primitive confusion | `def process(name: Name, id: UserId)` |
+| Mutable collections (`ArrayBuffer`, etc.) | Hidden mutation | `List`, `Vector`, `Seq` |
+| Methods returning `Unit` on case classes | Implies side effect | Pure methods only |
+| `null` | Partial values | `Option[A]` |
+| `derives JsonCodec` / `derives DbCodec` on a domain type | Pulls infrastructure into the domain — see "Adapter-extension modules" below | Adapter-extension module |
+| `implicit val` / `given` codec written by hand | Brittle boilerplate | `derives` in the adapter-extension module |
 
 ## Prefer domain types directly
 

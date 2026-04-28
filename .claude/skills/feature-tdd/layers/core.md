@@ -29,6 +29,56 @@ Rules:
 - Takes port dependencies via constructor, exposed as `ZLayer`
 - Business logic only — no encoding, no SQL
 
+## Activity logging — every method starts with one
+
+Every public method on the service starts with a `ZIO.logActivity` call emitting a typed event from `common/activity-logging`. This gives observability into business-logic execution: structured, searchable, and impossible to misformat at the call site. Free-form `ZIO.logInfo("doing thing")` is **not** acceptable in core service code.
+
+The contract from `common/activity-logging`:
+
+```scala
+// trait hierarchy — pick the one matching the log level you want
+trait TraceLog extends ActivityLog
+trait DebugLog extends ActivityLog
+trait InfoLog  extends ActivityLog
+trait WarnLog  extends ActivityLog
+trait ErrorLog extends ActivityLog
+trait FatalLog extends ActivityLog
+
+// extension
+ZIO.logActivity[A <: ActivityLog: JsonCodec](a: A): UIO[Unit]
+```
+
+Define one event case class per service method (and one per notable branch within a method, if the branch is interesting). They live next to the service, in `core-impl`:
+
+```scala
+package ubc.<service>.core
+
+import ubc.common.{InfoLog, WarnLog, ZIO as _, *}
+import zio.*
+import zio.json.*
+
+// One activity event per service method — fields capture the business inputs.
+final case class LinkOrgRequested(userId: UserId, orgName: OrgName) extends InfoLog derives JsonCodec
+final case class LinkOrgRejected(userId: UserId, reason: String)   extends WarnLog derives JsonCodec
+```
+
+Every method opens with the activity log:
+
+```scala
+case class GitHubOrgService(orgRepo: OrgRepository):
+  def linkOrg(userId: UserId, orgName: OrgName): IO[DomainError, GitHubOrg] =
+    ZIO.logActivity(LinkOrgRequested(userId, orgName)) *>
+      // business logic
+      orgRepo.save(...).orElseFail(DomainError.AlreadyLinked)
+```
+
+Rules:
+- Each method's first effect is `ZIO.logActivity(<Event>)`. No exceptions for "trivial" methods — observability of trivial methods is also valuable.
+- Event class names read as past-tense business facts: `LinkOrgRequested`, `WebhookSignatureRejected`, `InstallationReconciled`. Not `LinkOrgEvent` or `LogLinkOrg`.
+- Pick the log level by what the event represents. Successful business operations are `InfoLog`. Domain-level rejections (validation, expired states) are `WarnLog`. Genuinely unexpected failures are `ErrorLog` — but those usually surface as ZIO defects rather than hand-rolled events.
+- Add fields the event needs to be useful in a log search: identifiers, the input that triggered it, the outcome. Do NOT include secrets — the event JSON may go to durable log storage.
+- The module needs `common.\`activity-logging\`` in `moduleDeps` and `zioJsonDeps` in `mvnDeps`.
+
 ## build.mill — add a test module to core-impl if not present
 
 ```scala
