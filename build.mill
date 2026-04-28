@@ -234,8 +234,12 @@ object `provider-gateways` extends Module {
 
       object `core-impl` extends ScalaModule {
         def scalaVersion = scalaVer
-        override def moduleDeps = Seq(ports)
-        override def mvnDeps = zioDeps
+        override def moduleDeps = Seq(
+          ports,
+          common.`activity-logging`,
+          domain.domainPublicAdapterExtensions.`zio-json`.jvm
+        )
+        override def mvnDeps = zioDeps ++ zioJsonDeps
 
         object test extends ScalaTests {
           def testFramework = "zio.test.sbt.ZTestFramework"

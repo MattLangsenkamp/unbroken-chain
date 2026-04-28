@@ -1,6 +1,7 @@
 package ubc.githubgateway.core
 
 import neotype.*
+import ubc.common.logActivity
 import ubc.common.pagination.{Page, PageRequest}
 import ubc.githubgateway.core.ports.*
 import ubc.githubgateway.domain.*
@@ -93,6 +94,7 @@ case class GitHubGatewayService(
       installUrl          = InstallUrl(
                               s"https://github.com/apps/${config.appSlug.unwrap}/installations/new?state=${state.unwrap}"
                             )
+      _                  <- ZIO.logActivity(LinkInitiated(state, expiresAt))
     yield LinkInitiation(installUrl, state, expiresAt)
 
   // ---------------------------------------------------------------------------------------
@@ -106,99 +108,151 @@ case class GitHubGatewayService(
     * no row to delete in that case.
     */
   def callback(state: LinkState, ghInstallationId: GhInstallationId): IO[LinkError, Unit] =
-    pendingFlows
-      .findByState(state)
-      .orDie
-      .flatMap {
-        case None       => ZIO.fail(LinkError.StateNotFound)
-        case Some(flow) =>
-          ZIO.acquireReleaseWith(ZIO.succeed(flow))(_ =>
-            pendingFlows.deleteByState(state).ignore
-          ) { f =>
-            for
-              now <- Clock.instant
-              _   <- ZIO.fail(LinkError.StateExpired).when(!f.expiresAt.isAfter(now))
-              jwt <- minter.mintAppJwt().mapError(asGitHubFailure)
-              installation <- github.getInstallation(jwt, ghInstallationId).mapError(asGitHubFailure)
-              persisted    <- installations
-                                .upsertByGhInstallationId(
-                                  ghInstallationId,
-                                  installation.accountLogin,
-                                  installation.accountId,
-                                  installation.accountType,
-                                  installation.status,
-                                  installation.installedAt
-                                )
-                                .orDie
-              token   <- github.createInstallationToken(jwt, ghInstallationId).mapError(asGitHubFailure)
-              desired <- github.listInstallationRepos(token, ghInstallationId).mapError(asGitHubFailure)
-              _       <- linkedRepos.replaceSet(persisted.id, desired).orDie
-            yield ()
-          }
-      }
+    ZIO.logActivity(CallbackReceived(state, ghInstallationId)) *>
+      pendingFlows
+        .findByState(state)
+        .orDie
+        .flatMap {
+          case None       =>
+            ZIO.logActivity(CallbackRejectedStateNotFound(state)) *>
+              ZIO.fail(LinkError.StateNotFound)
+          case Some(flow) =>
+            ZIO.acquireReleaseWith(ZIO.succeed(flow))(_ =>
+              pendingFlows.deleteByState(state).ignore
+            ) { f =>
+              (for
+                now <- Clock.instant
+                _   <- (ZIO.logActivity(CallbackRejectedStateExpired(state)) *>
+                         ZIO.fail(LinkError.StateExpired))
+                         .when(!f.expiresAt.isAfter(now))
+                jwt <- minter.mintAppJwt().mapError(asGitHubFailure)
+                installation <- github.getInstallation(jwt, ghInstallationId).mapError(asGitHubFailure)
+                persisted    <- installations
+                                  .upsertByGhInstallationId(
+                                    ghInstallationId,
+                                    installation.accountLogin,
+                                    installation.accountId,
+                                    installation.accountType,
+                                    installation.status,
+                                    installation.installedAt
+                                  )
+                                  .orDie
+                token   <- github.createInstallationToken(jwt, ghInstallationId).mapError(asGitHubFailure)
+                desired <- github.listInstallationRepos(token, ghInstallationId).mapError(asGitHubFailure)
+                summary <- linkedRepos.replaceSet(persisted.id, desired).orDie
+                _       <- ZIO.logActivity(
+                             CallbackCompleted(
+                               state            = state,
+                               ghInstallationId = ghInstallationId,
+                               installationId   = persisted.id,
+                               addedRepos       = summary.added,
+                               removedRepos     = summary.removed,
+                               renamedRepos     = summary.renamed
+                             )
+                           )
+              yield ()).tapError {
+                case LinkError.GitHubFailure(message) =>
+                  ZIO.logActivity(CallbackRejectedGitHubFailure(state, message))
+                case _ => ZIO.unit
+              }
+            }
+        }
 
   /** Discard a pending flow without completing it. Idempotent — never raises. */
   def abandon(state: LinkState): UIO[Unit] =
-    pendingFlows.deleteByState(state).ignore.unit
+    ZIO.logActivity(LinkAbandoned(state)) *>
+      pendingFlows.deleteByState(state).ignore.unit
 
   // ---------------------------------------------------------------------------------------
   // Listing
   // ---------------------------------------------------------------------------------------
 
   def listInstallations(page: PageRequest): UIO[Page[Installation]] =
-    installations.listAll(page).orDie
+    for
+      result <- installations.listAll(page).orDie
+      _      <- ZIO.logActivity(InstallationsListed(result.items.size, result.total))
+    yield result
 
   def listInstallationRepos(
       ghInstallationId: GhInstallationId,
       page: PageRequest
   ): IO[ReconcileError, Page[LinkedRepo]] =
     installations.findByGhInstallationId(ghInstallationId).orDie.flatMap {
-      case None        => ZIO.fail(ReconcileError.InstallationNotFound)
-      case Some(inst)  => linkedRepos.listByInstallation(inst.id, page).orDie
+      case None        =>
+        ZIO.logActivity(InstallationReposListRejectedNotFound(ghInstallationId)) *>
+          ZIO.fail(ReconcileError.InstallationNotFound)
+      case Some(inst)  =>
+        for
+          result <- linkedRepos.listByInstallation(inst.id, page).orDie
+          _      <- ZIO.logActivity(
+                      InstallationReposListed(ghInstallationId, result.items.size, result.total)
+                    )
+        yield result
     }
 
   def listRepos(page: PageRequest): UIO[Page[LinkedRepo]] =
-    linkedRepos.listAll(page).orDie
+    for
+      result <- linkedRepos.listAll(page).orDie
+      _      <- ZIO.logActivity(ReposListed(result.items.size, result.total))
+    yield result
 
   // ---------------------------------------------------------------------------------------
   // Unlink
   // ---------------------------------------------------------------------------------------
 
   def unlink(ghInstallationId: GhInstallationId): IO[UnlinkError, Unit] =
-    for
-      jwt    <- minter.mintAppJwt().mapError(asUnlinkFailure)
-      result <- github.deleteInstallation(jwt, ghInstallationId).mapError(asUnlinkFailure)
-      _      <- result match
-                  case Left(message) => ZIO.fail(UnlinkError.GitHubFailure(message))
-                  case Right(())     => installations.deleteByGhInstallationId(ghInstallationId).orDie.unit
-    yield ()
+    ZIO.logActivity(UnlinkRequested(ghInstallationId)) *>
+      (for
+        jwt    <- minter.mintAppJwt().mapError(asUnlinkFailure)
+        result <- github.deleteInstallation(jwt, ghInstallationId).mapError(asUnlinkFailure)
+        _      <- result match
+                    case Left(message) => ZIO.fail(UnlinkError.GitHubFailure(message))
+                    case Right(())     =>
+                      installations.deleteByGhInstallationId(ghInstallationId).orDie *>
+                        ZIO.logActivity(UnlinkCompleted(ghInstallationId))
+      yield ()).tapError { case UnlinkError.GitHubFailure(message) =>
+        ZIO.logActivity(UnlinkRejectedGitHubFailure(ghInstallationId, message))
+      }
 
   // ---------------------------------------------------------------------------------------
   // Reconcile
   // ---------------------------------------------------------------------------------------
 
   def reconcile(ghInstallationId: GhInstallationId): IO[ReconcileError, ReconcileSummary] =
-    installations.findByGhInstallationId(ghInstallationId).orDie.flatMap {
-      case None           => ZIO.fail(ReconcileError.InstallationNotFound)
-      case Some(existing) =>
-        for
-          jwt          <- minter.mintAppJwt().mapError(asReconcileFailure)
-          installation <- github.getInstallation(jwt, ghInstallationId).mapError(asReconcileFailure)
-          _            <- installations
-                            .upsertByGhInstallationId(
-                              ghInstallationId,
-                              installation.accountLogin,
-                              installation.accountId,
-                              installation.accountType,
-                              installation.status,
-                              installation.installedAt
-                            )
-                            .orDie
-          token   <- github.createInstallationToken(jwt, ghInstallationId).mapError(asReconcileFailure)
-          desired <- github.listInstallationRepos(token, ghInstallationId).mapError(asReconcileFailure)
-          summary <- linkedRepos.replaceSet(existing.id, desired).orDie
-        yield summary
-    }
+    ZIO.logActivity(ReconcileRequested(ghInstallationId)) *>
+      installations.findByGhInstallationId(ghInstallationId).orDie.flatMap {
+        case None           =>
+          ZIO.logActivity(ReconcileRejectedNotFound(ghInstallationId)) *>
+            ZIO.fail(ReconcileError.InstallationNotFound)
+        case Some(existing) =>
+          (for
+            jwt          <- minter.mintAppJwt().mapError(asReconcileFailure)
+            installation <- github.getInstallation(jwt, ghInstallationId).mapError(asReconcileFailure)
+            _            <- installations
+                              .upsertByGhInstallationId(
+                                ghInstallationId,
+                                installation.accountLogin,
+                                installation.accountId,
+                                installation.accountType,
+                                installation.status,
+                                installation.installedAt
+                              )
+                              .orDie
+            token   <- github.createInstallationToken(jwt, ghInstallationId).mapError(asReconcileFailure)
+            desired <- github.listInstallationRepos(token, ghInstallationId).mapError(asReconcileFailure)
+            summary <- linkedRepos.replaceSet(existing.id, desired).orDie
+            _       <- ZIO.logActivity(
+                         ReconcileCompleted(
+                           ghInstallationId = ghInstallationId,
+                           added            = summary.added,
+                           removed          = summary.removed,
+                           renamed          = summary.renamed
+                         )
+                       )
+          yield summary).tapError { case ReconcileError.GitHubFailure(message) =>
+            ZIO.logActivity(ReconcileRejectedGitHubFailure(ghInstallationId, message))
+          }
+      }
 
   // ---------------------------------------------------------------------------------------
   // Sweep
@@ -208,6 +262,7 @@ case class GitHubGatewayService(
     for
       now   <- Clock.instant
       count <- pendingFlows.deleteExpired(now).orDie
+      _     <- ZIO.logActivity(SweepCompleted(count))
     yield count
 
   // ---------------------------------------------------------------------------------------
@@ -219,29 +274,48 @@ case class GitHubGatewayService(
       rawBody: Array[Byte],
       event: GithubWebhookEvent
   ): IO[WebhookError, WebhookOutcome] =
-    val expectedSignature = hmacSha256Hex(config.webhookSecret, rawBody)
-    val sigOk = MessageDigest.isEqual(
-      expectedSignature.getBytes(StandardCharsets.UTF_8),
-      headers.signature.getBytes(StandardCharsets.UTF_8)
-    )
-    if !sigOk then ZIO.fail(WebhookError.InvalidSignature)
-    else
-      for
-        now <- Clock.instant
-        provisional = WebhookDelivery(
-          deliveryId = headers.deliveryId,
-          eventType  = headers.eventType,
-          receivedAt = now,
-          outcome    = WebhookOutcome.Processed
-        )
-        inserted <- webhookLog.recordIfAbsent(provisional).orDie
-        outcome  <- if !inserted then ZIO.succeed(WebhookOutcome.Duplicate)
-                    else dispatch(event)
-        _ <- webhookLog.updateOutcome(headers.deliveryId, outcome).orDie
-      yield outcome
+    ZIO.logActivity(WebhookReceived(headers.deliveryId, headers.eventType)) *> {
+      val expectedSignature = hmacSha256Hex(config.webhookSecret, rawBody)
+      val sigOk = MessageDigest.isEqual(
+        expectedSignature.getBytes(StandardCharsets.UTF_8),
+        headers.signature.getBytes(StandardCharsets.UTF_8)
+      )
+      if !sigOk then
+        ZIO.logActivity(WebhookSignatureRejected(headers.deliveryId, headers.eventType)) *>
+          ZIO.fail(WebhookError.InvalidSignature)
+      else
+        for
+          now <- Clock.instant
+          provisional = WebhookDelivery(
+            deliveryId = headers.deliveryId,
+            eventType  = headers.eventType,
+            receivedAt = now,
+            outcome    = WebhookOutcome.Processed
+          )
+          inserted <- webhookLog.recordIfAbsent(provisional).orDie
+          outcome  <- {
+            if !inserted then
+              ZIO
+                .logActivity(WebhookDeduplicated(headers.deliveryId, headers.eventType))
+                .as(WebhookOutcome.Duplicate)
+            else dispatch(headers, event)
+          }
+          _ <- webhookLog.updateOutcome(headers.deliveryId, outcome).orDie
+        yield outcome
+    }
 
-  private def dispatch(event: GithubWebhookEvent): UIO[WebhookOutcome] =
-    event match
+  private def dispatch(headers: WebhookHeaders, event: GithubWebhookEvent): UIO[WebhookOutcome] =
+    val variant = event match
+      case _: GithubWebhookEvent.InstallationDeleted     => "InstallationDeleted"
+      case _: GithubWebhookEvent.InstallationSuspended   => "InstallationSuspended"
+      case _: GithubWebhookEvent.InstallationUnsuspended => "InstallationUnsuspended"
+      case _: GithubWebhookEvent.RepositoriesAdded       => "RepositoriesAdded"
+      case _: GithubWebhookEvent.RepositoriesRemoved     => "RepositoriesRemoved"
+      case _: GithubWebhookEvent.RepositoryRenamed       => "RepositoryRenamed"
+      case _: GithubWebhookEvent.RepositoryTransferred   => "RepositoryTransferred"
+      case _: GithubWebhookEvent.Unhandled               => "Unhandled"
+
+    val processed: UIO[WebhookOutcome] = event match
       case GithubWebhookEvent.InstallationDeleted(id) =>
         installations.deleteByGhInstallationId(id).orDie.as(WebhookOutcome.Processed)
 
@@ -272,6 +346,21 @@ case class GitHubGatewayService(
 
       case GithubWebhookEvent.Unhandled(_, _) =>
         ZIO.succeed(WebhookOutcome.Ignored)
+
+    processed.tap {
+      case WebhookOutcome.Processed =>
+        ZIO.logActivity(WebhookProcessed(headers.deliveryId, headers.eventType, variant))
+      case WebhookOutcome.Ignored   =>
+        val action = event match
+          case GithubWebhookEvent.Unhandled(_, a) => a
+          case _                                  => None
+        ZIO.logActivity(WebhookIgnored(headers.deliveryId, headers.eventType, action))
+      case WebhookOutcome.Failed    =>
+        ZIO.logActivity(
+          WebhookFailed(headers.deliveryId, headers.eventType, s"$variant could not be applied")
+        )
+      case WebhookOutcome.Duplicate => ZIO.unit  // unreachable here; handled at handleWebhook level
+    }
 
 object GitHubGatewayService:
   val layer: URLayer[
