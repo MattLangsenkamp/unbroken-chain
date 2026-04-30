@@ -1,0 +1,4 @@
+site_name: writer
+docs_dir: .
+nav:
+  - Overview: index.md

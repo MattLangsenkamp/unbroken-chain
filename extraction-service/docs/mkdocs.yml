@@ -1,0 +1,8 @@
+site_name: extraction-service
+docs_dir: .
+nav:
+  - Overview: index.md
+  - Concepts:
+      - Responsibilities: concepts/responsibilities.md
+  - Runbooks:
+      - On-call: runbooks/on-call.md
