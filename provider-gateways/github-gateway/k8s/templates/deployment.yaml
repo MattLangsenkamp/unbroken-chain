@@ -36,6 +36,21 @@ spec:
                   name: postgres-credentials
                   key: password
             {{- end }}
+            - name: GITHUB_APP_PRIVATE_KEY_PEM
+              valueFrom:
+                secretKeyRef:
+                  name: github-gateway-credentials
+                  key: github-app-private-key-pem
+            - name: GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: github-gateway-credentials
+                  key: github-webhook-secret
+            - name: VERIFIER_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: github-gateway-credentials
+                  key: verifier-encryption-key
             {{- if .Values.extraEnv }}
             {{- toYaml .Values.extraEnv | nindent 12 }}
             {{- end }}

@@ -19,6 +19,26 @@ rabbitmq:
 otel:
   endpoint: "http://otel-collector:4317"
 
+# GitHub App configuration. Sensitive values (private key PEM, webhook secret,
+# verifier encryption key) are sourced from the github-gateway-credentials
+# Secret synced by the umbrella chart's ExternalSecret.
+githubApp:
+  # Numeric App ID from GitHub (settings/apps/<slug>)
+  id: 3551266
+  # URL slug of the GitHub App (also used to build the install URL)
+  slug: "unbroken-chain-2"
+  # Where the gateway redirects the browser after a linking flow.
+  # Both point at the same SPA route — the failure URL gets `?error=<code>`
+  # appended by the gateway, and the SPA's LinkResult view branches on that.
+  successRedirectUrl: "http://localhost:3000/link/result"
+  failureRedirectUrl: "http://localhost:3000/link/result"
+  # Lifetime of a pending_link_flow row before the sweeper deletes it
+  pendingLinkTtlSeconds: 600
+  # Lifetime of the app-level JWT used to mint installation tokens
+  appJwtTtlSeconds: 540
+  # How often the background sweeper runs
+  sweepIntervalSeconds: 60
+
 migrations:
   image:
     repository: "unbrokenchain/github-gateway-migrations"

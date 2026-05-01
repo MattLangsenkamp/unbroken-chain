@@ -12,3 +12,13 @@ data:
   POSTGRES_DB: {{ .Values.postgres.db | quote }}
   POSTGRES_USER: {{ .Values.postgres.user | quote }}
   {{- end }}
+  # int64 forces integer rendering — without it Helm parses YAML numbers as
+  # float64 and `quote` emits scientific notation for large values
+  # (e.g. 3551266 → "3.551266e+06"), which ZIO Config can't parse as Long.
+  GITHUB_APP_ID: {{ .Values.githubApp.id | int64 | quote }}
+  GITHUB_APP_SLUG: {{ .Values.githubApp.slug | quote }}
+  LINK_SUCCESS_URL: {{ .Values.githubApp.successRedirectUrl | quote }}
+  LINK_FAILURE_URL: {{ .Values.githubApp.failureRedirectUrl | quote }}
+  PENDING_LINK_TTL_SECONDS: {{ .Values.githubApp.pendingLinkTtlSeconds | int64 | quote }}
+  APP_JWT_TTL_SECONDS: {{ .Values.githubApp.appJwtTtlSeconds | int64 | quote }}
+  SWEEP_INTERVAL_SECONDS: {{ .Values.githubApp.sweepIntervalSeconds | int64 | quote }}

@@ -11,6 +11,7 @@
 import tyrian.*
 import tyrian.Html.*
 import scala.scalajs.js.annotation.JSExportTopLevel
+import org.scalajs.dom
 import neotype.* // brings the `.unwrap` extension method into scope for newtypes
 import ubc.githubgateway.api.GitHubGatewayApi
 import ubc.githubgateway.api.external.http.SttpFetchGitHubGatewayClient
@@ -29,15 +30,26 @@ object Main extends TyrianZIOApp[Msg, Model]:
 
   def router: Location => Msg = _ => Msg.NoOp
 
+  // The github-gateway redirects here at the end of a linking flow — success URL
+  // is bare, failure URL has `?error=<code>` (codes match ApiError.code values).
+  private val LinkResultPath = "/link/result"
+
   def init(flags: Map[String, String]): (Model, Cmd[Task, Msg]) =
-    val baseUrl                 = flags.getOrElse("apiBase", "http://api.localhost:8080")
+    val baseUrl                  = flags.getOrElse("apiBase", "http://api.localhost:8080/github-gateway")
     val client: GitHubGatewayApi = SttpFetchGitHubGatewayClient(baseUrl)
-    val initialFetch =
-      run(client.listInstallations(None, 50)) {
+
+    if dom.window.location.pathname == LinkResultPath then
+      val params     = new dom.URLSearchParams(dom.window.location.search)
+      val maybeError = Option(params.get("error")).filter(_.nonEmpty)
+      // Replace the history entry so a refresh lands on Home, not on /link/result.
+      dom.window.history.replaceState("", "", "/")
+      (Model.init(client).copy(view = View.LinkResult(maybeError)), Cmd.None)
+    else
+      val initialFetch = run(client.listInstallations(None, 50)) {
         case Right(page) => Msg.InstallationsLoaded(page)
         case Left(err)   => Msg.LoadFailed(err)
       }
-    (Model.init(client), initialFetch)
+      (Model.init(client), initialFetch)
 
   /** Runs a Task and surfaces failures as Msgs (rather than crashing the runtime). */
   private def run[A](task: Task[A])(toMsg: Either[String, A] => Msg): Cmd[Task, Msg] =
@@ -141,9 +153,10 @@ object Main extends TyrianZIOApp[Msg, Model]:
     val banner: List[Html[Msg]] =
       model.error.map(e => div(`class` := "banner")(text(e))).toList
     val body: Html[Msg] = model.view match
-      case View.Loading => p()(text("Loading..."))
-      case View.Linking => p()(text("Redirecting to GitHub..."))
-      case View.Home    => homeView(model.installations)
+      case View.Loading                 => p()(text("Loading..."))
+      case View.Linking                 => p()(text("Redirecting to GitHub..."))
+      case View.Home                    => homeView(model.installations)
+      case View.LinkResult(maybeError)  => linkResultView(maybeError)
       case View.InstallationDetail(inst, repos, more) =>
         detailView(inst, repos, more)
     div(`class` := "app")(
@@ -166,6 +179,24 @@ object Main extends TyrianZIOApp[Msg, Model]:
       h2()(text("Linked Installations")),
       button(onClick(Msg.StartLinking))(text("Link a new GitHub installation")),
       list
+    )
+
+  private def linkResultView(maybeError: Option[String]): Html[Msg] =
+    val (heading, description) = maybeError match
+      case None =>
+        ("Linked!", "Your GitHub installation was linked successfully.")
+      case Some("STATE_NOT_FOUND") =>
+        ("Link failed", "We couldn't match this callback to an in-progress link request. Please start over.")
+      case Some("STATE_EXPIRED") =>
+        ("Link expired", "Your link request expired before completing. Please start over.")
+      case Some("GITHUB_FAILURE") =>
+        ("GitHub error", "GitHub reported a problem completing the install. Please try again.")
+      case Some(other) =>
+        ("Link failed", s"Unexpected error: $other")
+    section()(
+      h2()(text(heading)),
+      p()(text(description)),
+      button(onClick(Msg.BackToHome))(text("Return to installations"))
     )
 
   private def detailView(
@@ -212,6 +243,7 @@ enum View:
   case Loading
   case Home
   case Linking
+  case LinkResult(maybeError: Option[String])
   case InstallationDetail(
       installation: Installation,
       repos: List[LinkedRepo],

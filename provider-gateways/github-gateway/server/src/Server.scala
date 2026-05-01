@@ -107,7 +107,7 @@ object Server extends ZIOAppDefault:
   def run =
     ZIO
       .serviceWithZIO[Routes[Any, Response]](routes =>
-        ZioServer.serve(routes @@ CorsMiddleware.forHosts(List("localhost")))
+        ZioServer.serve(routes @@ CorsMiddleware.forHosts(List("localhost", "127.0.0.1")))
       )
       .provide(
         // HTTP routes wired from core

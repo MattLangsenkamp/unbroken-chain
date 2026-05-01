@@ -1,2 +1,2 @@
 FROM flyway/flyway:latest
-COPY . /flyway/sql/
+COPY db-migrations/resources/db/migration/ /flyway/sql/
