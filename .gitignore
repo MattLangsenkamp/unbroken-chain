@@ -13,3 +13,7 @@ umbrella/charts/
 **/presentation/node_modules/
 **/presentation/package-lock.json
 **/presentation/.scala-js-out/
+
+# Docs site — mkdocs build output and uv venv
+site/_site/
+site/.venv/

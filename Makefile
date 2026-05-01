@@ -4,7 +4,7 @@ GITHUB_GATEWAY_PRESENTATION_IMAGE ?= unbrokenchain/github-gateway-presentation:l
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings full-github-gateway full-reader full-writer full-extraction-service full-ubc-control-plane
+.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings full-github-gateway full-reader full-writer full-extraction-service full-ubc-control-plane docs-deps docs-serve docs-build help
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -133,6 +133,18 @@ full-ubc-control-plane:
 		ubc-control-plane \
 		ubc-control-plane/k8s \
 		$(CLUSTER_NAME)
+
+## docs-deps : sync Python deps for the docs site (uv sync into site/.venv)
+docs-deps:
+	@$(SCRIPT_DIR)/docs-deps.sh
+
+## docs-serve : serve the docs site locally with live reload
+docs-serve:
+	@$(SCRIPT_DIR)/docs-serve.sh
+
+## docs-build : build the static docs site into site/_site (strict mode)
+docs-build:
+	@$(SCRIPT_DIR)/docs-build.sh
 
 ## help : list available targets
 help:

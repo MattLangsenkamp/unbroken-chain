@@ -1,0 +1,51 @@
+site_name: Unbroken Chain
+site_url: https://mattlangsenkamp.github.io/unbroken-chain/
+repo_url: https://github.com/mattlangsenkamp/unbroken-chain
+edit_uri: edit/main/
+
+docs_dir: ../docs
+site_dir: _site
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - monorepo
+
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Docs:
+      - Architecture: architecture.md
+  - Services:
+      - Overview: services/index.md
+      - Extraction Service: '!include ../extraction-service/docs/mkdocs.yml'
+      - Reader: '!include ../reader/docs/mkdocs.yml'
+      - Writer: '!include ../writer/docs/mkdocs.yml'
+      - UBC Control Plane: '!include ../ubc-control-plane/docs/mkdocs.yml'
+      - GitHub Gateway: '!include ../provider-gateways/github-gateway/docs/mkdocs.yml'
