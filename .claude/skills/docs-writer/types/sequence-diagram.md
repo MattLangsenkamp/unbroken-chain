@@ -9,6 +9,7 @@ Sequence diagrams show how systems interact and how data flows between them. The
 - **Explain WHAT, not HOW.** The numbered list under the diagram should describe what is happening at each step. Implementation detail belongs in surrounding prose or in linked code paths, not in the step labels.
 - **Include code paths.** When a step corresponds to specific code, link or reference it (`file/path.scala:123`) so the reader can jump from the diagram to the implementation.
 - **Avoid branching inside a diagram.** `if` / `alt` blocks bloat the visual. Prefer a second diagram for the alternate path, repeating shared steps as needed. The only exception is when both branches are very small (one or two steps).
+- **Happy path comes first, and stays whole.** The first diagram in any flow document is the end-to-end happy path, drawn as a single diagram even when it spans many actors and steps. Do not split the happy path across multiple diagrams to keep them small — readers need to see the whole thing in one place. Failure cases, alternate paths, and side jobs (sweeps, abandons, etc.) come after, each in its own diagram.
 
 ## Shape
 
