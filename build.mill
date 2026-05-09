@@ -12,6 +12,15 @@ import com.github.lolgab.mill.scalablytyped.*
 val scalaVer   = "3.6.4"
 val scalaJSVer = "1.20.2"
 
+// Compiler warnings for unused/discarded code. Inherited by every module via
+// UbcScalaModule / UbcScalaJSModule. ScalaTests inherits scalacOptions from the
+// outer module in Mill 1.x, so test modules pick these up automatically.
+val lintOptions = Seq(
+  "-Wunused:all",
+  "-Wvalue-discard",
+  "-Wnonunit-statement"
+)
+
 // zio + zio-test must move in lockstep: zio-test's macros reference internal
 // zio APIs by name. neotype-tapir 0.4.10 transitively requires zio-test 2.1.24,
 // so we pin everything to 2.1.24 to keep classpath resolution coherent.
@@ -94,7 +103,20 @@ val otelSemconvDeps = Seq(
 )
 
 
-trait ServiceModule extends ScalaModule with DockerModule {
+// Base ScalaModule for this project — adds lintOptions on top of Mill defaults.
+// Use this everywhere instead of mill.scalalib.ScalaModule. .distinct keeps cross-platform
+// modules quiet: a `js` submodule that extends `Shared with UbcScalaJSModule` would
+// otherwise pick up lintOptions from both linearized supers and scalac complains.
+trait UbcScalaModule extends ScalaModule {
+  override def scalacOptions = (super.scalacOptions() ++ lintOptions).distinct
+}
+
+// Same as UbcScalaModule but for Scala.js modules.
+trait UbcScalaJSModule extends ScalaJSModule {
+  override def scalacOptions = (super.scalacOptions() ++ lintOptions).distinct
+}
+
+trait ServiceModule extends UbcScalaModule with DockerModule {
   def scalaVersion = scalaVer
   override def mvnDeps = super.mvnDeps() ++ zioDeps
 
@@ -107,12 +129,12 @@ trait ServiceModule extends ScalaModule with DockerModule {
 // Use for domainPublic and api layers that the frontend needs to consume.
 // Sources live in <module>/src/ and are shared by both jvm and js sub-modules.
 trait CrossPlatform extends Module {
-  trait Shared extends ScalaModule {
+  trait Shared extends UbcScalaModule {
     def scalaVersion = scalaVer
     override def sources = Task.Sources(moduleDir / os.up / "src")
   }
   object jvm extends Shared
-  object js extends Shared with ScalaJSModule {
+  object js extends Shared with UbcScalaJSModule {
     def scalaJSVersion = scalaJSVer
   }
 }
@@ -120,7 +142,7 @@ trait CrossPlatform extends Module {
 // Mixin for per-service Tyrian SPA modules.
 // npm artifacts (package.json, node_modules) are scoped to <service>/presentation/.
 // To wrap npm libraries with TypeScript definitions, also mix in WithScalablyTyped.
-trait PresentationModule extends ScalaJSModule {
+trait PresentationModule extends UbcScalaJSModule {
   def scalaVersion   = scalaVer
   def scalaJSVersion = scalaJSVer
   override def mvnDeps = tyrianDeps
@@ -146,7 +168,7 @@ object `provider-gateways` extends Module {
     object domain extends Module {
 
       object domainPublic extends Module {
-        trait Shared extends ScalaModule {
+        trait Shared extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def sources = Task.Sources(moduleDir / os.up / "src")
           override def mvnDeps = super.mvnDeps() ++ neotypeDeps
@@ -157,14 +179,14 @@ object `provider-gateways` extends Module {
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
         }
-        object js extends Shared with ScalaJSModule {
+        object js extends Shared with UbcScalaJSModule {
           def scalaJSVersion = scalaJSVer
           // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
           override def mvnDeps = Seq(mvn"io.github.kitlangton:neotype_sjs1_3:0.4.10")
         }
       }
 
-      object domainPrivate extends ScalaModule {
+      object domainPrivate extends UbcScalaModule {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(domainPublic.jvm)
         override def mvnDeps = super.mvnDeps() ++ neotypeDeps
@@ -178,7 +200,7 @@ object `provider-gateways` extends Module {
       object domainPublicAdapterExtensions extends Module {
 
         object `zio-json` extends Module {
-          trait Shared extends ScalaModule {
+          trait Shared extends UbcScalaModule {
             def scalaVersion = scalaVer
             override def sources = Task.Sources(moduleDir / os.up / "src")
             override def mvnDeps = zioJsonDeps ++ neotypeZioJsonDeps
@@ -186,7 +208,7 @@ object `provider-gateways` extends Module {
           object jvm extends Shared {
             override def moduleDeps = Seq(domainPublic.jvm, common.pagination.jvm, api.`api-defn`.jvm)
           }
-          object js extends Shared with ScalaJSModule {
+          object js extends Shared with UbcScalaJSModule {
             def scalaJSVersion = scalaJSVer
             override def moduleDeps = Seq(domainPublic.js, common.pagination.js, api.`api-defn`.js)
             // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
@@ -197,7 +219,7 @@ object `provider-gateways` extends Module {
           }
         }
 
-        object magnum extends ScalaModule {
+        object magnum extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(domainPublic.jvm)
           override def mvnDeps = magnumDeps
@@ -206,13 +228,13 @@ object `provider-gateways` extends Module {
 
       object domainPrivateAdapterExtensions extends Module {
 
-        object `zio-json` extends ScalaModule {
+        object `zio-json` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(domainPrivate, domainPublicAdapterExtensions.`zio-json`.jvm)
           override def mvnDeps = zioJsonDeps
         }
 
-        object magnum extends ScalaModule {
+        object magnum extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(domainPrivate)
           override def mvnDeps = magnumDeps
@@ -222,7 +244,7 @@ object `provider-gateways` extends Module {
 
     object core extends Module {
 
-      object ports extends ScalaModule {
+      object ports extends UbcScalaModule {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(
           domain.domainPublic.jvm,
@@ -232,7 +254,7 @@ object `provider-gateways` extends Module {
         override def mvnDeps = zioDeps
       }
 
-      object `core-impl` extends ScalaModule {
+      object `core-impl` extends UbcScalaModule {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(
           ports,
@@ -261,7 +283,7 @@ object `provider-gateways` extends Module {
 
         // Outbound HTTP adapter implementing GitHubAppClient against GitHub's REST API
         // via Tapir endpoint DSL + sttp's ZIO backend. Tests use SttpBackendStub.
-        object `tapir-sttp-github-app-client` extends ScalaModule {
+        object `tapir-sttp-github-app-client` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -276,7 +298,7 @@ object `provider-gateways` extends Module {
         }
 
         // Driven port implementation for InstallationRepository via Magnum + Postgres.
-        object `magnum-installation-repository` extends ScalaModule {
+        object `magnum-installation-repository` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -296,7 +318,7 @@ object `provider-gateways` extends Module {
         }
 
         // Driven port implementation for LinkedRepoRepository via Magnum + Postgres.
-        object `magnum-linked-repo-repository` extends ScalaModule {
+        object `magnum-linked-repo-repository` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -316,7 +338,7 @@ object `provider-gateways` extends Module {
         }
 
         // Driven port implementation for PendingLinkFlowRepository via Magnum + Postgres.
-        object `magnum-pending-link-flow-repository` extends ScalaModule {
+        object `magnum-pending-link-flow-repository` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -336,7 +358,7 @@ object `provider-gateways` extends Module {
         }
 
         // Driven port implementation for WebhookDeliveryRepository via Magnum + Postgres.
-        object `magnum-webhook-delivery-repository` extends ScalaModule {
+        object `magnum-webhook-delivery-repository` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -356,7 +378,7 @@ object `provider-gateways` extends Module {
         }
 
         // In-memory InstallationRepository for local dev and testing — no DB required.
-        object `in-memory-installation-repository` extends ScalaModule {
+        object `in-memory-installation-repository` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -368,7 +390,7 @@ object `provider-gateways` extends Module {
         }
 
         // In-memory LinkedRepoRepository for local dev and testing.
-        object `in-memory-linked-repo-repository` extends ScalaModule {
+        object `in-memory-linked-repo-repository` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -380,7 +402,7 @@ object `provider-gateways` extends Module {
         }
 
         // In-memory PendingLinkFlowRepository for local dev and testing.
-        object `in-memory-pending-link-flow-repository` extends ScalaModule {
+        object `in-memory-pending-link-flow-repository` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -392,7 +414,7 @@ object `provider-gateways` extends Module {
         }
 
         // In-memory WebhookDeliveryRepository for local dev and testing.
-        object `in-memory-webhook-delivery-repository` extends ScalaModule {
+        object `in-memory-webhook-delivery-repository` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -405,7 +427,7 @@ object `provider-gateways` extends Module {
 
         // In-memory fake of GitHub's REST API for the App. Used by core service tests
         // that need a deterministic, in-process backend instead of calling github.com.
-        object `in-memory-github-app-client` extends ScalaModule {
+        object `in-memory-github-app-client` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -417,7 +439,7 @@ object `provider-gateways` extends Module {
         }
 
         // In-memory InstallationTokenMinter — returns deterministic dummy JWTs for tests.
-        object `in-memory-installation-token-minter` extends ScalaModule {
+        object `in-memory-installation-token-minter` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -430,7 +452,7 @@ object `provider-gateways` extends Module {
 
         // Deterministic SecureRandom — counter-backed; emits predictable verifiers/state nonces
         // so tests can assert on exact values. Not for production use.
-        object `deterministic-secure-random` extends ScalaModule {
+        object `deterministic-secure-random` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -443,7 +465,7 @@ object `provider-gateways` extends Module {
 
         // No-op Crypto adapter — base64 identity transform. For tests and local dev only;
         // gives the round-trip property of a real Crypto without the key management.
-        object `noop-crypto` extends ScalaModule {
+        object `noop-crypto` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -456,7 +478,7 @@ object `provider-gateways` extends Module {
 
         // Real InstallationTokenMinter: signs RS256 App JWTs from a configured RSA private key
         // using nimbus-jose-jwt. Used by the server bootstrap.
-        object `nimbus-jose-installation-token-minter` extends ScalaModule {
+        object `nimbus-jose-installation-token-minter` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps ++ Seq(
@@ -471,7 +493,7 @@ object `provider-gateways` extends Module {
 
         // Real Crypto adapter: AES-GCM encryption of the PKCE verifier at rest using
         // javax.crypto. 256-bit key supplied at construction.
-        object `aes-gcm-crypto` extends ScalaModule {
+        object `aes-gcm-crypto` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -484,7 +506,7 @@ object `provider-gateways` extends Module {
 
         // Real SecureRandom adapter: java.security.SecureRandom-backed generator for the
         // PKCE code verifier (RFC 7636) and the link-state nonce.
-        object `java-secure-random-generator` extends ScalaModule {
+        object `java-secure-random-generator` extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
@@ -503,7 +525,7 @@ object `provider-gateways` extends Module {
       // frontend can share the same types without a second definition.
       // Depends only on domainPublic — never on domainPrivate or any adapter extension.
       object `api-defn` extends Module {
-        trait Shared extends ScalaModule {
+        trait Shared extends UbcScalaModule {
           def scalaVersion = scalaVer
           override def sources = Task.Sources(moduleDir / os.up / "src")
           override def mvnDeps = zioDeps
@@ -511,7 +533,7 @@ object `provider-gateways` extends Module {
         object jvm extends Shared {
           override def moduleDeps = Seq(domain.domainPublic.jvm, common.pagination.jvm)
         }
-        object js extends Shared with ScalaJSModule {
+        object js extends Shared with UbcScalaJSModule {
           def scalaJSVersion = scalaJSVer
           override def moduleDeps = Seq(domain.domainPublic.js, common.pagination.js)
           // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
@@ -522,7 +544,7 @@ object `provider-gateways` extends Module {
       // Inbound HTTP adapter: Tapir endpoints that decode requests and delegate
       // immediately to core. No business logic lives here.
       object `internal-api-adapters` extends Module {
-        object http extends ScalaModule {
+        object http extends UbcScalaModule {
           def scalaVersion = scalaVer
           // Tapir's Schema derivation for nested generics (Page[Installation]) needs
           // a higher inline budget than the default 32.
@@ -560,7 +582,7 @@ object `provider-gateways` extends Module {
       object `external-api-adapters` extends Module {
         // JVM client: Tapir endpoint DSL + SttpClientInterpreter. Import this when a
         // JVM service needs to call the GitHub Gateway over HTTP.
-        object `tapir-sttp-http` extends ScalaModule {
+        object `tapir-sttp-http` extends UbcScalaModule {
           def scalaVersion = scalaVer
           // Tapir's Schema derivation for nested generics (Page[Installation]) needs
           // a higher inline budget than the default 32.
@@ -581,7 +603,7 @@ object `provider-gateways` extends Module {
         // Scala.js client: raw sttp + FetchZioBackend (browser Fetch API).
         // No Tapir — FetchZioBackend returns ZIO Task directly, matching the port trait.
         // Explicit _sjs1_3 artifact name required for ScalaJS resolution.
-        object `sttp-fetch-js` extends ScalaJSModule {
+        object `sttp-fetch-js` extends UbcScalaJSModule {
           def scalaVersion = scalaVer
           def scalaJSVersion = scalaJSVer
           override def moduleDeps = Seq(
@@ -635,7 +657,7 @@ object common extends Module {
   // Reads POSTGRES_HOST / POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD from the
   // environment (set ConfigProvider.envProvider.snakeCase in your server's bootstrap).
   // Exposes a single TaskLayer[TransactorZIO] — wire it in any service that needs DB access.
-  object `hikari-magnum-transactor` extends ScalaModule {
+  object `hikari-magnum-transactor` extends UbcScalaModule {
     def scalaVersion = scalaVer
     override def mvnDeps = zioDeps ++ zioConfigDeps ++ magnumDeps ++ Seq(
       mvn"com.zaxxer:HikariCP:5.1.0",
@@ -645,28 +667,28 @@ object common extends Module {
 
   // Structured activity logging: typed case classes with JsonCodec instead of free-form strings.
   // ZIO.logActivity(MyEvent(...)) routes to the correct ZIO log level and serialises to JSON.
-  object `activity-logging` extends ScalaModule {
+  object `activity-logging` extends UbcScalaModule {
     def scalaVersion = scalaVer
     override def mvnDeps = zioDeps ++ zioJsonDeps
   }
 
   // OTel SDK wired into ZIO via zio-opentelemetry. Reads OTLP_ENDPOINT from env (falls back to
   // http://otel-collector:4317). Exposes BaseTelemetry.live(serviceName): RLayer[Scope, TelemetryEnv].
-  object `base-telemetry` extends ScalaModule {
+  object `base-telemetry` extends UbcScalaModule {
     def scalaVersion = scalaVer
     override def moduleDeps = Seq(`activity-logging`)
     override def mvnDeps = zioDeps ++ zioOtelDeps ++ otelSdkDeps ++ loggingDeps ++ zioConfigDeps
   }
 
   // Shared ZIO HTTP server boilerplate: serverAfterTelemetry, resolvedRoutesLayer, ZServerStarting.
-  object `server-utils` extends ScalaModule {
+  object `server-utils` extends UbcScalaModule {
     def scalaVersion = scalaVer
     override def moduleDeps = Seq(`base-telemetry`, `activity-logging`)
     override def mvnDeps = zioDeps ++ zioHttpDeps ++ zioOtelDeps
   }
 
   // CORS middleware factory: CorsMiddleware.forHosts(List("localhost")) allows bare host and *.host.
-  object `cors-middleware` extends ScalaModule {
+  object `cors-middleware` extends UbcScalaModule {
     def scalaVersion = scalaVer
     override def mvnDeps = zioHttpDeps
   }
@@ -674,7 +696,7 @@ object common extends Module {
   // Tapir tracing interceptor: TapirTracingInterceptor.serverOptions(tracing) returns
   // ZioHttpServerOptions with a TracingInterceptor — gives every Tapir endpoint an OTel
   // server span with W3C trace-context propagation. Adapted from kinoplan/utils (Apache 2.0).
-  object `tapir-tracing-interceptor` extends ScalaModule {
+  object `tapir-tracing-interceptor` extends UbcScalaModule {
     def scalaVersion = scalaVer
     override def mvnDeps = tapirServerDeps ++ zioOtelDeps ++ otelSemconvDeps
   }
@@ -684,7 +706,7 @@ object common extends Module {
   // Cross-compiled (jvm + js) so Scala.js consumers (e.g. typed clients in
   // external-api-adapters/sttp-fetch-js and Tyrian SPAs) can share the same types.
   object pagination extends Module {
-    trait Shared extends ScalaModule {
+    trait Shared extends UbcScalaModule {
       def scalaVersion = scalaVer
       override def sources = Task.Sources(moduleDir / os.up / "src")
       override def mvnDeps = zioDeps
@@ -696,7 +718,7 @@ object common extends Module {
         override def mvnDeps = super.mvnDeps() ++ zioTestDeps
       }
     }
-    object js extends Shared with ScalaJSModule {
+    object js extends Shared with UbcScalaJSModule {
       def scalaJSVersion = scalaJSVer
       // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
       override def mvnDeps = Seq(mvn"dev.zio:zio_sjs1_3:2.1.17")
@@ -709,7 +731,7 @@ object common extends Module {
   //
   // IMPORTANT: Add this module only to test.moduleDeps of consuming modules — never to
   // production moduleDeps. Testcontainers and Flyway must not appear on production classpaths.
-  object `db-test-support` extends ScalaModule {
+  object `db-test-support` extends UbcScalaModule {
     def scalaVersion = scalaVer
     override def mvnDeps = zioDeps ++ magnumDeps ++ Seq(
       mvn"com.zaxxer:HikariCP:5.1.0",

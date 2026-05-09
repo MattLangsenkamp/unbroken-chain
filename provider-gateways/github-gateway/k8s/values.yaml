@@ -30,8 +30,8 @@ githubApp:
   # Where the gateway redirects the browser after a linking flow.
   # Both point at the same SPA route — the failure URL gets `?error=<code>`
   # appended by the gateway, and the SPA's LinkResult view branches on that.
-  successRedirectUrl: "http://localhost:3000/link/result"
-  failureRedirectUrl: "http://localhost:3000/link/result"
+  successRedirectUrl: "http://github.localhost:8080/link/result"
+  failureRedirectUrl: "http://github.localhost:8080/link/result"
   # Lifetime of a pending_link_flow row before the sweeper deletes it
   pendingLinkTtlSeconds: 600
   # Lifetime of the app-level JWT used to mint installation tokens

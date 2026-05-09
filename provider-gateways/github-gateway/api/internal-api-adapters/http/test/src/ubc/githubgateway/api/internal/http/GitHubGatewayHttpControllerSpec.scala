@@ -4,7 +4,7 @@ import neotype.*
 import sttp.client3.*
 import sttp.client3.impl.zio.RIOMonadAsyncError
 import sttp.client3.testing.SttpBackendStub
-import sttp.model.{StatusCode, Uri}
+import sttp.model.StatusCode
 import sttp.tapir.server.stub.TapirStubInterpreter
 import sttp.tapir.ztapir.*
 import ubc.githubgateway.api.ApiError

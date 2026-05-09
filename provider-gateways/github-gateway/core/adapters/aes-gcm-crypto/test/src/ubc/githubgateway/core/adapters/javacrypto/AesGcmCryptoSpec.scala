@@ -14,8 +14,6 @@ object AesGcmCryptoSpec extends ZIOSpecDefault:
   private val testKeyBytes: Array[Byte] =
     (0 until 32).map(_.toByte).toArray
   private val testKey: SecretKeySpec = new SecretKeySpec(testKeyBytes, "AES")
-  private val testKeyB64: EncryptionKey =
-    EncryptionKey(java.util.Base64.getEncoder.encodeToString(testKeyBytes))
 
   private def freshCrypto: AesGcmCrypto =
     new AesGcmCrypto(testKey, new java.security.SecureRandom())

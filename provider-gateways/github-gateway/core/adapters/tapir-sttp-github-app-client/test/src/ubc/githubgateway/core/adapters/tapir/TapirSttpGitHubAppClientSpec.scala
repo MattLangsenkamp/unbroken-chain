@@ -10,7 +10,7 @@ import zio.test.*
 import sttp.client3.{Request, Response, SttpBackend}
 import sttp.client3.testing.SttpBackendStub
 import sttp.client3.impl.zio.RIOMonadAsyncError
-import sttp.model.{Header, StatusCode}
+import sttp.model.StatusCode
 
 import java.time.Instant
 
