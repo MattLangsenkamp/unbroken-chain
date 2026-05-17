@@ -616,11 +616,33 @@ object common extends Module {
     )
   }
 
-  // Structured activity logging: typed case classes with JsonCodec instead of free-form strings.
-  // ZIO.logActivity(MyEvent(...)) routes to the correct ZIO log level and serialises to JSON.
+  // Structured activity logging: typed case classes with a Mirror-based inline encoder
+  // instead of free-form strings. ZIO.logActivity(MyEvent(...)) routes to the correct
+  // ZIO log level and serialises to JSON. Fields whose declared type <: Sensitive are
+  // redacted in the emitted JSON.
   object `activity-logging` extends UbcScalaModule {
     def scalaVersion = scalaVer
+    override def moduleDeps = Seq(sensitive.jvm)
     override def mvnDeps = zioDeps ++ zioJsonDeps
+
+    object test extends ScalaTests {
+      def testFramework = "zio.test.sbt.ZTestFramework"
+      override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+    }
+  }
+
+  // Marker trait for values whose contents must never appear in logs, traces, or other
+  // observability output. Downstream codecs/loggers are expected to honour the marker —
+  // the trait itself has no runtime behaviour. Cross-compiled so frontend code can use it too.
+  object sensitive extends Module {
+    trait Shared extends UbcScalaModule {
+      def scalaVersion = scalaVer
+      override def sources = Task.Sources(moduleDir / os.up / "src")
+    }
+    object jvm extends Shared
+    object js extends Shared with UbcScalaJSModule {
+      def scalaJSVersion = scalaJSVer
+    }
   }
 
   // OTel SDK wired into ZIO via zio-opentelemetry. Reads OTLP_ENDPOINT from env (falls back to

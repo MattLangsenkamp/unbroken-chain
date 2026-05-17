@@ -1,7 +1,6 @@
 package ubc.common
 
 import zio.*
-import zio.json.*
 import zio.http.{Response, Routes, Server as ZServer}
 import zio.telemetry.opentelemetry.context.ContextStorage
 import zio.telemetry.opentelemetry.tracing.Tracing
@@ -35,4 +34,4 @@ object ServerLayers:
       for env <- ZIO.environment[TelemetryEnv]
       yield app.provideEnvironment(env)
 
-  case class ZServerStarting() extends InfoLog derives JsonCodec
+  case class ZServerStarting() extends InfoLog derives ActivityEncoder
