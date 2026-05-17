@@ -8,13 +8,12 @@ import sttp.model.StatusCode
 import sttp.tapir.server.stub.TapirStubInterpreter
 import sttp.tapir.ztapir.*
 import ubc.githubgateway.api.ApiError
-import ubc.common.crypto.inmemory.NoopCrypto
 import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
-import ubc.githubgateway.domain.internal.{EncryptionKey, GitHubGatewayConfig}
+import ubc.githubgateway.domain.internal.GitHubGatewayConfig
 import ubc.common.pagination.Page
 import zio.*
 import zio.json.*
@@ -39,7 +38,6 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         githubAppSlug          = AppSlug("unbroken-chain-app"),
         githubAppPrivateKeyPem = "test-pem",
         githubWebhookSecret    = "test-secret",
-        verifierEncryptionKey  = EncryptionKey("test-key"),
         pendingLinkTtl         = 10.minutes,
         linkSuccessUrl         = "http://localhost/link/success",
         linkFailureUrl         = "http://localhost/link/failure",
@@ -323,6 +321,5 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
     InMemoryGitHubAppClient.layer,
     InMemoryInstallationTokenMinter.layer,
     DeterministicSecureRandom.layer,
-    NoopCrypto.layer,
     GitHubGatewayService.layer
   )

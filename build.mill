@@ -262,7 +262,6 @@ object `provider-gateways` extends Module {
         override def moduleDeps = Seq(
           ports,
           common.`activity-logging`,
-          common.`crypto-port`,
           common.`secure-random-port`,
           domain.domainPublicAdapterExtensions.`zio-json`.jvm
         )
@@ -278,8 +277,7 @@ object `provider-gateways` extends Module {
             adapters.`in-memory-webhook-delivery-repository`,
             adapters.`in-memory-github-app-client`,
             adapters.`in-memory-installation-token-minter`,
-            common.`deterministic-secure-random`,
-            common.`noop-crypto`
+            common.`deterministic-secure-random`
           )
         }
       }
@@ -525,8 +523,7 @@ object `provider-gateways` extends Module {
               core.adapters.`in-memory-webhook-delivery-repository`,
               core.adapters.`in-memory-github-app-client`,
               core.adapters.`in-memory-installation-token-minter`,
-              common.`deterministic-secure-random`,
-              common.`noop-crypto`
+              common.`deterministic-secure-random`
             )
           }
         }
@@ -590,7 +587,6 @@ object `provider-gateways` extends Module {
         core.adapters.`magnum-pending-link-flow-repository`,
         core.adapters.`magnum-webhook-delivery-repository`,
         core.adapters.`nimbus-jose-installation-token-minter`,
-        common.`aes-gcm-crypto`,
         common.`java-secure-random-generator`,
         api.`internal-api-adapters`.http,
         common.`hikari-magnum-transactor`,

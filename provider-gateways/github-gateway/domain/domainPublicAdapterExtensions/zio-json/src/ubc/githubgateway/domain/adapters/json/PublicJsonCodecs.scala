@@ -22,7 +22,6 @@ object PublicJsonCodecs:
   given JsonCodec[DeliveryId]       = summon[JsonCodec[DeliveryId]]
   given JsonCodec[EventType]        = summon[JsonCodec[EventType]]
   given JsonCodec[EventAction]      = summon[JsonCodec[EventAction]]
-  given JsonCodec[CodeChallenge]    = summon[JsonCodec[CodeChallenge]]
 
   // Enums
   given JsonCodec[AccountType] = JsonCodec[String].transformOrFail(

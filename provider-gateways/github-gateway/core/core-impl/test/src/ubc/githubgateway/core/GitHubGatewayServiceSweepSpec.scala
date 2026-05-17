@@ -1,6 +1,5 @@
 package ubc.githubgateway.core
 
-import ubc.common.crypto.inmemory.NoopCrypto
 import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.ports.PendingLinkFlowRepository
@@ -22,25 +21,19 @@ object GitHubGatewayServiceSweepSpec extends ZIOSpecDefault:
           repo <- ZIO.service[PendingLinkFlowRepository]
 
           past   = PendingLinkFlow(
-                     state             = LinkState("past"),
-                     encryptedVerifier = EncryptedBytes("e1"),
-                     codeChallenge     = CodeChallenge("c1"),
-                     createdAt         = anchor.minusSeconds(7200),
-                     expiresAt         = anchor.minusSeconds(60)
+                     state     = LinkState("past"),
+                     createdAt = anchor.minusSeconds(7200),
+                     expiresAt = anchor.minusSeconds(60)
                    )
           edge   = PendingLinkFlow(
-                     state             = LinkState("edge"),
-                     encryptedVerifier = EncryptedBytes("e2"),
-                     codeChallenge     = CodeChallenge("c2"),
-                     createdAt         = anchor.minusSeconds(7200),
-                     expiresAt         = anchor
+                     state     = LinkState("edge"),
+                     createdAt = anchor.minusSeconds(7200),
+                     expiresAt = anchor
                    )
           future = PendingLinkFlow(
-                     state             = LinkState("future"),
-                     encryptedVerifier = EncryptedBytes("e3"),
-                     codeChallenge     = CodeChallenge("c3"),
-                     createdAt         = anchor.minusSeconds(7200),
-                     expiresAt         = anchor.plusSeconds(60)
+                     state     = LinkState("future"),
+                     createdAt = anchor.minusSeconds(7200),
+                     expiresAt = anchor.plusSeconds(60)
                    )
 
           _   <- repo.insert(past)
@@ -69,6 +62,5 @@ object GitHubGatewayServiceSweepSpec extends ZIOSpecDefault:
       InMemoryGitHubAppClient.layer,
       InMemoryInstallationTokenMinter.layer,
       DeterministicSecureRandom.layer,
-      NoopCrypto.layer,
       GitHubGatewayService.layer
     )

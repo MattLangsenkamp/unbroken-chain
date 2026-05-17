@@ -14,9 +14,5 @@ object TokensSpec extends ZIOSpecDefault:
       test("InstallationAccessToken wraps and unwraps a String") {
         val v: InstallationAccessToken = InstallationAccessToken("ghs_abcdef123456")
         assertTrue(v.unwrap == "ghs_abcdef123456")
-      },
-      test("EncryptionKey wraps and unwraps a base64 String") {
-        val v: EncryptionKey = EncryptionKey("c2VjcmV0LWtleS1kZW1vLW9ubHk=")
-        assertTrue(v.unwrap == "c2VjcmV0LWtleS1kZW1vLW9ubHk=")
       }
     )

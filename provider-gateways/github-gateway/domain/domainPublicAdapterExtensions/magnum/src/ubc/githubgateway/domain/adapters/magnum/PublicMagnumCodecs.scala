@@ -23,7 +23,6 @@ object PublicMagnumCodecs:
   given DbCodec[AccountLogin]     = DbCodec[String].biMap(AccountLogin(_), _.unwrap)
   given DbCodec[RepoFullName]     = DbCodec[String].biMap(RepoFullName(_), _.unwrap)
   given DbCodec[LinkState]        = DbCodec[String].biMap(LinkState(_), _.unwrap)
-  given DbCodec[CodeChallenge]    = DbCodec[String].biMap(CodeChallenge(_), _.unwrap)
   given DbCodec[DeliveryId]       = DbCodec[String].biMap(DeliveryId(_), _.unwrap)
   given DbCodec[EventType]        = DbCodec[String].biMap(EventType(_), _.unwrap)
 

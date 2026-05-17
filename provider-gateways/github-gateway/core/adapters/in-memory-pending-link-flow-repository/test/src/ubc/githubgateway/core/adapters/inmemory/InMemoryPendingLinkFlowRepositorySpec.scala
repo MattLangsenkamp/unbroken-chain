@@ -12,11 +12,9 @@ object InMemoryPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
 
   private def flow(state: String, expiresAt: Instant): PendingLinkFlow =
     PendingLinkFlow(
-      state             = LinkState(state),
-      encryptedVerifier = EncryptedBytes(s"enc-$state"),
-      codeChallenge     = CodeChallenge(s"challenge-$state"),
-      createdAt         = Instant.parse("2026-04-25T12:00:00Z"),
-      expiresAt         = expiresAt
+      state     = LinkState(state),
+      createdAt = Instant.parse("2026-04-25T12:00:00Z"),
+      expiresAt = expiresAt
     )
 
   override def spec =

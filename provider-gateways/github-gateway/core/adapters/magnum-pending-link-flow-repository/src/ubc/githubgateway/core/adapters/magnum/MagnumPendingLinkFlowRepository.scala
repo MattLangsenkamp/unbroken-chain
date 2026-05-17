@@ -4,7 +4,6 @@ import ubc.githubgateway.core.ports.PendingLinkFlowRepository
 import ubc.githubgateway.domain.LinkState
 import ubc.githubgateway.domain.internal.PendingLinkFlow
 import ubc.githubgateway.domain.adapters.magnum.PublicMagnumCodecs.given
-import ubc.githubgateway.domain.internal.adapters.magnum.PrivateMagnumCodecs.given
 import com.augustnagro.magnum.*
 import com.augustnagro.magnum.magzio.*
 import zio.*
@@ -18,15 +17,15 @@ class MagnumPendingLinkFlowRepository(xa: TransactorZIO) extends PendingLinkFlow
   def insert(flow: PendingLinkFlow): Task[Unit] =
     xa.transact {
       sql"""
-        INSERT INTO pending_link_flow (state, encrypted_verifier, code_challenge, created_at, expires_at)
-        VALUES (${flow.state}, ${flow.encryptedVerifier}, ${flow.codeChallenge}, ${flow.createdAt}, ${flow.expiresAt})
+        INSERT INTO pending_link_flow (state, created_at, expires_at)
+        VALUES (${flow.state}, ${flow.createdAt}, ${flow.expiresAt})
       """.update.run()
     }.unit
 
   def findByState(state: LinkState): Task[Option[PendingLinkFlow]] =
     xa.connect {
       sql"""
-        SELECT state, encrypted_verifier, code_challenge, created_at, expires_at
+        SELECT state, created_at, expires_at
         FROM pending_link_flow
         WHERE state = $state
       """.query[PendingLinkFlow].run().headOption

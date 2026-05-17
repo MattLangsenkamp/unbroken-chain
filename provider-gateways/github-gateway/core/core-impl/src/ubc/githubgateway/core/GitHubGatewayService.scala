@@ -1,7 +1,6 @@
 package ubc.githubgateway.core
 
 import neotype.*
-import ubc.common.crypto.Crypto
 import ubc.common.logActivity
 import ubc.common.pagination.{Page, PageRequest}
 import ubc.common.securerandom.SecureRandom
@@ -12,15 +11,14 @@ import zio.*
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-import java.util.Base64
 
 /** Core service for the GitHub App installation lifecycle.
   *
-  * Composes the eight outbound ports (four repos, one outbound HTTP client, one token minter,
-  * one randomness source, one crypto adapter) into the operations exposed by the API layer.
+  * Composes the seven outbound ports (four repos, one outbound HTTP client, one token minter,
+  * one randomness source) into the operations exposed by the API layer.
   *
   * Scope:
-  *   - link initiation (PKCE state + verifier, persist pending row, build install URL)
+  *   - link initiation (state nonce, persist pending row, build install URL)
   *   - link callback (consume pending row, fetch installation + repos, persist mirror)
   *   - listing / unlinking / reconciling installations + their repo sets
   *   - sweeping expired pending flows
@@ -37,19 +35,12 @@ case class GitHubGatewayService(
     webhookLog: WebhookDeliveryRepository,
     github: GitHubAppClient,
     minter: InstallationTokenMinter,
-    random: SecureRandom,
-    crypto: Crypto
+    random: SecureRandom
 ):
 
   // ---------------------------------------------------------------------------------------
   // Internals
   // ---------------------------------------------------------------------------------------
-
-  private def base64UrlNoPadding(bytes: Array[Byte]): String =
-    Base64.getUrlEncoder.withoutPadding.encodeToString(bytes)
-
-  private def sha256(input: Array[Byte]): Array[Byte] =
-    MessageDigest.getInstance("SHA-256").digest(input)
 
   private def asGitHubFailure(t: Throwable): LinkError.GitHubFailure =
     LinkError.GitHubFailure(Option(t.getMessage).getOrElse(t.getClass.getName))
@@ -69,37 +60,25 @@ case class GitHubGatewayService(
   // Link initiation
   // ---------------------------------------------------------------------------------------
 
-  /** Begin a link flow. Generates a fresh state nonce + PKCE verifier, persists the pending
-    * row, and returns the GitHub install URL the caller should redirect the user to.
+  /** Begin a link flow. Generates a fresh state nonce, persists the pending row, and returns
+    * the GitHub install URL the caller should redirect the user to.
     *
-    * No modelled errors — entropy, encryption, and pending-row insertion are all infrastructure
-    * defects rather than business outcomes. Surface them as ZIO defects (via `.orDie`).
+    * No modelled errors — entropy and pending-row insertion are infrastructure defects rather
+    * than business outcomes. Surface them as ZIO defects (via `.orDie`).
     */
   def initiate(): UIO[LinkInitiation] =
     for
-      // PKCE state nonce: 32 bytes → 43 base64url chars. PKCE code verifier: 64 bytes → 86
-      // chars (within RFC 7636's 43-128 range). Newtype wrappers happen here at the call
-      // site; the SecureRandom port itself is generic and lives in `common`.
-      state              <- random.urlSafeRandomString(byteCount = 32).map(LinkState(_))
-      verifier           <- random.urlSafeRandomString(byteCount = 64).map(CodeVerifier(_))
-      challenge           = CodeChallenge(
-                              base64UrlNoPadding(sha256(verifier.unwrap.getBytes(StandardCharsets.UTF_8)))
-                            )
-      encryptedVerifier  <- crypto.encrypt(verifier.unwrap).map(EncryptedBytes(_)).orDie
-      now                <- Clock.instant
-      expiresAt           = now.plus(config.pendingLinkTtl)
-      flow                = PendingLinkFlow(
-                              state             = state,
-                              encryptedVerifier = encryptedVerifier,
-                              codeChallenge     = challenge,
-                              createdAt         = now,
-                              expiresAt         = expiresAt
-                            )
-      _                  <- pendingFlows.insert(flow).orDie
-      installUrl          = InstallUrl(
-                              s"https://github.com/apps/${config.githubAppSlug.unwrap}/installations/new?state=${state.unwrap}"
-                            )
-      _                  <- ZIO.logActivity(LinkInitiated(state, expiresAt))
+      // 32 bytes → 43 base64url chars. Newtype wrapping happens here at the call site; the
+      // SecureRandom port itself is generic and lives in `common`.
+      state      <- random.urlSafeRandomString(byteCount = 32).map(LinkState(_))
+      now        <- Clock.instant
+      expiresAt   = now.plus(config.pendingLinkTtl)
+      flow        = PendingLinkFlow(state = state, createdAt = now, expiresAt = expiresAt)
+      _          <- pendingFlows.insert(flow).orDie
+      installUrl  = InstallUrl(
+                      s"https://github.com/apps/${config.githubAppSlug.unwrap}/installations/new?state=${state.unwrap}"
+                    )
+      _          <- ZIO.logActivity(LinkInitiated(state, expiresAt))
     yield LinkInitiation(installUrl, state, expiresAt)
 
   // ---------------------------------------------------------------------------------------
@@ -373,7 +352,7 @@ object GitHubGatewayService:
       InstallationRepository & LinkedRepoRepository &
       PendingLinkFlowRepository & WebhookDeliveryRepository &
       GitHubAppClient & InstallationTokenMinter &
-      SecureRandom & Crypto,
+      SecureRandom,
     GitHubGatewayService
   ] =
     ZLayer.fromFunction(GitHubGatewayService.apply)

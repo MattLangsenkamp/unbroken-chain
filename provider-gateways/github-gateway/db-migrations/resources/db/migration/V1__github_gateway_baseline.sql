@@ -3,7 +3,7 @@
 -- Replaces the previous OAuth-token-centric schema. Models four aggregates:
 --   * installation       — a live GitHub App installation we know about
 --   * linked_repo        — a repository selected for an installation (FK + cascade)
---   * pending_link_flow  — an in-flight link attempt (PKCE state row, swept after expiry)
+--   * pending_link_flow  — an in-flight link attempt (state nonce row, swept after expiry)
 --   * webhook_delivery   — idempotency log keyed by GitHub's X-GitHub-Delivery UUID
 
 CREATE TABLE installation (
@@ -26,8 +26,6 @@ CREATE TABLE linked_repo (
 
 CREATE TABLE pending_link_flow (
     state                TEXT         PRIMARY KEY,
-    encrypted_verifier   BYTEA        NOT NULL,
-    code_challenge       TEXT         NOT NULL,
     created_at           TIMESTAMPTZ  NOT NULL,
     expires_at           TIMESTAMPTZ  NOT NULL
 );

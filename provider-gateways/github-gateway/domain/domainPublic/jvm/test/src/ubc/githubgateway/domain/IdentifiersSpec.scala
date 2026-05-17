@@ -39,10 +39,6 @@ object IdentifiersSpec extends ZIOSpecDefault:
         val v: LinkState = LinkState("abc123nonce")
         assertTrue(v.unwrap == "abc123nonce")
       },
-      test("CodeChallenge wraps a base64url SHA256 String") {
-        val v: CodeChallenge = CodeChallenge("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
-        assertTrue(v.unwrap == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
-      },
       test("DeliveryId wraps a UUID String") {
         val v: DeliveryId = DeliveryId("72d3162e-cc78-11e3-81ab-4c9367dc0958")
         assertTrue(v.unwrap == "72d3162e-cc78-11e3-81ab-4c9367dc0958")

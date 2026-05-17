@@ -1,9 +1,6 @@
 package ubc.githubgateway.server
 
-import neotype.*
 import sttp.client3.httpclient.zio.HttpClientZioBackend
-import ubc.common.crypto.Crypto
-import ubc.common.crypto.javacrypto.AesGcmCrypto
 import ubc.common.securerandom.javacrypto.JavaSecureRandomGenerator
 import ubc.common.{BaseTelemetry, CorsMiddleware, HikariMagnumTransactor, ServerLayers}
 import ubc.githubgateway.api.internal.http.GitHubGatewayHttpController
@@ -34,18 +31,6 @@ object Server extends ZIOAppDefault:
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
     Runtime.setConfigProvider(ConfigProvider.envProvider.snakeCase)
 
-  /** Bridge layer from this service's config to the common AES-GCM adapter.
-    *
-    * The common `AesGcmCrypto` companion exposes only `fromKey(base64Key)` — no `.layer` —
-    * so this service's bootstrap turns its own `verifierEncryptionKey` into a `Crypto`
-    * binding here. Lives in the server module rather than next to the config because it
-    * crosses the service boundary into a generic common adapter.
-    */
-  private val cryptoLayer: ZLayer[GitHubGatewayConfig, Throwable, Crypto] =
-    ZLayer.fromZIO {
-      ZIO.serviceWithZIO[GitHubGatewayConfig](cfg => AesGcmCrypto.fromKey(cfg.verifierEncryptionKey.unwrap))
-    }
-
   def run =
     ZIO
       .serviceWithZIO[Routes[Any, Response]](routes =>
@@ -66,7 +51,6 @@ object Server extends ZIOAppDefault:
         MagnumPendingLinkFlowRepository.layer,
         MagnumWebhookDeliveryRepository.layer,
         NimbusJoseInstallationTokenMinter.layer,
-        cryptoLayer,
         JavaSecureRandomGenerator.live,
 
         // Config

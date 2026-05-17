@@ -12,7 +12,7 @@ import zio.config.magnolia.deriveConfig
   * `feature-tdd/layers/domain.md` skill).
   *
   * Sourced from environment variables at startup via `ZIO.config[GitHubGatewayConfig]`. Each
-  * companion-object layer (`AesGcmCrypto.layer`, `NimbusJoseInstallationTokenMinter.layer`,
+  * companion-object layer (`NimbusJoseInstallationTokenMinter.layer`,
   * `GitHubGatewayService.sweeperLayer`, …) reads what it needs from this single value.
   *
   * @param githubAppId
@@ -26,8 +26,6 @@ import zio.config.magnolia.deriveConfig
   * @param githubWebhookSecret
   *   raw bytes of the webhook signing secret (sourced as a UTF-8 string from a secret) —
   *   used to verify HMAC-SHA-256 signatures on inbound webhooks
-  * @param verifierEncryptionKey
-  *   base64-encoded AES-256 key used by [[AesGcmCrypto]] to encrypt PKCE verifiers at rest
   * @param pendingLinkTtl
   *   how long a `pending_link_flow` row remains valid before sweep
   * @param linkSuccessUrl
@@ -46,7 +44,6 @@ final case class GitHubGatewayConfig(
     githubAppSlug: AppSlug,
     githubAppPrivateKeyPem: String,
     githubWebhookSecret: String,
-    verifierEncryptionKey: EncryptionKey,
     pendingLinkTtl: Duration,
     linkSuccessUrl: String,
     linkFailureUrl: String,
@@ -64,7 +61,6 @@ object GitHubGatewayConfig:
       githubAppSlug: String,
       githubAppPrivateKeyPem: String,
       githubWebhookSecret: String,
-      verifierEncryptionKey: String,
       pendingLinkTtl: Duration,
       linkSuccessUrl: String,
       linkFailureUrl: String,
@@ -79,7 +75,6 @@ object GitHubGatewayConfig:
         githubAppSlug           = AppSlug(r.githubAppSlug),
         githubAppPrivateKeyPem  = r.githubAppPrivateKeyPem,
         githubWebhookSecret     = r.githubWebhookSecret,
-        verifierEncryptionKey   = EncryptionKey(r.verifierEncryptionKey),
         pendingLinkTtl          = r.pendingLinkTtl,
         linkSuccessUrl          = r.linkSuccessUrl,
         linkFailureUrl          = r.linkFailureUrl,

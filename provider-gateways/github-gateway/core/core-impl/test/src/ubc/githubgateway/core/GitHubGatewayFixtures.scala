@@ -1,7 +1,7 @@
 package ubc.githubgateway.core
 
 import ubc.githubgateway.domain.{AppId, AppSlug}
-import ubc.githubgateway.domain.internal.{EncryptionKey, GitHubGatewayConfig}
+import ubc.githubgateway.domain.internal.GitHubGatewayConfig
 import zio.*
 
 /** Shared test fixtures for [[GitHubGatewayService]] specs. */
@@ -24,7 +24,6 @@ object GitHubGatewayFixtures:
         githubAppSlug          = appSlug,
         githubAppPrivateKeyPem = "test-pem",                     // unused in service-level tests
         githubWebhookSecret    = "test-secret",
-        verifierEncryptionKey  = EncryptionKey("test-key"),      // unused in service-level tests
         pendingLinkTtl         = pendingTtl,
         linkSuccessUrl         = successRedirectUrl,
         linkFailureUrl         = failureRedirectUrl,

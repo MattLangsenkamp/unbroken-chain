@@ -36,10 +36,6 @@ type RepoFullName = RepoFullName.Type
 object LinkState extends Newtype[String]
 type LinkState = LinkState.Type
 
-/** PKCE code challenge: base64url(SHA256(verifier)). The verifier itself is private. */
-object CodeChallenge extends Newtype[String]
-type CodeChallenge = CodeChallenge.Type
-
 /** Value of the `X-GitHub-Delivery` header — a UUID GitHub assigns to each webhook delivery. */
 object DeliveryId extends Newtype[String]
 type DeliveryId = DeliveryId.Type

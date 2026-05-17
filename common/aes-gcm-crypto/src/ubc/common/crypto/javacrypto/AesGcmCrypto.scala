@@ -4,6 +4,7 @@ import ubc.common.crypto.Crypto
 import zio.*
 
 import java.nio.charset.StandardCharsets
+import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.{GCMParameterSpec, SecretKeySpec}
@@ -23,7 +24,7 @@ import javax.crypto.spec.{GCMParameterSpec, SecretKeySpec}
   */
 final class AesGcmCrypto(
     key: SecretKeySpec,
-    secureRandom: java.security.SecureRandom
+    secureRandom: SecureRandom
 ) extends Crypto:
 
   private val ivLengthBytes = 12   // AES-GCM standard IV length
@@ -72,5 +73,5 @@ object AesGcmCrypto:
       if raw.length != 32 then
         throw new RuntimeException(s"Expected 256-bit AES key (32 bytes); got ${raw.length}")
       val key = new SecretKeySpec(raw, "AES")
-      new AesGcmCrypto(key, new java.security.SecureRandom())
+      new AesGcmCrypto(key, new SecureRandom())
     }

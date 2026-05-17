@@ -1,6 +1,5 @@
 package ubc.githubgateway.core
 
-import ubc.common.crypto.inmemory.NoopCrypto
 import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.ports.PendingLinkFlowRepository
@@ -37,6 +36,5 @@ object GitHubGatewayServiceAbandonSpec extends ZIOSpecDefault:
       InMemoryGitHubAppClient.layer,
       InMemoryInstallationTokenMinter.layer,
       DeterministicSecureRandom.layer,
-      NoopCrypto.layer,
       GitHubGatewayService.layer
     )

@@ -13,9 +13,3 @@ type AppJwt = AppJwt.Type
   */
 object InstallationAccessToken extends Newtype[String]
 type InstallationAccessToken = InstallationAccessToken.Type
-
-/** Base64-encoded AES key sourced from a Kubernetes secret. Used to encrypt PKCE verifiers
-  * at rest; never serialised over the wire.
-  */
-object EncryptionKey extends Newtype[String]
-type EncryptionKey = EncryptionKey.Type

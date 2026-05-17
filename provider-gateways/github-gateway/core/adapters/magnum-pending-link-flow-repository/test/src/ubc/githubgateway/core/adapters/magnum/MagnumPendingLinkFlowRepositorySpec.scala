@@ -4,18 +4,14 @@ import com.augustnagro.magnum.*
 import com.augustnagro.magnum.magzio.*
 import ubc.common.TestDatabase
 import ubc.githubgateway.core.ports.PendingLinkFlowRepository
-import ubc.githubgateway.domain.{CodeChallenge, LinkState}
-import ubc.githubgateway.domain.internal.{EncryptedBytes, PendingLinkFlow}
+import ubc.githubgateway.domain.LinkState
+import ubc.githubgateway.domain.internal.PendingLinkFlow
 import zio.*
 import zio.test.*
 
 import java.time.Instant
 
-/** Integration tests for [[MagnumPendingLinkFlowRepository]] against a real PostgreSQL.
-  *
-  * Particularly verifies the [[EncryptedBytes]] codec round-trip through the BYTEA column —
-  * domain holds base64 String, column holds raw bytes, codec translates both directions.
-  */
+/** Integration tests for [[MagnumPendingLinkFlowRepository]] against a real PostgreSQL. */
 object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
 
   private val migrationLocation = "classpath:db/migration"
@@ -25,26 +21,20 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
       _.transact { sql"TRUNCATE TABLE pending_link_flow".update.run() }
     ).unit.orDie
 
-  // Encode a few well-known byte sequences as base64 — round-trip target.
-  private val verifierBytes: Array[Byte] = "the-secret-verifier".getBytes("UTF-8")
-  private val verifierB64: String = java.util.Base64.getEncoder.encodeToString(verifierBytes)
-
   private def flow(
       state: String,
       expiresAt: Instant = Instant.parse("2025-01-01T00:10:00Z")
   ): PendingLinkFlow =
     PendingLinkFlow(
-      state             = LinkState(state),
-      encryptedVerifier = EncryptedBytes(verifierB64),
-      codeChallenge     = CodeChallenge("ch-" + state),
-      createdAt         = Instant.parse("2025-01-01T00:00:00Z"),
-      expiresAt         = expiresAt
+      state     = LinkState(state),
+      createdAt = Instant.parse("2025-01-01T00:00:00Z"),
+      expiresAt = expiresAt
     )
 
   override def spec =
     (suite("MagnumPendingLinkFlowRepositorySpec")(
 
-      test("insert + findByState round-trip preserves the EncryptedBytes value through BYTEA codec") {
+      test("insert + findByState round-trip preserves all fields") {
         val original = flow("state-1")
         for
           repo  <- ZIO.service[PendingLinkFlowRepository]
@@ -52,11 +42,9 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
           found <- repo.findByState(LinkState("state-1"))
         yield assertTrue(
           found.isDefined,
-          found.get.state             == original.state,
-          found.get.encryptedVerifier == original.encryptedVerifier, // base64 String compares by value
-          found.get.codeChallenge     == original.codeChallenge,
-          found.get.createdAt         == original.createdAt,
-          found.get.expiresAt         == original.expiresAt
+          found.get.state     == original.state,
+          found.get.createdAt == original.createdAt,
+          found.get.expiresAt == original.expiresAt
         )
       },
 

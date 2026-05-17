@@ -1,8 +1,6 @@
 package ubc.githubgateway.core
 
 import neotype.*
-import ubc.common.crypto.Crypto
-import ubc.common.crypto.inmemory.NoopCrypto
 import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.ports.PendingLinkFlowRepository
@@ -10,25 +8,17 @@ import ubc.githubgateway.domain.*
 import zio.*
 import zio.test.*
 
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
-import java.util.Base64
-
 object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
-
-  private def base64UrlNoPadding(bytes: Array[Byte]): String =
-    Base64.getUrlEncoder.withoutPadding.encodeToString(bytes)
 
   override def spec =
     suite("GitHubGatewayService.initiate")(
-      test("returns a LinkInitiation with deterministic state and verifier (counter-based stub)") {
+      test("returns a LinkInitiation with deterministic state (counter-based stub)") {
         for
           svc <- ZIO.service[GitHubGatewayService]
           out <- svc.initiate()
         yield assertTrue(
           // DeterministicSecureRandom uses a single counter shared across calls. initiate()
-          // calls urlSafeRandomString first for the state (32 bytes → 43 chars) — counter
-          // hits 1 — then for the verifier — counter hits 2.
+          // calls urlSafeRandomString once for the state (32 bytes → 43 chars), counter hits 1.
           out.state == LinkState("rnd-1-" + "A" * (43 - "rnd-1-".length))
         )
       },
@@ -42,22 +32,15 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
           )
         )
       },
-      test("persists a PendingLinkFlow with the SHA-256 challenge of the verifier") {
+      test("persists a PendingLinkFlow keyed on the returned state") {
         for
           svc  <- ZIO.service[GitHubGatewayService]
           out  <- svc.initiate()
           repo <- ZIO.service[PendingLinkFlowRepository]
           row  <- repo.findByState(out.state)
-          // Second counter tick: 64-byte verifier → 86-char base64url string.
-          rawVerifier = "rnd-2-" + "A" * (86 - "rnd-2-".length)
-          expectedChallenge = CodeChallenge(
-            base64UrlNoPadding(
-              MessageDigest.getInstance("SHA-256").digest(rawVerifier.getBytes(StandardCharsets.UTF_8))
-            )
-          )
         yield assertTrue(
           row.isDefined,
-          row.exists(_.codeChallenge == expectedChallenge)
+          row.exists(_.state == out.state)
         )
       },
       test("expiresAt - createdAt == config.pendingLinkTtl, both anchored on Clock.instant") {
@@ -74,17 +57,6 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
           row.exists(_.createdAt == fixedNow),
           row.exists(_.expiresAt == fixedNow.plus(GitHubGatewayFixtures.pendingTtl))
         )
-      },
-      test("the persisted encryptedVerifier round-trips through Crypto to the original verifier") {
-        for
-          svc    <- ZIO.service[GitHubGatewayService]
-          out    <- svc.initiate()
-          repo   <- ZIO.service[PendingLinkFlowRepository]
-          crypto <- ZIO.service[Crypto]
-          row    <- repo.findByState(out.state)
-          decrypted <- crypto.decrypt(row.get.encryptedVerifier.unwrap)
-          expectedVerifier = "rnd-2-" + "A" * (86 - "rnd-2-".length)
-        yield assertTrue(decrypted == expectedVerifier)
       }
     ).provide(
       GitHubGatewayFixtures.testConfigLayer,
@@ -95,6 +67,5 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
       InMemoryGitHubAppClient.layer,
       InMemoryInstallationTokenMinter.layer,
       DeterministicSecureRandom.layer,
-      NoopCrypto.layer,
       GitHubGatewayService.layer
     )
