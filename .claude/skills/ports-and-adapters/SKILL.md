@@ -128,4 +128,4 @@ In `build.mill`, each driven adapter lists `ports` in `moduleDeps` plus its infr
 ## Related skills
 
 - **`relational-database-modeling`** — Magnum SQL adapter, DbCodec wiring, Flyway migrations
-- **`scala-zio`** — ZIO layer composition, service pattern
+- **`feature-tdd`** — full vertical-slice TDD for ports + adapters; layer templates with concrete patterns; `service-setup.md` for new-service module scaffolding

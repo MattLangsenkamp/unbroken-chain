@@ -1,17 +1,13 @@
-# Claude Context
+# Purpose
 
-Project skills live under `.claude/skills/`. Always check that directory before starting any task — it contains skills and context that define the conventions for this codebase. Each skill's `SKILL.md` declares when to invoke it via the `description` frontmatter field.
+UBC is a work in progress. The following is the intent for the system
 
-## Skills
+Unbroken chain (UBC) is a code retrieval system that connects to a git provider and can be queried by web gui, CLI or MCP servers. It should reduce token and context usage by finding the "right code" faster. One UBC installation is meant to be used by many people in an organization. Below is an example usage.
 
-- `.claude/skills/mill-build/` — Mill build commands, module structure, dependency management, ScalaJS/CrossPlatform/PresentationModule traits
-- `.claude/skills/scala-zio/` — Scala 3 / ZIO patterns, domain modeling, configuration, service setup
-- `.claude/skills/make-utils/` — Makefile and bin/ script conventions; all logic lives in bin/
-- `.claude/skills/local-dev/` — Local k3d cluster setup, kubeconfig, k9s, and dev environment lifecycle
-- `.claude/skills/k8s/` — Helm umbrella chart structure, adding services, adding operators
-- `.claude/skills/presentation/` — Per-service Tyrian SPA apps: dev workflow, production build, ScalablyTyped JS facades, nginx Docker, k8s wiring
-- `.claude/skills/ports-and-adapters/` — Port traits, adapter naming, in-memory stubs
-- `.claude/skills/relational-database-modeling/` — Flyway migrations, Magnum repositories, DbCodec wiring
-- `.claude/skills/feature-tdd/` — Inside-out TDD for full vertical slices (domain → ports → core → driven → driving)
+A system admin installs UBC in a k8s cluster for company A. company A links the github org and all its repos to the UBC installation. UBC indexes new code as commits are pushed to the linked repos. UBC authenticates with company A's identity provider (Okta, Keycloak, etc). Users authenticate and use UBC in the web gui and through the MCP with agents to write code more efficiently.
 
-More skills may be added over time — always check `.claude/skills/` for the full list.
+# Conventions
+
+## Imports
+
+Always put imports at the top of the file. Do not use fully-qualified inline references (e.g. `new java.security.SecureRandom()` or `param: java.util.UUID`) — import the type at the top and use the short name in the body. Inline FQNs degrade readability. If two imports collide, rename one with `as` rather than inlining a FQN.

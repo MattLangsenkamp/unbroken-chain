@@ -1,5 +1,9 @@
 /out
 
+# Local secrets material — read by bin/load-github-app-secrets.sh,
+# never committed
+/.local/
+
 # IDE
 .metals/
 .vscode/

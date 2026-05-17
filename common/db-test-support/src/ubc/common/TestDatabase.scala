@@ -137,7 +137,7 @@ object TestDatabase:
               dbConRef.set(dbCon)
               readyLatch.countDown()                // signal: DbCon is ready
               try doneLatch.await()                 // block until test teardown
-              finally Try(dbCon.connection.rollback())  // always rollback
+              finally (Try(dbCon.connection.rollback()): Unit)  // always rollback
             }
             .tapError(_ =>
               // If connection acquisition fails before the block runs, unblock the waiter below.
