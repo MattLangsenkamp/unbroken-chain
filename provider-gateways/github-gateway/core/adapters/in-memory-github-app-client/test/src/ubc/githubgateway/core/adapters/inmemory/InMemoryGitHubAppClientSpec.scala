@@ -49,15 +49,15 @@ object InMemoryGitHubAppClientSpec extends ZIOSpecDefault:
           got  <- fake.listInstallationRepos(token, ghId)
         yield assertTrue(got == repos)
       },
-      test("deleteInstallation returns Right(()) when seeded and Right(()) when not seeded (idempotent 404)") {
+      test("deleteInstallation succeeds for seeded and unseeded ids (idempotent 404)") {
         for
           fake <- ZIO.service[InMemoryGitHubAppClient]
           _    <- fake.seedInstallation(seeded)
-          a    <- fake.deleteInstallation(jwt, ghId)
-          // After delete, repeating MUST still be Right(()) — that's the GitHub idempotency semantic.
-          b <- fake.deleteInstallation(jwt, ghId)
-          c <- fake.deleteInstallation(jwt, GhInstallationId(404L))
-        yield assertTrue(a == Right(()), b == Right(()), c == Right(()))
+          // After delete, repeating MUST still succeed — that's the GitHub idempotency semantic.
+          _    <- fake.deleteInstallation(jwt, ghId)
+          _    <- fake.deleteInstallation(jwt, ghId)
+          _    <- fake.deleteInstallation(jwt, GhInstallationId(404L))
+        yield assertCompletes
       },
       test("createInstallationToken returns a deterministic token") {
         for

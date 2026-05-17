@@ -13,7 +13,7 @@ Domain types live in:
 - All data is **immutable** — `val` everywhere, never `var`
 - Case classes for product types, Scala 3 `enum` for sum types, neotype `Newtype` for primitive wrappers
 - **Avoid raw primitives** (`String`, `Int`, `Float`, `Boolean`) for domain values — wrap them in newtypes
-- **No infrastructure** in domain files — never import Magnum, Tapir, JDBC, ZIO JSON, or any codec library
+- **No infrastructure** in domain files — never import Magnum, Tapir, JDBC, ZIO JSON, or any codec library. The single exception is `zio-config` inside `domainPrivate`: config types live there and the server module always pulls them in anyway, so isolating `zio-config` from that classpath buys nothing
 
 ### Newtypes with neotype
 

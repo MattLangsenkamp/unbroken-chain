@@ -36,13 +36,13 @@ trait GitHubAppClient:
   /** `DELETE /app/installations/{installation_id}` — revoke the installation on GitHub's side.
     *
     * Semantics:
-    *   - `Right(())` on 204 success
-    *   - `Right(())` on 404 (already gone — idempotent, GitHub's standard behaviour)
-    *   - `Left(message)` on any other error status or transport failure
+    *   - succeeds on 204
+    *   - succeeds on 404 (already gone — idempotent, GitHub's standard behaviour)
+    *   - fails the `Task` with a [[Throwable]] on any other error status or transport failure
     *
-    * Callers translate `Left` to [[UnlinkError.GitHubFailure]] at the service boundary.
+    * Callers translate the `Throwable` to [[UnlinkError.GitHubFailure]] at the service boundary.
     */
-  def deleteInstallation(jwt: AppJwt, ghInstallationId: GhInstallationId): Task[Either[String, Unit]]
+  def deleteInstallation(jwt: AppJwt, ghInstallationId: GhInstallationId): Task[Unit]
 
   /** `POST /app/installations/{installation_id}/access_tokens` — exchange an App JWT for a
     * short-lived (~1h) installation access token. Tokens are not cached at this layer; the

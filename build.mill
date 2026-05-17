@@ -189,7 +189,10 @@ object `provider-gateways` extends Module {
       object domainPrivate extends UbcScalaModule {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(domainPublic.jvm)
-        override def mvnDeps = super.mvnDeps() ++ neotypeDeps
+        // zio-config lives here (rather than in an adapter-extension module) by design:
+        // every server module pulls config in anyway, so isolating it from this classpath
+        // buys nothing. See `.claude/skills/feature-tdd/layers/domain.md` for the rule.
+        override def mvnDeps = super.mvnDeps() ++ neotypeDeps ++ zioDeps ++ zioConfigDeps
 
         object test extends ScalaTests {
           def testFramework = "zio.test.sbt.ZTestFramework"
@@ -259,6 +262,8 @@ object `provider-gateways` extends Module {
         override def moduleDeps = Seq(
           ports,
           common.`activity-logging`,
+          common.`crypto-port`,
+          common.`secure-random-port`,
           domain.domainPublicAdapterExtensions.`zio-json`.jvm
         )
         override def mvnDeps = zioDeps ++ zioJsonDeps
@@ -273,8 +278,8 @@ object `provider-gateways` extends Module {
             adapters.`in-memory-webhook-delivery-repository`,
             adapters.`in-memory-github-app-client`,
             adapters.`in-memory-installation-token-minter`,
-            adapters.`deterministic-secure-random`,
-            adapters.`noop-crypto`
+            common.`deterministic-secure-random`,
+            common.`noop-crypto`
           )
         }
       }
@@ -303,7 +308,8 @@ object `provider-gateways` extends Module {
           override def moduleDeps = Seq(
             ports,
             domain.domainPublicAdapterExtensions.magnum,
-            domain.domainPrivateAdapterExtensions.magnum
+            domain.domainPrivateAdapterExtensions.magnum,
+            common.`magnum-pagination`
           )
           override def mvnDeps = zioDeps ++ magnumDeps
 
@@ -323,7 +329,8 @@ object `provider-gateways` extends Module {
           override def moduleDeps = Seq(
             ports,
             domain.domainPublicAdapterExtensions.magnum,
-            domain.domainPrivateAdapterExtensions.magnum
+            domain.domainPrivateAdapterExtensions.magnum,
+            common.`magnum-pagination`
           )
           override def mvnDeps = zioDeps ++ magnumDeps
 
@@ -450,32 +457,6 @@ object `provider-gateways` extends Module {
           }
         }
 
-        // Deterministic SecureRandom — counter-backed; emits predictable verifiers/state nonces
-        // so tests can assert on exact values. Not for production use.
-        object `deterministic-secure-random` extends UbcScalaModule {
-          def scalaVersion = scalaVer
-          override def moduleDeps = Seq(ports)
-          override def mvnDeps = zioDeps
-
-          object test extends ScalaTests {
-            def testFramework = "zio.test.sbt.ZTestFramework"
-            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
-          }
-        }
-
-        // No-op Crypto adapter — base64 identity transform. For tests and local dev only;
-        // gives the round-trip property of a real Crypto without the key management.
-        object `noop-crypto` extends UbcScalaModule {
-          def scalaVersion = scalaVer
-          override def moduleDeps = Seq(ports)
-          override def mvnDeps = zioDeps
-
-          object test extends ScalaTests {
-            def testFramework = "zio.test.sbt.ZTestFramework"
-            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
-          }
-        }
-
         // Real InstallationTokenMinter: signs RS256 App JWTs from a configured RSA private key
         // using nimbus-jose-jwt. Used by the server bootstrap.
         object `nimbus-jose-installation-token-minter` extends UbcScalaModule {
@@ -484,32 +465,6 @@ object `provider-gateways` extends Module {
           override def mvnDeps = zioDeps ++ Seq(
             mvn"com.nimbusds:nimbus-jose-jwt:9.40"
           )
-
-          object test extends ScalaTests {
-            def testFramework = "zio.test.sbt.ZTestFramework"
-            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
-          }
-        }
-
-        // Real Crypto adapter: AES-GCM encryption of the PKCE verifier at rest using
-        // javax.crypto. 256-bit key supplied at construction.
-        object `aes-gcm-crypto` extends UbcScalaModule {
-          def scalaVersion = scalaVer
-          override def moduleDeps = Seq(ports)
-          override def mvnDeps = zioDeps
-
-          object test extends ScalaTests {
-            def testFramework = "zio.test.sbt.ZTestFramework"
-            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
-          }
-        }
-
-        // Real SecureRandom adapter: java.security.SecureRandom-backed generator for the
-        // PKCE code verifier (RFC 7636) and the link-state nonce.
-        object `java-secure-random-generator` extends UbcScalaModule {
-          def scalaVersion = scalaVer
-          override def moduleDeps = Seq(ports)
-          override def mvnDeps = zioDeps
 
           object test extends ScalaTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
@@ -570,8 +525,8 @@ object `provider-gateways` extends Module {
               core.adapters.`in-memory-webhook-delivery-repository`,
               core.adapters.`in-memory-github-app-client`,
               core.adapters.`in-memory-installation-token-minter`,
-              core.adapters.`deterministic-secure-random`,
-              core.adapters.`noop-crypto`
+              common.`deterministic-secure-random`,
+              common.`noop-crypto`
             )
           }
         }
@@ -635,8 +590,8 @@ object `provider-gateways` extends Module {
         core.adapters.`magnum-pending-link-flow-repository`,
         core.adapters.`magnum-webhook-delivery-repository`,
         core.adapters.`nimbus-jose-installation-token-minter`,
-        core.adapters.`aes-gcm-crypto`,
-        core.adapters.`java-secure-random-generator`,
+        common.`aes-gcm-crypto`,
+        common.`java-secure-random-generator`,
         api.`internal-api-adapters`.http,
         common.`hikari-magnum-transactor`,
         common.`base-telemetry`,
@@ -722,6 +677,80 @@ object common extends Module {
       def scalaJSVersion = scalaJSVer
       // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
       override def mvnDeps = Seq(mvn"dev.zio:zio_sjs1_3:2.1.17")
+    }
+  }
+
+  // Shared opaque-cursor pagination helpers for Magnum-backed repositories.
+  // Pulls in only Magnum-flavoured cursor encoding (base64-of-offset) — no service-specific code.
+  object `magnum-pagination` extends UbcScalaModule {
+    def scalaVersion = scalaVer
+    override def mvnDeps = magnumDeps
+  }
+
+  // Outbound port for symmetric encryption — operates on plain `String` (UTF-8 plaintext +
+  // base64-encoded ciphertext). Each port is its own Mill module so consumers pull in only
+  // the trait, not any adapter dep.
+  object `crypto-port` extends UbcScalaModule {
+    def scalaVersion = scalaVer
+    override def mvnDeps = zioDeps
+  }
+
+  // Real Crypto adapter: AES-GCM encryption with a base64-encoded 256-bit key. No `.layer`
+  // in the companion — keys come from each consuming service's own config, so the wiring
+  // layer lives next to the config rather than here.
+  object `aes-gcm-crypto` extends UbcScalaModule {
+    def scalaVersion = scalaVer
+    override def moduleDeps = Seq(`crypto-port`)
+    override def mvnDeps = zioDeps
+
+    object test extends ScalaTests {
+      def testFramework = "zio.test.sbt.ZTestFramework"
+      override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+    }
+  }
+
+  // No-op Crypto adapter: base64 identity transform. For tests and local dev only.
+  object `noop-crypto` extends UbcScalaModule {
+    def scalaVersion = scalaVer
+    override def moduleDeps = Seq(`crypto-port`)
+    override def mvnDeps = zioDeps
+
+    object test extends ScalaTests {
+      def testFramework = "zio.test.sbt.ZTestFramework"
+      override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+    }
+  }
+
+  // Outbound port for cryptographically secure randomness — `urlSafeRandomString(byteCount)`
+  // returns a base64url (no padding) random string. Service-specific newtype wrappers
+  // (CodeVerifier, LinkState, …) belong at the call site.
+  object `secure-random-port` extends UbcScalaModule {
+    def scalaVersion = scalaVer
+    override def mvnDeps = zioDeps
+  }
+
+  // Real SecureRandom adapter: java.security.SecureRandom-backed.
+  object `java-secure-random-generator` extends UbcScalaModule {
+    def scalaVersion = scalaVer
+    override def moduleDeps = Seq(`secure-random-port`)
+    override def mvnDeps = zioDeps
+
+    object test extends ScalaTests {
+      def testFramework = "zio.test.sbt.ZTestFramework"
+      override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+    }
+  }
+
+  // Deterministic SecureRandom — counter-backed; emits predictable strings of the requested
+  // byte-equivalent length so tests can assert exact values. Not for production.
+  object `deterministic-secure-random` extends UbcScalaModule {
+    def scalaVersion = scalaVer
+    override def moduleDeps = Seq(`secure-random-port`)
+    override def mvnDeps = zioDeps
+
+    object test extends ScalaTests {
+      def testFramework = "zio.test.sbt.ZTestFramework"
+      override def mvnDeps = super.mvnDeps() ++ zioTestDeps
     }
   }
 

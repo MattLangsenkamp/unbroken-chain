@@ -1,6 +1,9 @@
 package ubc.githubgateway.core
 
 import neotype.*
+import ubc.common.crypto.Crypto
+import ubc.common.crypto.inmemory.NoopCrypto
+import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.ports.PendingLinkFlowRepository
 import ubc.githubgateway.domain.*
@@ -23,9 +26,10 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
           svc <- ZIO.service[GitHubGatewayService]
           out <- svc.initiate()
         yield assertTrue(
-          // DeterministicSecureRandom uses a single counter shared across the two
-          // calls, so the order is: first call -> newLinkState() -> "state-1"
-          out.state == LinkState("state-1")
+          // DeterministicSecureRandom uses a single counter shared across calls. initiate()
+          // calls urlSafeRandomString first for the state (32 bytes → 43 chars) — counter
+          // hits 1 — then for the verifier — counter hits 2.
+          out.state == LinkState("rnd-1-" + "A" * (43 - "rnd-1-".length))
         )
       },
       test("install URL has the form https://github.com/apps/<slug>/installations/new?state=<state>") {
@@ -34,7 +38,7 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
           out <- svc.initiate()
         yield assertTrue(
           out.installUrl == InstallUrl(
-            s"https://github.com/apps/${TestFixtures.appSlug.unwrap}/installations/new?state=${out.state.unwrap}"
+            s"https://github.com/apps/${GitHubGatewayFixtures.appSlug.unwrap}/installations/new?state=${out.state.unwrap}"
           )
         )
       },
@@ -44,9 +48,8 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
           out  <- svc.initiate()
           repo <- ZIO.service[PendingLinkFlowRepository]
           row  <- repo.findByState(out.state)
-          // DeterministicSecureRandom uses a single counter, so the second call
-          // (newCodeVerifier()) generates "verifier-2-…"
-          rawVerifier = "verifier-2-" + "A" * math.max(0, 43 - "verifier-2-".length)
+          // Second counter tick: 64-byte verifier → 86-char base64url string.
+          rawVerifier = "rnd-2-" + "A" * (86 - "rnd-2-".length)
           expectedChallenge = CodeChallenge(
             base64UrlNoPadding(
               MessageDigest.getInstance("SHA-256").digest(rawVerifier.getBytes(StandardCharsets.UTF_8))
@@ -67,9 +70,9 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
           repo <- ZIO.service[PendingLinkFlowRepository]
           row  <- repo.findByState(out.state)
         yield assertTrue(
-          out.expiresAt == fixedNow.plus(TestFixtures.pendingTtl),
+          out.expiresAt == fixedNow.plus(GitHubGatewayFixtures.pendingTtl),
           row.exists(_.createdAt == fixedNow),
-          row.exists(_.expiresAt == fixedNow.plus(TestFixtures.pendingTtl))
+          row.exists(_.expiresAt == fixedNow.plus(GitHubGatewayFixtures.pendingTtl))
         )
       },
       test("the persisted encryptedVerifier round-trips through Crypto to the original verifier") {
@@ -77,14 +80,14 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
           svc    <- ZIO.service[GitHubGatewayService]
           out    <- svc.initiate()
           repo   <- ZIO.service[PendingLinkFlowRepository]
-          crypto <- ZIO.service[ubc.githubgateway.core.ports.Crypto]
+          crypto <- ZIO.service[Crypto]
           row    <- repo.findByState(out.state)
-          decrypted <- crypto.decrypt(row.get.encryptedVerifier)
-          expectedVerifier = "verifier-2-" + "A" * math.max(0, 43 - "verifier-2-".length)
+          decrypted <- crypto.decrypt(row.get.encryptedVerifier.unwrap)
+          expectedVerifier = "rnd-2-" + "A" * (86 - "rnd-2-".length)
         yield assertTrue(decrypted == expectedVerifier)
       }
     ).provide(
-      TestFixtures.testConfigLayer,
+      GitHubGatewayFixtures.testConfigLayer,
       InMemoryInstallationRepository.layer,
       InMemoryLinkedRepoRepository.layer,
       InMemoryPendingLinkFlowRepository.layer,

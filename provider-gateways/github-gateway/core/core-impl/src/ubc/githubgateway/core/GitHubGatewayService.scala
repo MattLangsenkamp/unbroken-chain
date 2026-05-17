@@ -1,8 +1,10 @@
 package ubc.githubgateway.core
 
 import neotype.*
+import ubc.common.crypto.Crypto
 import ubc.common.logActivity
 import ubc.common.pagination.{Page, PageRequest}
+import ubc.common.securerandom.SecureRandom
 import ubc.githubgateway.core.ports.*
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.internal.*
@@ -75,12 +77,15 @@ case class GitHubGatewayService(
     */
   def initiate(): UIO[LinkInitiation] =
     for
-      state              <- random.newLinkState()
-      verifier           <- random.newCodeVerifier()
+      // PKCE state nonce: 32 bytes → 43 base64url chars. PKCE code verifier: 64 bytes → 86
+      // chars (within RFC 7636's 43-128 range). Newtype wrappers happen here at the call
+      // site; the SecureRandom port itself is generic and lives in `common`.
+      state              <- random.urlSafeRandomString(byteCount = 32).map(LinkState(_))
+      verifier           <- random.urlSafeRandomString(byteCount = 64).map(CodeVerifier(_))
       challenge           = CodeChallenge(
                               base64UrlNoPadding(sha256(verifier.unwrap.getBytes(StandardCharsets.UTF_8)))
                             )
-      encryptedVerifier  <- crypto.encrypt(verifier.unwrap).orDie
+      encryptedVerifier  <- crypto.encrypt(verifier.unwrap).map(EncryptedBytes(_)).orDie
       now                <- Clock.instant
       expiresAt           = now.plus(config.pendingLinkTtl)
       flow                = PendingLinkFlow(
@@ -92,7 +97,7 @@ case class GitHubGatewayService(
                             )
       _                  <- pendingFlows.insert(flow).orDie
       installUrl          = InstallUrl(
-                              s"https://github.com/apps/${config.appSlug.unwrap}/installations/new?state=${state.unwrap}"
+                              s"https://github.com/apps/${config.githubAppSlug.unwrap}/installations/new?state=${state.unwrap}"
                             )
       _                  <- ZIO.logActivity(LinkInitiated(state, expiresAt))
     yield LinkInitiation(installUrl, state, expiresAt)
@@ -203,13 +208,10 @@ case class GitHubGatewayService(
   def unlink(ghInstallationId: GhInstallationId): IO[UnlinkError, Unit] =
     ZIO.logActivity(UnlinkRequested(ghInstallationId)) *>
       (for
-        jwt    <- minter.mintAppJwt().mapError(asUnlinkFailure)
-        result <- github.deleteInstallation(jwt, ghInstallationId).mapError(asUnlinkFailure)
-        _      <- result match
-                    case Left(message) => ZIO.fail(UnlinkError.GitHubFailure(message))
-                    case Right(())     =>
-                      installations.deleteByGhInstallationId(ghInstallationId).orDie *>
-                        ZIO.logActivity(UnlinkCompleted(ghInstallationId))
+        jwt <- minter.mintAppJwt().mapError(asUnlinkFailure)
+        _   <- github.deleteInstallation(jwt, ghInstallationId).mapError(asUnlinkFailure)
+        _   <- installations.deleteByGhInstallationId(ghInstallationId).orDie
+        _   <- ZIO.logActivity(UnlinkCompleted(ghInstallationId))
       yield ()).tapError { case UnlinkError.GitHubFailure(message) =>
         ZIO.logActivity(UnlinkRejectedGitHubFailure(ghInstallationId, message))
       }
@@ -275,7 +277,10 @@ case class GitHubGatewayService(
       event: GithubWebhookEvent
   ): IO[WebhookError, WebhookOutcome] =
     ZIO.logActivity(WebhookReceived(headers.deliveryId, headers.eventType)) *> {
-      val expectedSignature = hmacSha256Hex(config.webhookSecret, rawBody)
+      val expectedSignature = hmacSha256Hex(
+        config.githubWebhookSecret.getBytes(StandardCharsets.UTF_8),
+        rawBody
+      )
       val sigOk = MessageDigest.isEqual(
         expectedSignature.getBytes(StandardCharsets.UTF_8),
         headers.signature.getBytes(StandardCharsets.UTF_8)
@@ -372,3 +377,23 @@ object GitHubGatewayService:
     GitHubGatewayService
   ] =
     ZLayer.fromFunction(GitHubGatewayService.apply)
+
+  /** Background sweeper layer: forks a fiber that drains expired `pending_link_flow` rows
+    * on a fixed cadence. Forked into the layer's scope, so it runs for the lifetime of the
+    * server and is interrupted automatically on shutdown — no leaked fibers.
+    *
+    * Lives here (and not in `Server.scala`) per the `feature-tdd` skill: layer definitions
+    * belong with the service or adapter they construct, and background fibers are owned by
+    * the service whose work they perform.
+    */
+  val sweeperLayer: ZLayer[GitHubGatewayService & GitHubGatewayConfig, Nothing, Unit] =
+    ZLayer.scoped {
+      for
+        cfg <- ZIO.service[GitHubGatewayConfig]
+        svc <- ZIO.service[GitHubGatewayService]
+        _   <- svc
+                 .sweepExpiredFlows()
+                 .repeat(Schedule.spaced(cfg.sweepInterval))
+                 .forkScoped
+      yield ()
+    }

@@ -26,7 +26,7 @@ For the architectural rules around ports and adapters (port trait conventions, a
       <tech>-<name>/                       # driven adapter (e.g. magnum-token-repository)
       in-memory-<name>/                    # in-memory stub for tests/local dev
   api/
-    api-defn/                              # semantic API contract trait + Tapir endpoints
+    api-defn/                              # semantic API contract trait — pure Scala signatures, no Tapir
     internal-api-adapters/
       <tech>/                              # driving adapter (e.g. http for Tapir + zio-http)
     external-api-adapters/
@@ -146,7 +146,30 @@ object Server extends ZIOAppDefault:
   )
 ```
 
-Background fibers (sweepers, schedulers, queue consumers) are forked here, never inside service implementations.
+`Server.scala` is wiring only — no business logic, no anonymous case classes, no inline transformations of config or services. Even **layer definitions** belong with the service or adapter they construct (in the companion object of `MyService` / `MyAdapter`), not here. The server's job is to import those companion-object layers, list them inside `provide(...)`, and run the program. If you find yourself defining a layer inside `Server.scala`, move it next to the thing it builds and import it.
+
+Background fibers (sweepers, schedulers, queue consumers) are forked **inside the service** that owns them, exposed as a layer from that service's companion. The server provides that layer alongside the others — it does not fork the fiber itself. This keeps the lifetime of the fiber colocated with the service it depends on, and makes it testable in isolation:
+
+```scala
+object GitHubGatewayService:
+  // The service's normal layer.
+  val layer: URLayer[<deps>, GitHubGatewayService] =
+    ZLayer.fromFunction(GitHubGatewayService.apply)
+
+  // A scoped layer that forks the sweeper for this service's lifetime.
+  val sweeperLayer: ZLayer[GitHubGatewayService & GitHubGatewayConfig, Nothing, Unit] =
+    ZLayer.scoped {
+      for
+        cfg <- ZIO.service[GitHubGatewayConfig]
+        svc <- ZIO.service[GitHubGatewayService]
+        _   <- svc.sweepExpiredFlows()
+                 .repeat(Schedule.spaced(cfg.sweepInterval))
+                 .forkScoped
+      yield ()
+    }
+```
+
+Then `Server.scala` simply lists `GitHubGatewayService.sweeperLayer` in its `provide(...)`.
 
 For env-var conventions and the `derives Config` pattern, see `layers/config.md`.
 

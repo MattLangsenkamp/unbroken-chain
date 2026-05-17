@@ -73,7 +73,7 @@ case class GitHubOrgService(orgRepo: OrgRepository):
 ```
 
 Rules:
-- Each method's first effect is `ZIO.logActivity(<Event>)`. No exceptions for "trivial" methods — observability of trivial methods is also valuable.
+- Each method's first effect is `ZIO.logActivity(<Event>)`. The only exceptions are methods we expect to fire at very high volume (tight inner loops, per-event hot paths) where activity emission would flood the telemetry pipeline. Skipping the log in those cases requires a comment in the method body explaining the volume concern, e.g. `// no activity log: hot path, called on every webhook line`.
 - Event class names read as past-tense business facts: `LinkOrgRequested`, `WebhookSignatureRejected`, `InstallationReconciled`. Not `LinkOrgEvent` or `LogLinkOrg`.
 - Pick the log level by what the event represents. Successful business operations are `InfoLog`. Domain-level rejections (validation, expired states) are `WarnLog`. Genuinely unexpected failures are `ErrorLog` — but those usually surface as ZIO defects rather than hand-rolled events.
 - Add fields the event needs to be useful in a log search: identifiers, the input that triggered it, the outcome. Do NOT include secrets — the event JSON may go to durable log storage.

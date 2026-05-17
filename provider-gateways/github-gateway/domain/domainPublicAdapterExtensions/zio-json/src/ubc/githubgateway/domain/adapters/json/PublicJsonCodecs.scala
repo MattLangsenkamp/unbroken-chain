@@ -46,5 +46,12 @@ object PublicJsonCodecs:
   given JsonCodec[PageRequest]       = DeriveJsonCodec.gen
 
   // API error envelope — surfaces stable error codes to clients without leaking
-  // domain-private error variants.
-  given JsonCodec[ApiError] = DeriveJsonCodec.gen
+  // domain-private error variants. Wire shape is `{code, message}`; on decode the
+  // `code` discriminator picks the variant and `message` populates parametric ones.
+  private final case class ApiErrorWire(code: String, message: String)
+  private given JsonCodec[ApiErrorWire] = DeriveJsonCodec.gen
+
+  given JsonCodec[ApiError] = JsonCodec[ApiErrorWire].transformOrFail(
+    wire => ApiError.fromWire(wire.code, wire.message),
+    e    => ApiErrorWire(e.code, e.message)
+  )

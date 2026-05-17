@@ -6,8 +6,13 @@ import com.nimbusds.jwt.{JWTClaimsSet, SignedJWT}
 import neotype.*
 import ubc.githubgateway.core.ports.InstallationTokenMinter
 import ubc.githubgateway.domain.AppId
-import ubc.githubgateway.domain.internal.AppJwt
+import ubc.githubgateway.domain.internal.{AppJwt, GitHubGatewayConfig}
 import zio.*
+
+import java.security.KeyFactory
+import java.security.interfaces.RSAPrivateKey
+import java.security.spec.PKCS8EncodedKeySpec
+import java.util.{Base64, Date}
 
 /** Real [[InstallationTokenMinter]] backed by `nimbus-jose-jwt` 9.x.
   *
@@ -16,20 +21,10 @@ import zio.*
   *
   * Per GitHub's guidance, `iat` is set to `now - 60s` so that minor clock skew between this service and GitHub doesn't
   * reject otherwise-valid JWTs.
-  *
-  * '''Nimbus null-safety audit''' (nimbus-jose-jwt 9.x):
-  *   - `RSASSASigner(RSAPrivateKey)` constructor — does not throw for valid keys; not nullable.
-  *   - `JWSHeader(JWSAlgorithm)` constructor — not nullable.
-  *   - `JWTClaimsSet.Builder.build()` — returns a non-null `JWTClaimsSet`.
-  *   - `SignedJWT(header, claims).sign(signer)` — returns void; throws `JOSEException` on failure (caught by
-  *     `ZIO.attempt`).
-  *   - `signedJwt.serialize()` — returns a non-null `String` per the nimbus 9.x source.
-  *
-  * No nullable surface is hit, so no thin typesafe wrapper in `common` is required.
   */
 final class NimbusJoseInstallationTokenMinter(
     appId: AppId,
-    privateKey: java.security.interfaces.RSAPrivateKey,
+    privateKey: RSAPrivateKey,
     ttl: zio.Duration
 ) extends InstallationTokenMinter:
 
@@ -40,8 +35,8 @@ final class NimbusJoseInstallationTokenMinter(
     for
       now <- Clock.instant
       claims = new JWTClaimsSet.Builder()
-        .issueTime(java.util.Date.from(now.minusSeconds(60)))
-        .expirationTime(java.util.Date.from(now.plus(ttl)))
+        .issueTime(Date.from(now.minusSeconds(60)))
+        .expirationTime(Date.from(now.plus(ttl)))
         .issuer(appId.unwrap.toString)
         .build()
       signedJwt = new SignedJWT(header, claims)
@@ -64,9 +59,19 @@ object NimbusJoseInstallationTokenMinter:
         .replace("-----BEGIN PRIVATE KEY-----", "")
         .replace("-----END PRIVATE KEY-----", "")
         .replaceAll("\\s", "")
-      val der     = java.util.Base64.getDecoder.decode(cleaned)
-      val keySpec = new java.security.spec.PKCS8EncodedKeySpec(der)
-      val factory = java.security.KeyFactory.getInstance("RSA")
-      val key     = factory.generatePrivate(keySpec).asInstanceOf[java.security.interfaces.RSAPrivateKey]
+      val der     = Base64.getDecoder.decode(cleaned)
+      val keySpec = new PKCS8EncodedKeySpec(der)
+      val factory = KeyFactory.getInstance("RSA")
+      val key     = factory.generatePrivate(keySpec).asInstanceOf[RSAPrivateKey]
       new NimbusJoseInstallationTokenMinter(appId, key, ttl)
+    }
+
+  /** Production layer — reads the App id, PEM-encoded private key, and JWT TTL from the
+    * shared [[GitHubGatewayConfig]]. Server bootstrap just lists this in `provide(...)`.
+    */
+  val layer: ZLayer[GitHubGatewayConfig, Throwable, InstallationTokenMinter] =
+    ZLayer.fromZIO {
+      ZIO.serviceWithZIO[GitHubGatewayConfig] { cfg =>
+        fromPem(cfg.githubAppId, cfg.githubAppPrivateKeyPem, cfg.appJwtTtl)
+      }
     }

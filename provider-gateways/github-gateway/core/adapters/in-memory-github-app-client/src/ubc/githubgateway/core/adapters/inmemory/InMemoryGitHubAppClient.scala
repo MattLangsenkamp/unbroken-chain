@@ -17,9 +17,9 @@ import zio.*
   * the concrete class so tests can `ZIO.serviceWith[InMemoryGitHubAppClient]` to seed and
   * `ZIO.serviceWith[GitHubAppClient]` to exercise the port surface.
   *
-  * Choice for `deleteInstallation`: returns `Right(())` for both seeded and unseeded inputs,
+  * Choice for `deleteInstallation`: succeeds for both seeded and unseeded inputs,
   * mirroring GitHub's "404-as-success" idempotency semantic. Tests that need to assert a
-  * failure can override the underlying ref directly.
+  * failure can compose a custom `GitHubAppClient` that fails the task instead.
   */
 final class InMemoryGitHubAppClient(
     installations: Ref[Map[GhInstallationId, Installation]],
@@ -55,11 +55,8 @@ final class InMemoryGitHubAppClient(
   def deleteInstallation(
       jwt: AppJwt,
       ghInstallationId: GhInstallationId
-  ): Task[Either[String, Unit]] =
-    for
-      _ <- installations.update(_ - ghInstallationId)
-      _ <- repos.update(_ - ghInstallationId)
-    yield Right(())
+  ): Task[Unit] =
+    installations.update(_ - ghInstallationId) *> repos.update(_ - ghInstallationId)
 
   def createInstallationToken(
       jwt: AppJwt,

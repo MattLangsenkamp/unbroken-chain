@@ -8,10 +8,13 @@ import sttp.model.StatusCode
 import sttp.tapir.server.stub.TapirStubInterpreter
 import sttp.tapir.ztapir.*
 import ubc.githubgateway.api.ApiError
+import ubc.common.crypto.inmemory.NoopCrypto
+import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
-import ubc.githubgateway.core.{GitHubGatewayConfig, GitHubGatewayService}
+import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
+import ubc.githubgateway.domain.internal.{EncryptionKey, GitHubGatewayConfig}
 import ubc.common.pagination.Page
 import zio.*
 import zio.json.*
@@ -23,7 +26,7 @@ import java.time.Instant
 object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
 
   // -------------------------------------------------------------------------
-  // Test fixtures (kept local — duplicated from core-impl/test/TestFixtures so
+  // Test fixtures (kept local — duplicated from core-impl/test/GitHubGatewayFixtures so
   // this module can be tested without a moduleDep on a sibling `test` module).
   // -------------------------------------------------------------------------
 
@@ -32,12 +35,16 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
   private val testConfigLayer: ULayer[GitHubGatewayConfig] =
     ZLayer.succeed(
       GitHubGatewayConfig(
-        appId              = AppId(123L),
-        appSlug            = AppSlug("unbroken-chain-app"),
-        pendingLinkTtl     = 10.minutes,
-        webhookSecret      = webhookSecret,
-        successRedirectUrl = "http://localhost/link/success",
-        failureRedirectUrl = "http://localhost/link/failure"
+        githubAppId            = AppId(123L),
+        githubAppSlug          = AppSlug("unbroken-chain-app"),
+        githubAppPrivateKeyPem = "test-pem",
+        githubWebhookSecret    = "test-secret",
+        verifierEncryptionKey  = EncryptionKey("test-key"),
+        pendingLinkTtl         = 10.minutes,
+        linkSuccessUrl         = "http://localhost/link/success",
+        linkFailureUrl         = "http://localhost/link/failure",
+        appJwtTtl              = 9.minutes,
+        sweepInterval          = 1.minute
       )
     )
 
@@ -114,7 +121,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
                      .send(backend)
       yield assertTrue(
         resp.code == StatusCode.Found,
-        resp.header("Location").contains(cfg.successRedirectUrl)
+        resp.header("Location").contains(cfg.linkSuccessUrl)
       )
     },
     test("GET /links/callback with missing state redirects to failure URL with error code") {
@@ -129,7 +136,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         location = resp.header("Location").getOrElse("")
       yield assertTrue(
         resp.code == StatusCode.Found,
-        location.startsWith(cfg.failureRedirectUrl),
+        location.startsWith(cfg.linkFailureUrl),
         location.contains(s"error=${ApiError.StateNotFound.code}")
       )
     },

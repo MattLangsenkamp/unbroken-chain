@@ -1,6 +1,8 @@
 package ubc.githubgateway.core
 
 import ubc.common.pagination.PageRequest
+import ubc.common.crypto.inmemory.NoopCrypto
+import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.ports.*
 import ubc.githubgateway.domain.*
@@ -81,7 +83,7 @@ object GitHubGatewayServiceListSpec extends ZIOSpecDefault:
         yield assertTrue(out.items.size == 2)
       }
     ).provide(
-      TestFixtures.testConfigLayer,
+      GitHubGatewayFixtures.testConfigLayer,
       InMemoryInstallationRepository.layer,
       InMemoryLinkedRepoRepository.layer,
       InMemoryPendingLinkFlowRepository.layer,

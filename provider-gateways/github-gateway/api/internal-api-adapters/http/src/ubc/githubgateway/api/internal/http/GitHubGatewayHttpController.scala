@@ -10,10 +10,18 @@ import sttp.tapir.ztapir.*
 import ubc.common.TapirTracingInterceptor
 import ubc.common.pagination.{Page, PageRequest}
 import ubc.githubgateway.api.ApiError
-import ubc.githubgateway.core.{GithubWebhookEvent, GitHubGatewayConfig, GitHubGatewayService, WebhookHeaders}
+import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
-import ubc.githubgateway.domain.internal.{LinkError, ReconcileError, UnlinkError, WebhookError}
+import ubc.githubgateway.domain.internal.{
+  GitHubGatewayConfig,
+  GithubWebhookEvent,
+  LinkError,
+  ReconcileError,
+  UnlinkError,
+  WebhookError,
+  WebhookHeaders
+}
 import zio.*
 import zio.http.{Response, Routes}
 import zio.json.*
@@ -132,14 +140,14 @@ object GitHubGatewayHttpController:
     callbackEndpoint.zServerLogic[Any] { case (state, ghInstallationId, _, _) =>
       service
         .callback(state, ghInstallationId)
-        .as(StatusCode.Found -> config.successRedirectUrl)
+        .as(StatusCode.Found -> config.linkSuccessUrl)
         .catchAll {
           case LinkError.StateNotFound =>
-            ZIO.succeed(StatusCode.Found -> appendError(config.failureRedirectUrl, ApiError.StateNotFound.code))
+            ZIO.succeed(StatusCode.Found -> appendError(config.linkFailureUrl, ApiError.StateNotFound.code))
           case LinkError.StateExpired =>
-            ZIO.succeed(StatusCode.Found -> appendError(config.failureRedirectUrl, ApiError.StateExpired.code))
+            ZIO.succeed(StatusCode.Found -> appendError(config.linkFailureUrl, ApiError.StateExpired.code))
           case LinkError.GitHubFailure(_) =>
-            ZIO.succeed(StatusCode.Found -> appendError(config.failureRedirectUrl, "GITHUB_FAILURE"))
+            ZIO.succeed(StatusCode.Found -> appendError(config.linkFailureUrl, "GITHUB_FAILURE"))
         }
     }
 

@@ -1,5 +1,6 @@
 package ubc.githubgateway.core.adapters.magnum
 
+import ubc.common.magnum.MagnumPagination
 import ubc.common.pagination.{Page, PageRequest}
 import ubc.githubgateway.core.ports.InstallationRepository
 import ubc.githubgateway.domain.*

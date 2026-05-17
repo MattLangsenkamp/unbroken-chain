@@ -198,7 +198,7 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
 
       // ---- deleteInstallation ----
 
-      test("deleteInstallation returns Right(()) on 204 No Content") {
+      test("deleteInstallation succeeds on 204 No Content") {
         val stub = stubLayer {
           case r if r.method.method == "DELETE"
             && r.uri.path == List("app", "installations", "12345") =>
@@ -206,12 +206,12 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
         }
         (for
           client <- ZIO.service[GitHubAppClient]
-          got    <- client.deleteInstallation(jwt, ghId)
-        yield assertTrue(got == Right(())))
+          _      <- client.deleteInstallation(jwt, ghId)
+        yield assertCompletes)
           .provide(stub, TapirSttpGitHubAppClient.layer)
       },
 
-      test("deleteInstallation returns Right(()) on 404 (idempotency)") {
+      test("deleteInstallation succeeds on 404 (idempotency)") {
         val stub = stubLayer {
           case r if r.method.method == "DELETE"
             && r.uri.path == List("app", "installations", "12345") =>
@@ -219,12 +219,12 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
         }
         (for
           client <- ZIO.service[GitHubAppClient]
-          got    <- client.deleteInstallation(jwt, ghId)
-        yield assertTrue(got == Right(())))
+          _      <- client.deleteInstallation(jwt, ghId)
+        yield assertCompletes)
           .provide(stub, TapirSttpGitHubAppClient.layer)
       },
 
-      test("deleteInstallation returns Left(...) on 500 with body included") {
+      test("deleteInstallation fails with body included on 500") {
         val stub = stubLayer {
           case r if r.method.method == "DELETE"
             && r.uri.path == List("app", "installations", "12345") =>
@@ -232,10 +232,9 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
         }
         (for
           client <- ZIO.service[GitHubAppClient]
-          got    <- client.deleteInstallation(jwt, ghId)
+          ex     <- client.deleteInstallation(jwt, ghId).flip
         yield assertTrue(
-          got.isLeft,
-          got.left.exists(_.contains("kaboom"))
+          Option(ex.getMessage).exists(_.contains("kaboom"))
         )).provide(stub, TapirSttpGitHubAppClient.layer)
       },
 

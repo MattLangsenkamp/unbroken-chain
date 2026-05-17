@@ -2,6 +2,7 @@ package ubc.githubgateway.core.adapters.tapir
 
 import ubc.githubgateway.core.ports.GitHubAppClient
 import ubc.githubgateway.domain.*
+import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
 import ubc.githubgateway.domain.internal.*
 import neotype.*
 import zio.*
@@ -112,20 +113,20 @@ final class TapirSttpGitHubAppClient(
   def deleteInstallation(
       jwt: AppJwt,
       ghInstallationId: GhInstallationId
-  ): Task[Either[String, Unit]] =
+  ): Task[Unit] =
     SttpClientInterpreter()
       .toSecureRequestThrowDecodeFailures(deleteInstallationEndpoint, Some(baseUri))
       .apply(jwt.unwrap)
       .apply(ghInstallationId.unwrap)
       .send(backend)
-      .map { resp =>
+      .flatMap { resp =>
         resp.body match
           // 204 (or any 2xx that Tapir routes to the success branch) → success
-          case Right(_) => Right(())
+          case Right(_)                       => ZIO.unit
           // 404 is treated as success per GitHub's idempotency contract for unlinks
-          case Left((StatusCode.NotFound, _)) => Right(())
+          case Left((StatusCode.NotFound, _)) => ZIO.unit
           case Left((status, body))           =>
-            Left(s"GitHub deleteInstallation failed: ${status.code} $body")
+            ZIO.fail(new RuntimeException(s"GitHub deleteInstallation failed: ${status.code} $body"))
       }
 
   def createInstallationToken(
@@ -150,11 +151,6 @@ final class TapirSttpGitHubAppClient(
 
   private def toDomainInstallation(gh: GhDto.GhInstallation): Task[Installation] =
     ZIO.attempt {
-      val accountType = gh.account.`type` match
-        case "User"         => AccountType.User
-        case "Organization" => AccountType.Organization
-        case other          =>
-          throw new RuntimeException(s"Unknown account type: $other")
       val status =
         if gh.suspended_at.isDefined then InstallationStatus.Suspended
         else InstallationStatus.Active
@@ -163,7 +159,7 @@ final class TapirSttpGitHubAppClient(
         ghInstallationId = GhInstallationId(gh.id),
         accountLogin     = AccountLogin(gh.account.login),
         accountId        = AccountId(gh.account.id),
-        accountType      = accountType,
+        accountType      = gh.account.accountType,
         status           = status,
         installedAt      = Instant.parse(gh.created_at)
       )
@@ -188,7 +184,13 @@ object TapirSttpGitHubAppClient:
   // ---- GitHub-shape DTOs (NOT in domainPublic — these are GitHub-specific) ----
 
   private[tapir] object GhDto:
-    final case class GhAccount(login: String, id: Long, `type`: String)
+    // Tapir Schema for the AccountType enum — string-based, matches GitHub's "User"/"Organization"
+    // wire format. Provided explicitly to keep `Schema.derived` from blowing the -Xmax-inlines
+    // budget on the enclosing GhInstallation case class.
+    given Schema[AccountType] =
+      Schema.derivedEnumeration[AccountType].defaultStringBased
+
+    final case class GhAccount(login: String, id: Long, @jsonField("type") accountType: AccountType)
     final case class GhInstallation(
         id: Long,
         account: GhAccount,

@@ -1,5 +1,7 @@
 package ubc.githubgateway.core
 
+import ubc.common.crypto.inmemory.NoopCrypto
+import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.ports.*
 import ubc.githubgateway.domain.*
@@ -14,8 +16,8 @@ object GitHubGatewayServiceUnlinkSpec extends ZIOSpecDefault:
   private val ghId       = GhInstallationId(5001L)
   private val installedAt = Instant.parse("2026-04-25T11:00:00Z")
 
-  /** Tiny in-test fake of [[GitHubAppClient]] that returns `Left("...")` on
-    * `deleteInstallation` so we can exercise the failure-mapping branch.
+  /** Tiny in-test fake of [[GitHubAppClient]] that fails `deleteInstallation` with a
+    * [[Throwable]] so we can exercise the failure-mapping branch.
     */
   private val failingDeleteGitHubLayer: ULayer[GitHubAppClient] =
     ZLayer.succeed(new GitHubAppClient:
@@ -25,14 +27,14 @@ object GitHubGatewayServiceUnlinkSpec extends ZIOSpecDefault:
           : Task[List[(GhRepositoryId, RepoFullName)]] =
         ZIO.succeed(Nil)
       def deleteInstallation(jwt: AppJwt, ghInstallationId: GhInstallationId)
-          : Task[Either[String, Unit]] =
-        ZIO.succeed(Left("github 500"))
+          : Task[Unit] =
+        ZIO.fail(new RuntimeException("github 500"))
       def createInstallationToken(jwt: AppJwt, ghInstallationId: GhInstallationId)
           : Task[InstallationAccessToken] =
         ZIO.succeed(InstallationAccessToken("ignored"))
     )
 
-  private val happyPath = test("Right(()) → local row deleted, returns Unit") {
+  private val happyPath = test("succeeds → local row deleted, returns Unit") {
     for
       svc        <- ZIO.service[GitHubGatewayService]
       installRepo <- ZIO.service[InstallationRepository]
@@ -44,7 +46,7 @@ object GitHubGatewayServiceUnlinkSpec extends ZIOSpecDefault:
       after      <- installRepo.findByGhInstallationId(ghId)
     yield assertTrue(after.isEmpty)
   }.provide(
-    TestFixtures.testConfigLayer,
+    GitHubGatewayFixtures.testConfigLayer,
     InMemoryInstallationRepository.layer,
     InMemoryLinkedRepoRepository.layer,
     InMemoryPendingLinkFlowRepository.layer,
@@ -56,7 +58,7 @@ object GitHubGatewayServiceUnlinkSpec extends ZIOSpecDefault:
     GitHubGatewayService.layer
   )
 
-  private val gitHubFailure = test("Left(message) → UnlinkError.GitHubFailure") {
+  private val gitHubFailure = test("Throwable → UnlinkError.GitHubFailure") {
     for
       svc <- ZIO.service[GitHubGatewayService]
       err <- svc.unlink(ghId).flip
@@ -64,7 +66,7 @@ object GitHubGatewayServiceUnlinkSpec extends ZIOSpecDefault:
       err == UnlinkError.GitHubFailure("github 500")
     )
   }.provide(
-    TestFixtures.testConfigLayer,
+    GitHubGatewayFixtures.testConfigLayer,
     InMemoryInstallationRepository.layer,
     InMemoryLinkedRepoRepository.layer,
     InMemoryPendingLinkFlowRepository.layer,
@@ -82,7 +84,7 @@ object GitHubGatewayServiceUnlinkSpec extends ZIOSpecDefault:
       _   <- svc.unlink(GhInstallationId(99999L))
     yield assertTrue(true)
   }.provide(
-    TestFixtures.testConfigLayer,
+    GitHubGatewayFixtures.testConfigLayer,
     InMemoryInstallationRepository.layer,
     InMemoryLinkedRepoRepository.layer,
     InMemoryPendingLinkFlowRepository.layer,

@@ -27,7 +27,7 @@ import zio.config.magnolia.*
 
 final case class MyServiceConfig(
     queueUrl: String,
-    timeoutMs: Long,
+    timeout: Duration,
     maxRetries: Int
 ) derives Config
 
@@ -46,13 +46,41 @@ object Server extends ZIOAppDefault:
 
 `envProvider` is case-insensitive. `.snakeCase` converts camelCase field names to snake_case lookup keys, so `queueUrl` is read from either `QUEUE_URL` or `queue_url`.
 
+### Bias towards strong types
+
+Even in config, prefer domain newtypes and `Duration` over raw `String` / `Long` / `Int`. The config case class is the *first* place a value enters the system; if it leaves typed, every downstream layer is freed from re-validating or re-parsing it. Wrap URLs in `URI` (or sttp's `Uri`), TTLs in `zio.Duration`, IDs and slugs in domain newtypes:
+
+```scala
+import java.net.URI
+
+final case class MyServiceConfig(
+    queueUrl: URI,
+    timeout: Duration,
+    appSlug: AppSlug,        // newtype from domainPrivate
+    maxRetries: Int
+) derives Config
+```
+
+zio-config has built-in support for `Duration` and `URI`. Newtype wrappers from neotype work via `derives Config` if a `Config` instance is in scope (see neotype-zio-config interop in the build).
+
 ### Field-name conversion gotcha
 
 `snakeCase` splits on digit-letter boundaries:
 - `s3Bucket` → `s_3_bucket` (unexpected — env var becomes `S_3_BUCKET`)
 - `storageBucket` → `storage_bucket` (correct)
 
-Avoid digits inside field names. If you must use one, name the env var explicitly via `Config.string("S3_BUCKET")` rather than relying on derivation.
+It is best to avoid digits inside field names entirely. If you genuinely cannot — for instance the field maps to an externally-fixed name like `S3_BUCKET` or `OAUTH2_CLIENT_ID` — bypass derivation and name the env var explicitly:
+
+```scala
+final case class StorageConfig(bucket: String, region: String)
+
+object StorageConfig:
+  given Config[StorageConfig] =
+    (Config.string("S3_BUCKET") zip Config.string("S3_REGION"))
+      .map(StorageConfig.apply)
+```
+
+Reserve this form for the digit-name case — for everything else, derivation is the rule.
 
 ---
 

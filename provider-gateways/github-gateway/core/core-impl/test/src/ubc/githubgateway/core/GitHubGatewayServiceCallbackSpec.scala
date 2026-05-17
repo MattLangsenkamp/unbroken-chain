@@ -1,6 +1,8 @@
 package ubc.githubgateway.core
 
 import ubc.common.pagination.PageRequest
+import ubc.common.crypto.inmemory.NoopCrypto
+import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.ports.*
 import ubc.githubgateway.domain.*
@@ -68,7 +70,7 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
           svc         <- ZIO.service[GitHubGatewayService]
           init        <- svc.initiate()
           // Time-travel past the TTL
-          _           <- TestClock.adjust(TestFixtures.pendingTtl.plus(Duration.fromSeconds(1)))
+          _           <- TestClock.adjust(GitHubGatewayFixtures.pendingTtl.plus(Duration.fromSeconds(1)))
           err         <- svc.callback(init.state, ghInstallationId).flip
           pendingRepo <- ZIO.service[PendingLinkFlowRepository]
           pending     <- pendingRepo.findByState(init.state)
@@ -150,7 +152,7 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
         )
       }
     ).provide(
-      TestFixtures.testConfigLayer,
+      GitHubGatewayFixtures.testConfigLayer,
       InMemoryInstallationRepository.layer,
       InMemoryLinkedRepoRepository.layer,
       InMemoryPendingLinkFlowRepository.layer,

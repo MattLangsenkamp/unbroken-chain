@@ -1,10 +1,13 @@
 package ubc.githubgateway.server
 
+import neotype.*
 import sttp.client3.httpclient.zio.HttpClientZioBackend
+import ubc.common.crypto.Crypto
+import ubc.common.crypto.javacrypto.AesGcmCrypto
+import ubc.common.securerandom.javacrypto.JavaSecureRandomGenerator
 import ubc.common.{BaseTelemetry, CorsMiddleware, HikariMagnumTransactor, ServerLayers}
 import ubc.githubgateway.api.internal.http.GitHubGatewayHttpController
-import ubc.githubgateway.core.{GitHubGatewayConfig, GitHubGatewayService}
-import ubc.githubgateway.core.adapters.javacrypto.{AesGcmCrypto, JavaSecureRandomGenerator}
+import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.core.adapters.magnum.{
   MagnumInstallationRepository,
   MagnumLinkedRepoRepository,
@@ -13,95 +16,34 @@ import ubc.githubgateway.core.adapters.magnum.{
 }
 import ubc.githubgateway.core.adapters.nimbus.NimbusJoseInstallationTokenMinter
 import ubc.githubgateway.core.adapters.tapir.TapirSttpGitHubAppClient
-import ubc.githubgateway.core.ports.{Crypto, InstallationTokenMinter}
-import ubc.githubgateway.domain.{AppId, AppSlug}
-import ubc.githubgateway.domain.internal.EncryptionKey
+import ubc.githubgateway.domain.internal.GitHubGatewayConfig
 import zio.*
-import zio.config.*
-import zio.config.magnolia.deriveConfig
 import zio.http.{Response, Routes, Server as ZioServer}
-
-import java.nio.charset.StandardCharsets
 
 /** Bootstrap for the github-gateway service.
   *
-  * Wires the core service against its production-grade driven adapters (Magnum repositories,
-  * Tapir+sttp GitHub client, Nimbus JWT minter, AES-GCM crypto, java SecureRandom),
-  * exposes the HTTP controller routes, and forks a sweeper fiber that drains expired
-  * pending-link rows on a fixed schedule.
+  * Wiring only — every layer constructor lives on its own companion (config in
+  * `GitHubGatewayConfig.layer`, sweeper in `GitHubGatewayService.sweeperLayer`, etc.). This
+  * file just lists which adapters get wired and runs the program.
   *
-  * Configuration is sourced from environment variables via `ConfigProvider.envProvider.snakeCase`.
+  * Configuration is sourced from environment variables via
+  * `ConfigProvider.envProvider.snakeCase`.
   */
 object Server extends ZIOAppDefault:
 
-  // Use environment variables as config source; snakeCase maps e.g.
-  // postgresHost → POSTGRES_HOST, otlpEndpoint → OTLP_ENDPOINT.
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
     Runtime.setConfigProvider(ConfigProvider.envProvider.snakeCase)
 
-  /** Plain mirror of the env-var contract — converted to typed domain values via
-    * [[gatewayConfigLayer]] / [[tokenMinterLayer]] / [[cryptoLayer]] downstream.
-    */
-  final case class RawConfig(
-      githubAppId: Long,
-      githubAppSlug: String,
-      githubAppPrivateKeyPem: String,
-      githubWebhookSecret: String,
-      verifierEncryptionKey: String,    // base64 32-byte AES key
-      pendingLinkTtlSeconds: Long,      // typically 600 (10m)
-      linkSuccessUrl: String,
-      linkFailureUrl: String,
-      appJwtTtlSeconds: Long,           // typically 540 (9m)
-      sweepIntervalSeconds: Long        // typically 60
-  )
-
-  private val rawConfigLayer: ZLayer[Any, Config.Error, RawConfig] =
-    ZLayer.fromZIO(ZIO.config[RawConfig](deriveConfig[RawConfig]))
-
-  private val gatewayConfigLayer: ZLayer[RawConfig, Nothing, GitHubGatewayConfig] =
-    ZLayer.fromFunction { (r: RawConfig) =>
-      GitHubGatewayConfig(
-        appId              = AppId(r.githubAppId),
-        appSlug            = AppSlug(r.githubAppSlug),
-        pendingLinkTtl     = Duration.fromSeconds(r.pendingLinkTtlSeconds),
-        webhookSecret      = r.githubWebhookSecret.getBytes(StandardCharsets.UTF_8),
-        successRedirectUrl = r.linkSuccessUrl,
-        failureRedirectUrl = r.linkFailureUrl
-      )
-    }
-
-  private val tokenMinterLayer: ZLayer[RawConfig, Throwable, InstallationTokenMinter] =
-    ZLayer.fromZIO {
-      for
-        cfg    <- ZIO.service[RawConfig]
-        minter <- NimbusJoseInstallationTokenMinter.fromPem(
-                    AppId(cfg.githubAppId),
-                    cfg.githubAppPrivateKeyPem,
-                    Duration.fromSeconds(cfg.appJwtTtlSeconds)
-                  )
-      yield minter
-    }
-
-  private val cryptoLayer: ZLayer[RawConfig, Throwable, Crypto] =
-    ZLayer.fromZIO {
-      ZIO.serviceWithZIO[RawConfig](r => AesGcmCrypto.fromKey(EncryptionKey(r.verifierEncryptionKey)))
-    }
-
-  /** Background sweeper: every `sweepIntervalSeconds`, drains expired pending-link rows.
+  /** Bridge layer from this service's config to the common AES-GCM adapter.
     *
-    * Forked into the layer's scope so it runs for the lifetime of the server and is
-    * interrupted automatically on shutdown — no leaked fibers.
+    * The common `AesGcmCrypto` companion exposes only `fromKey(base64Key)` — no `.layer` —
+    * so this service's bootstrap turns its own `verifierEncryptionKey` into a `Crypto`
+    * binding here. Lives in the server module rather than next to the config because it
+    * crosses the service boundary into a generic common adapter.
     */
-  private val sweeperLayer: ZLayer[RawConfig & GitHubGatewayService, Nothing, Unit] =
-    ZLayer.scoped {
-      for
-        cfg <- ZIO.service[RawConfig]
-        svc <- ZIO.service[GitHubGatewayService]
-        _   <- svc
-                 .sweepExpiredFlows()
-                 .repeat(Schedule.spaced(Duration.fromSeconds(cfg.sweepIntervalSeconds)))
-                 .forkScoped
-      yield ()
+  private val cryptoLayer: ZLayer[GitHubGatewayConfig, Throwable, Crypto] =
+    ZLayer.fromZIO {
+      ZIO.serviceWithZIO[GitHubGatewayConfig](cfg => AesGcmCrypto.fromKey(cfg.verifierEncryptionKey.unwrap))
     }
 
   def run =
@@ -110,11 +52,12 @@ object Server extends ZIOAppDefault:
         ZioServer.serve(routes @@ CorsMiddleware.forHosts(List("localhost", "127.0.0.1")))
       )
       .provide(
-        // HTTP routes wired from core
+        // Inbound HTTP routes
         GitHubGatewayHttpController.layer,
 
-        // Core service — business logic
+        // Core service + its background sweeper
         GitHubGatewayService.layer,
+        GitHubGatewayService.sweeperLayer,
 
         // Driven adapters
         TapirSttpGitHubAppClient.layer,
@@ -122,16 +65,12 @@ object Server extends ZIOAppDefault:
         MagnumLinkedRepoRepository.layer,
         MagnumPendingLinkFlowRepository.layer,
         MagnumWebhookDeliveryRepository.layer,
-        tokenMinterLayer,
+        NimbusJoseInstallationTokenMinter.layer,
         cryptoLayer,
         JavaSecureRandomGenerator.live,
 
-        // Sweeper background fiber — forks itself into this layer's scope
-        sweeperLayer,
-
         // Config
-        rawConfigLayer,
-        gatewayConfigLayer,
+        GitHubGatewayConfig.layer,
 
         // Infra
         HikariMagnumTransactor.layer,

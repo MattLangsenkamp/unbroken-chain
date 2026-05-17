@@ -1,5 +1,7 @@
 package ubc.githubgateway.core
 
+import ubc.common.crypto.inmemory.NoopCrypto
+import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.ports.PendingLinkFlowRepository
 import ubc.githubgateway.domain.LinkState
@@ -27,7 +29,7 @@ object GitHubGatewayServiceAbandonSpec extends ZIOSpecDefault:
         yield assertTrue(true)
       }
     ).provide(
-      TestFixtures.testConfigLayer,
+      GitHubGatewayFixtures.testConfigLayer,
       InMemoryInstallationRepository.layer,
       InMemoryLinkedRepoRepository.layer,
       InMemoryPendingLinkFlowRepository.layer,

@@ -1,6 +1,8 @@
 package ubc.githubgateway.core
 
 import ubc.common.pagination.PageRequest
+import ubc.common.crypto.inmemory.NoopCrypto
+import ubc.common.securerandom.inmemory.DeterministicSecureRandom
 import ubc.githubgateway.core.adapters.inmemory.*
 import ubc.githubgateway.core.ports.*
 import ubc.githubgateway.domain.*
@@ -20,7 +22,7 @@ object GitHubGatewayServiceWebhookSpec extends ZIOSpecDefault:
   private def headers(deliveryId: String, eventType: String, signature: String): WebhookHeaders =
     WebhookHeaders(DeliveryId(deliveryId), EventType(eventType), signature)
 
-  private val validSig = TestFixtures.signSha256Hex(TestFixtures.webhookSecret, rawBody)
+  private val validSig = GitHubGatewayFixtures.signSha256Hex(GitHubGatewayFixtures.webhookSecret, rawBody)
 
   override def spec =
     suite("GitHubGatewayService.handleWebhook")(
@@ -258,7 +260,7 @@ object GitHubGatewayServiceWebhookSpec extends ZIOSpecDefault:
         )
       }
     ).provide(
-      TestFixtures.testConfigLayer,
+      GitHubGatewayFixtures.testConfigLayer,
       InMemoryInstallationRepository.layer,
       InMemoryLinkedRepoRepository.layer,
       InMemoryPendingLinkFlowRepository.layer,
