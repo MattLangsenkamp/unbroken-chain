@@ -59,8 +59,12 @@ compile time. For each field with declared type `T`:
 
 ```scala
 inline def fieldJson[T](t: T): Json = summonFrom {
-  case _: (T <:< Sensitive) => Json.Str("[**Redacted**]")
-  case enc: JsonEncoder[T]  => enc.toJsonAST(t).getOrElse(Json.Null)
+  case _: (T <:< Sensitive)         => Json.Str("[**Redacted**]")
+  case _: (T <:< Option[Sensitive]) =>
+    t.asInstanceOf[Option[?]] match
+      case Some(_) => Json.Str("[**Redacted**]")
+      case None    => Json.Null  // omitted by encodeFields
+  case enc: JsonEncoder[T]          => enc.toJsonAST(t).getOrElse(Json.Null)
 }
 ```
 
@@ -69,12 +73,17 @@ Then prepend `("_ActivityLog", Json.Str(a.productPrefix))` and emit
 
 Three properties make this defensible:
 
-1. **`summonFrom` evaluates cases in order.** The `<:<` case is first, so it
-   wins over an in-scope `JsonEncoder[T]` (including neotype-derived ones).
-2. **Top-level only.** Redaction fires only for fields whose declared type at
-   the *top-level* activity-log class is `<: Sensitive`. Nested case classes
-   use standard zio-json derivation and will not redact their own sensitive
-   fields. Documented limitation; activity events are flat by convention.
+1. **`summonFrom` evaluates cases in order.** The Sensitive cases are first,
+   so they win over an in-scope `JsonEncoder[T]` (including neotype-derived
+   ones).
+2. **Top-level fields and `Option[Sensitive]` covered; other containers not.**
+   Redaction fires for fields whose declared type is `<: Sensitive`, plus the
+   special-case `Option[Sensitive]` (covariant subtype, so any `Option[X]`
+   where `X <: Sensitive` matches). Other containers (`Seq`, `Map`, `Either`,
+   nested products) use standard zio-json derivation and will NOT redact —
+   activity events are flat by convention, and the Option case covers the
+   overwhelmingly-common nullable-field pattern. To redact a sub-tree, make
+   the whole container type `<: Sensitive`.
 3. **No decode path.** `toActivityJson` is encode-only; log storage is the
    sink. Dropping `JsonCodec` derivation in favor of an encode-only function
    is correct, not a regression.
@@ -161,10 +170,11 @@ Cases:
 4. **Pure-non-sensitive event unchanged.** `toActivityJson(NoSecretEvent("hi", 3))`
    parses to the same JSON the old `derives JsonCodec` path would have
    produced — guards against accidental shape change during the rewrite.
-5. **Documented limitation: `Option[Sensitive]` does NOT auto-redact.**
-   `OptSecretEvent("hi", Some(FakeSecret("hunter2")))` → the inner secret
-   appears unredacted. Test pins the limitation so future work that closes
-   it has a failing test to flip.
+5. **`Option[Sensitive] = Some` redacts.**
+   `OptSecretEvent("hi", Some(FakeSecret("hunter2")))` →
+   `"token":"[**Redacted**]"` and no `"hunter2"` substring.
+5b. **`Option[Sensitive] = None` is omitted from the JSON object.**
+   Consistent with the null-stripping rule for regular Option fields.
 6. **Log level routing.** `ZIO.logActivity(FlatEvent(...))` routes to
    `LogLevel.Info` (use a ZIO test logger sink). One representative test —
    the level `match` is trivial.

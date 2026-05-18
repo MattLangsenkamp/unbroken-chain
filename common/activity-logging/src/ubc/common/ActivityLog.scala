@@ -44,6 +44,15 @@ object ActivityEncoder:
   private inline def fieldJson[T](t: T): Json =
     summonFrom {
       case _: (T <:< Sensitive) => Redacted
+      case _: (T <:< Option[Sensitive]) =>
+        // Option is covariant, so `Option[X] <:< Option[Sensitive]` whenever
+        // `X <:< Sensitive`. Some(_) → redacted; None → Null (omitted by the
+        // null-stripping step in encodeFields, matching old derives JsonCodec
+        // shape). Other containers (Seq, Map, Either, ...) are not covered;
+        // events that need them should make the whole container type Sensitive.
+        t.asInstanceOf[Option[?]] match
+          case Some(_) => Redacted
+          case None    => Json.Null
       case enc: JsonEncoder[T]  => enc.toJsonAST(t).getOrElse(Json.Null)
     }
 

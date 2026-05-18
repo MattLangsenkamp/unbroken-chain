@@ -116,12 +116,19 @@ object ActivityLogSpec extends ZIOSpecDefault:
           json.contains("\"name\":\"hi\"")
         )
       },
-      test("documented limitation: Option[Sensitive] is NOT auto-redacted") {
-        // The redaction check fires only when the field's *declared type* is
-        // itself <: Sensitive. `Option[FakeSecret]` is not. Pinning this so a
-        // future PR that closes the gap has a failing test to flip.
+      test("Option[Sensitive] = Some redacts the value") {
         val json = toActivityJson(OptSecretEvent("hi", Some(FakeSecret("hunter2"))))
-        assertTrue(json.contains("hunter2"))
+        assertTrue(
+          json.contains("\"token\":\"[**Redacted**]\""),
+          !json.contains("hunter2")
+        )
+      },
+      test("Option[Sensitive] = None is omitted from the JSON object") {
+        val json = toActivityJson(OptSecretEvent("hi", None))
+        assertTrue(
+          !json.contains("\"token\""),
+          json.contains("\"name\":\"hi\"")
+        )
       },
       test("ZIO.logActivity routes to LogLevel.Info for InfoLog events") {
         for
