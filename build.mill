@@ -627,7 +627,7 @@ object common extends Module {
 
     object test extends ScalaTests {
       def testFramework = "zio.test.sbt.ZTestFramework"
-      override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+      override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ neotypeDeps ++ neotypeZioJsonDeps
     }
   }
 

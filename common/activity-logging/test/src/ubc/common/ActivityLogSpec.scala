@@ -1,5 +1,7 @@
 package ubc.common
 
+import neotype.*
+import neotype.interop.ziojson.given
 import ubc.common.sensitive.Sensitive
 import zio.*
 import zio.json.*
@@ -24,6 +26,26 @@ object ActivityLogSpec extends ZIOSpecDefault:
       extends InfoLog derives ActivityEncoder
 
   final case class OptStringEvent(name: String, note: Option[String])
+      extends InfoLog derives ActivityEncoder
+
+  // Mirrors the production pattern: a neotype-based newtype opts into Sensitive
+  // via intersection-typing. neotype's `apply` returns the opaque `Type`, which
+  // is not automatically `<: Sensitive`, so a smart constructor widens the
+  // value with a cast. The cast is type-system-only — the encoder's redaction
+  // check is compile-time, so no `Sensitive` interface needs to exist at
+  // runtime. neotype-zio-json supplies the underlying `JsonEncoder`, but the
+  // `<:< Sensitive` check wins over it in `summonFrom`.
+  object FakeNeoSecret extends Newtype[String]
+  type FakeNeoSecret = FakeNeoSecret.Type & Sensitive
+  def fakeNeoSecret(s: String): FakeNeoSecret =
+    FakeNeoSecret(s).asInstanceOf[FakeNeoSecret]
+
+  // A plain neotype (no Sensitive). Confirms the non-redacting branch still
+  // resolves the neotype-zio-json `JsonEncoder` and emits the underlying value.
+  object FakeNeoId extends Newtype[String]
+  type FakeNeoId = FakeNeoId.Type
+
+  final case class NeoEvent(name: String, id: FakeNeoId, token: FakeNeoSecret)
       extends InfoLog derives ActivityEncoder
 
   // Captures emitted log records (level + rendered message) for the
@@ -83,6 +105,15 @@ object ActivityLogSpec extends ZIOSpecDefault:
         assertTrue(
           !absent.contains("\"note\""),
           present.contains("\"note\":\"ok\"")
+        )
+      },
+      test("redacts a Sensitive neotype field while a non-Sensitive neotype passes through") {
+        val json = toActivityJson(NeoEvent("hi", FakeNeoId("order-42"), fakeNeoSecret("hunter2")))
+        assertTrue(
+          json.contains("\"token\":\"[**Redacted**]\""),
+          !json.contains("hunter2"),
+          json.contains("\"id\":\"order-42\""),
+          json.contains("\"name\":\"hi\"")
         )
       },
       test("documented limitation: Option[Sensitive] is NOT auto-redacted") {

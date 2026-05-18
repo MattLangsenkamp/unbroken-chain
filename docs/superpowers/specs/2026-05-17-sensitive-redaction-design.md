@@ -110,18 +110,29 @@ and the compiler synthesises the Mirror automatically.
 ### Sensitive opt-in for newtypes
 
 The first time someone adds a token-bearing field to an event, opt the
-corresponding newtype in via intersection-typing:
+corresponding newtype in via intersection-typing **plus a smart constructor**:
 
 ```scala
 object AppJwt extends Newtype[String]
 type AppJwt = AppJwt.Type & Sensitive
+def appJwt(s: String): AppJwt = AppJwt(s).asInstanceOf[AppJwt]
 ```
 
-If neotype's macros don't cooperate with the intersection, fall back to a
-mixin on the companion or wrap with a final case class. **Not done in this
-PR** — no current event has a secret-bearing field, so opting in would change
-no observable behaviour and risks pulling neotype-interop edge cases into
-scope. Future PRs that add secret-bearing fields will drive the opt-in.
+The smart constructor is required because neotype's `apply` returns the
+opaque `Type` (aliased to `String`), which is **not** automatically
+`<: Sensitive` — opaque types only conform to their declared bounds, and
+their underlying type cannot be widened structurally. The cast is
+type-system-only: the encoder's `<:< Sensitive` check is compile-time, so
+no `Sensitive` interface is needed at runtime, and the bytes are unchanged.
+
+The cast appears once, in the smart constructor next to the type definition.
+Call sites use `appJwt("...")` and never touch `asInstanceOf`. Verified by
+the spec's neotype test, which also confirms a non-Sensitive neotype on the
+same event class encodes normally via neotype-zio-json's `JsonEncoder`.
+
+**Not done in this PR** — no current event has a secret-bearing field, so
+opting in would change no observable behaviour. Future PRs that add
+secret-bearing fields will drive the opt-in.
 
 ## Tests
 
@@ -159,6 +170,13 @@ Cases:
    the level `match` is trivial.
 7. **Compile-time: `derives JsonCodec` is not required.** Implicit — the
    fixtures compile without it. No separate test needed.
+8. **Neotype opt-in.** Define `object FakeNeoSecret extends Newtype[String]`,
+   `type FakeNeoSecret = FakeNeoSecret.Type & Sensitive`, and a smart
+   constructor that casts. An event class with both a Sensitive neotype
+   field and a non-Sensitive neotype field — verify the Sensitive one is
+   redacted while the non-Sensitive one passes through via the
+   neotype-zio-json `JsonEncoder`. This is the exercise of both branches
+   of `summonFrom` in the same product.
 
 Non-goals for tests: every neotype variant, OTel, concurrent logging.
 
