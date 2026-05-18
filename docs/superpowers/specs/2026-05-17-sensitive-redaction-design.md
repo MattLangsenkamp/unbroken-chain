@@ -118,26 +118,36 @@ and the compiler synthesises the Mirror automatically.
 
 ### Sensitive opt-in for newtypes
 
-The first time someone adds a token-bearing field to an event, opt the
-corresponding newtype in via intersection-typing **plus a smart constructor**:
+For plain case classes, `extends Sensitive` works directly and is the
+preferred form — the marker is nominal and reviewers see the relationship
+at the type definition.
+
+For neotype-backed newtypes (where the inner opaque `Type` cannot be made
+`<: Sensitive` by extending the trait on the companion), use
+intersection-typing on the type alias plus a smart constructor inside the
+companion that delegates to `Sensitive.tag`:
 
 ```scala
-object AppJwt extends Newtype[String]
+object AppJwt extends Newtype[String]:
+  def sensitive(s: String): AppJwt = Sensitive.tag(AppJwt(s))
 type AppJwt = AppJwt.Type & Sensitive
-def appJwt(s: String): AppJwt = AppJwt(s).asInstanceOf[AppJwt]
 ```
 
-The smart constructor is required because neotype's `apply` returns the
-opaque `Type` (aliased to `String`), which is **not** automatically
-`<: Sensitive` — opaque types only conform to their declared bounds, and
-their underlying type cannot be widened structurally. The cast is
-type-system-only: the encoder's `<:< Sensitive` check is compile-time, so
-no `Sensitive` interface is needed at runtime, and the bytes are unchanged.
+`Sensitive.tag[A](a: A): A & Sensitive` is an `inline def` provided by the
+`sensitive` module. It is the only place an `asInstanceOf` appears for this
+pattern — call sites use `AppJwt.sensitive("...")` and never touch a cast.
+The cast is type-system-only: the encoder's `<:< Sensitive` check is
+compile-time, so no `Sensitive` interface is needed at runtime, and the
+runtime bytes are unchanged.
 
-The cast appears once, in the smart constructor next to the type definition.
-Call sites use `appJwt("...")` and never touch `asInstanceOf`. Verified by
-the spec's neotype test, which also confirms a non-Sensitive neotype on the
-same event class encodes normally via neotype-zio-json's `JsonEncoder`.
+Why this is required: neotype's `Newtype[A]` defines `opaque type Type = A`,
+whose external subtype relationship is fixed (`<: Any`). Extending
+`Sensitive` on the companion refines the companion's type, not `Type`'s.
+Intersection-typing widens the alias the *encoder* sees at the field, and
+`Sensitive.tag` is the bridge from `Type` to `Type & Sensitive` for the
+constructor. Verified by the spec's neotype test, which also confirms a
+non-Sensitive neotype on the same event class encodes normally via
+neotype-zio-json's `JsonEncoder`.
 
 **Not done in this PR** — no current event has a secret-bearing field, so
 opting in would change no observable behaviour. Future PRs that add

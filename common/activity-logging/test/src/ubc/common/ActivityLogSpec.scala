@@ -16,37 +16,29 @@ object ActivityLogSpec extends ZIOSpecDefault:
   object FakeSecret:
     given JsonEncoder[FakeSecret] = JsonEncoder[String].contramap(_.value)
 
-  final case class FlatEvent(name: String, token: FakeSecret)
-      extends InfoLog derives ActivityEncoder
+  final case class FlatEvent(name: String, token: FakeSecret) extends InfoLog derives ActivityEncoder
 
-  final case class NoSecretEvent(name: String, count: Int)
-      extends InfoLog derives ActivityEncoder
+  final case class NoSecretEvent(name: String, count: Int) extends InfoLog derives ActivityEncoder
 
-  final case class OptSecretEvent(name: String, token: Option[FakeSecret])
-      extends InfoLog derives ActivityEncoder
+  final case class OptSecretEvent(name: String, token: Option[FakeSecret]) extends InfoLog derives ActivityEncoder
 
-  final case class OptStringEvent(name: String, note: Option[String])
-      extends InfoLog derives ActivityEncoder
+  final case class OptStringEvent(name: String, note: Option[String]) extends InfoLog derives ActivityEncoder
 
-  // Mirrors the production pattern: a neotype-based newtype opts into Sensitive
-  // via intersection-typing. neotype's `apply` returns the opaque `Type`, which
-  // is not automatically `<: Sensitive`, so a smart constructor widens the
-  // value with a cast. The cast is type-system-only — the encoder's redaction
-  // check is compile-time, so no `Sensitive` interface needs to exist at
-  // runtime. neotype-zio-json supplies the underlying `JsonEncoder`, but the
+  // Mirrors the production pattern for opting a neotype-backed newtype into
+  // Sensitive: intersection-type alias plus a smart-constructor `make` inside
+  // the companion that uses `Sensitive.tag` to widen the opaque value.
+  // neotype-zio-json supplies the underlying `JsonEncoder`, but the
   // `<:< Sensitive` check wins over it in `summonFrom`.
-  object FakeNeoSecret extends Newtype[String]
+  object FakeNeoSecret extends Newtype[String]:
+    def sensitive(s: String): FakeNeoSecret = Sensitive.tag(FakeNeoSecret(s))
   type FakeNeoSecret = FakeNeoSecret.Type & Sensitive
-  def fakeNeoSecret(s: String): FakeNeoSecret =
-    FakeNeoSecret(s).asInstanceOf[FakeNeoSecret]
 
   // A plain neotype (no Sensitive). Confirms the non-redacting branch still
   // resolves the neotype-zio-json `JsonEncoder` and emits the underlying value.
   object FakeNeoId extends Newtype[String]
   type FakeNeoId = FakeNeoId.Type
 
-  final case class NeoEvent(name: String, id: FakeNeoId, token: FakeNeoSecret)
-      extends InfoLog derives ActivityEncoder
+  final case class NeoEvent(name: String, id: FakeNeoId, token: FakeNeoSecret) extends InfoLog derives ActivityEncoder
 
   // Captures emitted log records (level + rendered message) for the
   // level-routing test. Built once per test via a ZLayer.
@@ -56,20 +48,20 @@ object ActivityLogSpec extends ZIOSpecDefault:
       for
         ref <- Ref.make(Chunk.empty[Captured])
         logger = new ZLogger[String, Unit]:
-                   def apply(
-                       trace:    Trace,
-                       fiberId:  FiberId,
-                       logLevel: LogLevel,
-                       message:  () => String,
-                       cause:    Cause[Any],
-                       context:  FiberRefs,
-                       spans:    List[LogSpan],
-                       annotations: Map[String, String]
-                   ): Unit =
-                     val unsafe = Unsafe.unsafe { implicit u =>
-                       Runtime.default.unsafe.run(ref.update(_ :+ Captured(logLevel, message())))
-                     }
-                     val _ = unsafe
+          def apply(
+              trace: Trace,
+              fiberId: FiberId,
+              logLevel: LogLevel,
+              message: () => String,
+              cause: Cause[Any],
+              context: FiberRefs,
+              spans: List[LogSpan],
+              annotations: Map[String, String]
+          ): Unit =
+            val unsafe = Unsafe.unsafe { implicit u =>
+              Runtime.default.unsafe.run(ref.update(_ :+ Captured(logLevel, message())))
+            }
+            val _ = unsafe
         _ <- ZIO.withLoggerScoped(logger)
       yield ref
     }
@@ -108,7 +100,7 @@ object ActivityLogSpec extends ZIOSpecDefault:
         )
       },
       test("redacts a Sensitive neotype field while a non-Sensitive neotype passes through") {
-        val json = toActivityJson(NeoEvent("hi", FakeNeoId("order-42"), fakeNeoSecret("hunter2")))
+        val json = toActivityJson(NeoEvent("hi", FakeNeoId("order-42"), FakeNeoSecret.sensitive("hunter2")))
         assertTrue(
           json.contains("\"token\":\"[**Redacted**]\""),
           !json.contains("hunter2"),
