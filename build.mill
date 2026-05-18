@@ -618,9 +618,34 @@ object common extends Module {
 
   // Structured activity logging: typed case classes with JsonCodec instead of free-form strings.
   // ZIO.logActivity(MyEvent(...)) routes to the correct ZIO log level and serialises to JSON.
+  // Fields wrapped in `Sensitive[A]` are emitted as "[**Redacted**]" via a global
+  // `JsonEncoder[Sensitive[A]]` that wins over any inner-type encoder.
   object `activity-logging` extends UbcScalaModule {
     def scalaVersion = scalaVer
+    override def moduleDeps = Seq(sensitive.jvm)
     override def mvnDeps = zioDeps ++ zioJsonDeps
+
+    object test extends ScalaTests {
+      def testFramework = "zio.test.sbt.ZTestFramework"
+      override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ neotypeDeps ++ neotypeZioJsonDeps
+    }
+  }
+
+  // `Sensitive[A]` wrapper for values whose contents must never appear in logs, traces,
+  // or other observability output (e.g. API tokens). Ships a global `JsonEncoder[Sensitive[A]]`
+  // that emits `"[**Redacted**]"`. Cross-compiled (jvm + js) so frontend code can use it too.
+  object sensitive extends Module {
+    trait Shared extends UbcScalaModule {
+      def scalaVersion = scalaVer
+      override def sources = Task.Sources(moduleDir / os.up / "src")
+      override def mvnDeps = zioJsonDeps
+    }
+    object jvm extends Shared
+    object js extends Shared with UbcScalaJSModule {
+      def scalaJSVersion = scalaJSVer
+      // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+      override def mvnDeps = Seq(mvn"dev.zio:zio-json_sjs1_3:0.7.3")
+    }
   }
 
   // OTel SDK wired into ZIO via zio-opentelemetry. Reads OTLP_ENDPOINT from env (falls back to

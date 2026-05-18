@@ -11,6 +11,14 @@ import zio.json.ast.Json
 // Usage:
 //   case class HealthCheckHit(path: String) extends InfoLog derives JsonCodec
 //   ZIO.logActivity(HealthCheckHit("/health"))
+//
+// Secret-bearing fields opt in to redaction by wrapping the value type at the
+// declaration site:
+//   case class TokenMinted(id: GhInstallationId, token: Sensitive[AppJwt])
+//       extends InfoLog derives JsonCodec
+//   ZIO.logActivity(TokenMinted(id, Sensitive(token)))
+// The wrapper carries a `JsonEncoder[Sensitive[A]]` that always emits
+// "[**Redacted**]", so the inner value never reaches the JSON payload.
 trait ActivityLog extends Product:
   def logLevel: LogLevel
 
