@@ -62,11 +62,15 @@ final case class TokenMinted(installationId: GhInstallationId, jwt: AppJwt)
 
 Logging it: `ZIO.logActivity(TokenMinted(id, jwt))` → `{"installationId":"…","jwt":"[**Redacted**]","_ActivityLog":"TokenMinted"}`.
 
-`Option[Sensitive]` is also covered — `Some(secret)` redacts; `None` is omitted.
+Common containers are also covered:
+- `Option[Sensitive]` — `Some(secret)` redacts; `None` is omitted.
+- `Seq[Sensitive]` (and subtypes: `List`, `Vector`, `Chunk`, …) — each element redacts, array length preserved.
+- `Either[_, Sensitive]` — the `Right` value redacts; the `Left` encodes normally. The `{"Left":..}`/`{"Right":..}` shape is preserved.
 
 ## What is NOT covered
 
-- **Other containers.** `Seq[Sensitive]`, `Map[K, Sensitive]`, `Either[E, Sensitive]`, nested case classes with a `Sensitive` field inside — these go through stock zio-json derivation and will **leak**. Activity events are flat by convention; if you need to put a secret inside a container, make the whole container type `<: Sensitive`.
+- **Map values and nested products.** `Map[K, Sensitive]` and a non-Sensitive case class with a `Sensitive` field inside go through stock zio-json derivation and will **leak**. Make the whole value `<: Sensitive` if it needs redaction.
+- **`Either` with a Sensitive `Left`.** Only the `Right` channel is checked; `Either[Sensitive, _]` leaks.
 - **Non-logging encode paths.** HTTP bodies, persisted JSON, OTel attributes (no helper exists yet). For those, unwrap with `.value` / `.inner` at the boundary.
 - **`toString`.** Not overridden. Don't interpolate sensitive values into strings.
 
@@ -81,4 +85,4 @@ Logging it: `ZIO.logActivity(TokenMinted(id, jwt))` → `{"installationId":"…"
 
 ## Design notes
 
-The marker-trait + `summonFrom` approach was chosen specifically so redaction fires **only** inside `ActivityEncoder`. A wrapper type with a global `JsonEncoder` was rejected because it would also redact outbound HTTP JSON bodies, breaking legitimate API calls that need to ship a token. See `docs/superpowers/specs/2026-05-17-sensitive-redaction-design.md` for the full rationale.
+The marker-trait + `summonFrom` approach was chosen specifically so redaction fires **only** inside `ActivityEncoder`. A wrapper type with a global `JsonEncoder` was rejected because it would also redact outbound HTTP JSON bodies, breaking legitimate API calls that need to ship a token.

@@ -1,6 +1,6 @@
 package ubc.common
 
-import scala.compiletime.{constValue, erasedValue, summonFrom}
+import scala.compiletime.{constValue, erasedValue, summonFrom, summonInline}
 import scala.deriving.Mirror
 
 import zio.*
@@ -18,9 +18,9 @@ import ubc.common.sensitive.Sensitive
 //   ZIO.logActivity(HealthCheckHit("/health"))
 //
 // Fields whose declared type <: Sensitive (e.g. tokens/secrets) are emitted as
-// "[**Redacted**]" instead of their value. The check fires only for fields at the
-// top level of the activity-log case class — nested products use their normal
-// JsonEncoder and will NOT redact their own Sensitive fields.
+// "[**Redacted**]" instead of their value, as are Option/Seq/Either-Right
+// wrappers of Sensitive. The check fires only for top-level fields — nested
+// products and Map values use their normal JsonEncoder and will NOT redact.
 trait ActivityLog extends Product:
   def logLevel: LogLevel
 
@@ -41,18 +41,30 @@ trait ActivityEncoder[A]:
 object ActivityEncoder:
   private val Redacted: Json = Json.Str("[**Redacted**]")
 
+  // Standard library containers are covariant in the relevant position, so e.g.
+  // `Option[X] <:< Option[Sensitive]` whenever `X <:< Sensitive`. Each container
+  // case redacts the Sensitive element(s) while preserving the surrounding shape.
+  // Map and nested products are NOT covered — make the whole value Sensitive if
+  // it needs redaction.
   private inline def fieldJson[T](t: T): Json =
     summonFrom {
       case _: (T <:< Sensitive) => Redacted
       case _: (T <:< Option[Sensitive]) =>
-        // Option is covariant, so `Option[X] <:< Option[Sensitive]` whenever
-        // `X <:< Sensitive`. Some(_) → redacted; None → Null (omitted by the
-        // null-stripping step in encodeFields, matching old derives JsonCodec
-        // shape). Other containers (Seq, Map, Either, ...) are not covered;
-        // events that need them should make the whole container type Sensitive.
+        // Some(_) → redacted; None → Null (omitted by the null-stripping step
+        // in encodeFields, matching the old derives JsonCodec shape).
         t.asInstanceOf[Option[?]] match
           case Some(_) => Redacted
           case None    => Json.Null
+      case _: (T <:< Seq[Sensitive]) =>
+        // Redact each element; the element count (array length) is preserved.
+        Json.Arr(t.asInstanceOf[Seq[Any]].map(_ => Redacted)*)
+      case _: (T <:< Either[l, Sensitive]) =>
+        // Only the Right channel is Sensitive. Preserve zio-json's
+        // {"Left":..}/{"Right":..} shape: Left encodes normally via its own
+        // JsonEncoder (summoned at the derivation site); Right is redacted.
+        t.asInstanceOf[Either[l, Any]] match
+          case Left(l)  => Json.Obj("Left" -> summonInline[JsonEncoder[l]].toJsonAST(l).getOrElse(Json.Null))
+          case Right(_) => Json.Obj("Right" -> Redacted)
       case enc: JsonEncoder[T]  => enc.toJsonAST(t).getOrElse(Json.Null)
     }
 

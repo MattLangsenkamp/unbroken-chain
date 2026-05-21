@@ -616,10 +616,8 @@ object common extends Module {
     )
   }
 
-  // Structured activity logging: typed case classes with a Mirror-based inline encoder
-  // instead of free-form strings. ZIO.logActivity(MyEvent(...)) routes to the correct
-  // ZIO log level and serialises to JSON. Fields whose declared type <: Sensitive are
-  // redacted in the emitted JSON.
+  // Structured activity logging: typed event case classes encoded to JSON, with
+  // Sensitive-typed fields redacted. See the `sensitive` skill for the full pattern.
   object `activity-logging` extends UbcScalaModule {
     def scalaVersion = scalaVer
     override def moduleDeps = Seq(sensitive.jvm)
@@ -631,9 +629,7 @@ object common extends Module {
     }
   }
 
-  // Marker trait for values whose contents must never appear in logs, traces, or other
-  // observability output. Downstream codecs/loggers are expected to honour the marker —
-  // the trait itself has no runtime behaviour. Cross-compiled so frontend code can use it too.
+  // Sensitive marker trait + tag helper for redacting secrets. Cross-compiled (jvm + js).
   object sensitive extends Module {
     trait Shared extends UbcScalaModule {
       def scalaVersion = scalaVer

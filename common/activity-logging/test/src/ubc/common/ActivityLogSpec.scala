@@ -24,6 +24,11 @@ object ActivityLogSpec extends ZIOSpecDefault:
 
   final case class OptStringEvent(name: String, note: Option[String]) extends InfoLog derives ActivityEncoder
 
+  final case class SeqSecretEvent(name: String, tokens: Seq[FakeSecret]) extends InfoLog derives ActivityEncoder
+
+  final case class EitherSecretEvent(name: String, result: Either[String, FakeSecret])
+      extends InfoLog derives ActivityEncoder
+
   // Mirrors the production pattern for opting a neotype-backed newtype into
   // Sensitive: intersection-type alias plus a smart-constructor `make` inside
   // the companion that uses `Sensitive.tag` to widen the opaque value.
@@ -120,6 +125,31 @@ object ActivityLogSpec extends ZIOSpecDefault:
         assertTrue(
           !json.contains("\"token\""),
           json.contains("\"name\":\"hi\"")
+        )
+      },
+      test("Seq[Sensitive] redacts each element while preserving count") {
+        val json = toActivityJson(SeqSecretEvent("hi", Seq(FakeSecret("hunter2"), FakeSecret("swordfish"))))
+        assertTrue(
+          json.contains("\"tokens\":[\"[**Redacted**]\",\"[**Redacted**]\"]"),
+          !json.contains("hunter2"),
+          !json.contains("swordfish")
+        )
+      },
+      test("Seq[Sensitive] empty stays an empty array") {
+        val json = toActivityJson(SeqSecretEvent("hi", Seq.empty))
+        assertTrue(json.contains("\"tokens\":[]"))
+      },
+      test("Either[_, Sensitive] = Right redacts the value (preserving the Right tag)") {
+        val json = toActivityJson(EitherSecretEvent("hi", Right(FakeSecret("hunter2"))))
+        assertTrue(
+          json.contains("\"result\":{\"Right\":\"[**Redacted**]\"}"),
+          !json.contains("hunter2")
+        )
+      },
+      test("Either[_, Sensitive] = Left encodes the non-sensitive value normally") {
+        val json = toActivityJson(EitherSecretEvent("hi", Left("not-found")))
+        assertTrue(
+          json.contains("\"result\":{\"Left\":\"not-found\"}")
         )
       },
       test("ZIO.logActivity routes to LogLevel.Info for InfoLog events") {
