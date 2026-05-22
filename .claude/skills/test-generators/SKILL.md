@@ -36,6 +36,31 @@ github-gateway/domain/domainPrivate/generators/  # jvm only (private domain is j
 The generator object lives in the **same package** as the types it covers, and is named
 `<Module>Generators`.
 
+### Why a dedicated `generators` module (not a `test/` source dir)?
+
+A fair question: generators could live in a module's existing `test/src` and be shared by
+adding that `test` submodule to another module's `test.moduleDeps` — Mill *does* let you depend
+on a test module. We deliberately use a separate `generators` module anyway:
+
+- **It avoids dragging specs along.** Depending on `domainPrivate.test` to borrow its generators
+  also pulls that module's actual spec classes (`TokensSpec`, …) and all its test-only deps onto
+  the consumer's classpath — coupling every consumer to the producer's whole test suite just to
+  get a `Gen`. A dedicated module exposes *only* generators. (This is classpath coupling, not
+  double-execution — Mill discovers suites from each module's own compiled output, not from
+  transitive deps.)
+- **JS cross-compilation requires it for the cross-compiled domains.** `domainPublic` and
+  `pagination` generators must be usable from the Scala.js frontend tests. A
+  `domainPublic.jvm.test` module is JVM-only and a Scala.js test cannot depend on it; only a
+  cross-compiled (`jvm` + `js`) `generators` module can serve both. This reason does **not**
+  apply to JVM-only domains like `domainPrivate`, but we keep those as `generators` modules too
+  for uniformity.
+- **Uniformity + the guard.** "Generators always live in a `generators` module" is one rule, and
+  `verify-no-test-deps-in-deploy` keys off the `/generators/` path segment. A scattered
+  test-dir approach is harder to state and to enforce.
+
+There is no precedent in this repo for test→test `moduleDeps`; existing `test.moduleDeps` only
+point at *production* in-memory adapters.
+
 ## How to write generators — `DeriveGen`
 
 Generators use `zio-test-magnolia`'s `DeriveGen` (`import zio.test.magnolia.DeriveGen`).
