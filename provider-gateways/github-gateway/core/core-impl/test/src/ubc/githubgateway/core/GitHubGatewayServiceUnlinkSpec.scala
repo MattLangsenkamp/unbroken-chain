@@ -30,7 +30,7 @@ object GitHubGatewayServiceUnlinkSpec extends ZIOSpecDefault:
         ZIO.fail(new RuntimeException("github 500"))
       def createInstallationToken(jwt: AppJwt, ghInstallationId: GhInstallationId)
           : Task[InstallationAccessToken] =
-        ZIO.succeed(InstallationAccessToken("ignored"))
+        ZIO.succeed(InstallationAccessToken.sensitive("ignored"))
     )
 
   private val happyPath = test("succeeds → local row deleted, returns Unit") {

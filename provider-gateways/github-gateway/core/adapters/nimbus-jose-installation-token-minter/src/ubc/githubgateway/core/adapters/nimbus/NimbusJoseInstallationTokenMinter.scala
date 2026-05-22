@@ -42,7 +42,7 @@ final class NimbusJoseInstallationTokenMinter(
       signedJwt = new SignedJWT(header, claims)
       _          <- ZIO.attempt(signedJwt.sign(signer))
       serialized <- ZIO.attempt(signedJwt.serialize())
-    yield AppJwt(serialized)
+    yield AppJwt.sensitive(serialized)
 
 object NimbusJoseInstallationTokenMinter:
 

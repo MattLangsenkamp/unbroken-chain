@@ -49,7 +49,25 @@ type AppJwt = AppJwt.Type & Sensitive
 
 Call sites construct via `AppJwt.sensitive("…")`. The `asInstanceOf` lives exactly once, inside `Sensitive.tag`'s inline body — never at call sites.
 
+**Unwrapping a Sensitive newtype:** the `& Sensitive` intersection breaks neotype's `value.unwrap`
+extension (it resolves a `Newtype.WithType[A, B]` keyed on the exact receiver type, which the
+intersection no longer matches). Use the companion method instead — `AppJwt.unwrap(jwt)` — which
+accepts any subtype of `Type`. Do this only at real boundaries that must ship the secret
+(e.g. building an `Authorization` header).
+
 **Don't name the smart constructor `make`** — `Newtype` already has `final def make`. `sensitive`, `secret`, or `from` all work.
+
+### Generator for a Sensitive newtype
+
+Every domain type needs a test generator (`test-generators` skill). A `Sensitive` newtype
+must be generated **through its smart constructor**, so the produced value keeps the marker —
+generating via plain `apply` would drop `& Sensitive` and the value could leak through
+`ActivityEncoder`:
+
+```scala
+given DeriveGen[AppJwt] = DeriveGen.instance(Gen.string.map(AppJwt.sensitive))
+val appJwt: Gen[Any, AppJwt] = DeriveGen[AppJwt]
+```
 
 ## Using a Sensitive value in an event
 

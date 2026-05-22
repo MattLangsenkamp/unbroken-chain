@@ -170,6 +170,21 @@ Define only the core type here. Adapter-extension modules (and their infrastruct
 
 See `adapter-extension-examples/` for concrete build.mill and codec patterns.
 
+## Generators (mandatory for every type)
+
+**Every domain type you define MUST get a ZIO Test generator** in its module's `generators`
+companion module — case classes, enums, and neotype newtypes alike. A type without a
+generator is an incomplete change. This keeps a generator available for every model so any
+layer's tests can reach for property-based testing trivially.
+
+- Leaf newtype → `given DeriveGen[T] = DeriveGen.instance(<gen>)` + a named `val`.
+- Case class / enum → a named `val` via `DeriveGen.gen[T].derive`.
+- `Sensitive` newtype → generate through the `.sensitive` smart constructor, never plain `apply`.
+
+Generators modules live on the **test classpath only** and must never appear in a production
+`moduleDeps` chain (`make verify-deploy-deps` enforces this). See the `test-generators` skill
+for the full module layout, `DeriveGen` patterns, and build.mill wiring.
+
 ## TDD cycle (Iron Law — no exceptions)
 
 **RED** — Write one failing test that constructs or uses the type you are about to define.
@@ -197,6 +212,9 @@ Expected: PASS.
 
 **REFACTOR** — Minimum fields only. Right module (public vs private)?
 
+**GENERATOR** — Add the type's generator to the module's `generators` companion (see the
+`test-generators` skill) and run that module's generator spec. No type is done without one.
+
 Repeat for each type.
 
 ## Naming rules
@@ -207,6 +225,7 @@ Repeat for each type.
 
 When complete:
 1. **Types defined** — name, location (public/private), what it wraps or its fields
-2. **Tests written** — one line per test: what it verifies
-3. **Deviations from plan** — anything that changed from the hypothesis
-4. **Proposed amendments** — changes needed to the ports, core, or adapter layers
+2. **Generators added** — confirm every new type has a generator in its `generators` module
+3. **Tests written** — one line per test: what it verifies
+4. **Deviations from plan** — anything that changed from the hypothesis
+5. **Proposed amendments** — changes needed to the ports, core, or adapter layers

@@ -33,6 +33,22 @@ val zioTestDeps = Seq(
   mvn"dev.zio::zio-test-sbt:2.1.24"
 )
 
+// Test-data generators: ZIO Test `Gen` + Magnolia `DeriveGen` derivation. These deps put
+// zio-test on a module's MAIN classpath (generators ARE `Gen` values), so any module using
+// them is test-only by construction — it must never appear in a production moduleDeps chain.
+// `bin/verify-no-test-deps-in-deploy.sh` enforces this. Note: no zio-test-sbt here — the
+// runner is only needed by the generators' own `test` submodules (which add zioTestDeps).
+val genDeps = Seq(
+  mvn"dev.zio::zio-test:2.1.24",
+  mvn"dev.zio::zio-test-magnolia:2.1.24"
+)
+
+// Scala.js variant — explicit _sjs1_3 suffix: top-level val :: resolves JVM-only at link time.
+val genDepsJs = Seq(
+  mvn"dev.zio:zio-test_sjs1_3:2.1.24",
+  mvn"dev.zio:zio-test-magnolia_sjs1_3:2.1.24"
+)
+
 val zioJsonDeps = Seq(
   mvn"dev.zio::zio-json:0.7.3"
 )
@@ -184,11 +200,35 @@ object `provider-gateways` extends Module {
           // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
           override def mvnDeps = Seq(mvn"io.github.kitlangton:neotype_sjs1_3:0.4.10")
         }
+
+        // Test-only ZIO Test generators for the public domain types. Cross-compiled (jvm + js)
+        // like the types they cover. Reference ONLY from test.moduleDeps — never production.
+        object generators extends Module {
+          trait Shared extends UbcScalaModule {
+            def scalaVersion = scalaVer
+            override def sources = Task.Sources(moduleDir / os.up / "src")
+          }
+          object jvm extends Shared {
+            override def moduleDeps = Seq(domainPublic.jvm)
+            override def mvnDeps = genDeps ++ neotypeDeps
+            object test extends ScalaTests {
+              def testFramework = "zio.test.sbt.ZTestFramework"
+              override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+            }
+          }
+          object js extends Shared with UbcScalaJSModule {
+            def scalaJSVersion = scalaJSVer
+            override def moduleDeps = Seq(domainPublic.js)
+            // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+            override def mvnDeps = genDepsJs ++ Seq(mvn"io.github.kitlangton:neotype_sjs1_3:0.4.10")
+          }
+        }
       }
 
       object domainPrivate extends UbcScalaModule {
         def scalaVersion = scalaVer
-        override def moduleDeps = Seq(domainPublic.jvm)
+        // sensitive.jvm: AppJwt / InstallationAccessToken are secret tokens marked `& Sensitive`.
+        override def moduleDeps = Seq(domainPublic.jvm, common.sensitive.jvm)
         // zio-config lives here (rather than in an adapter-extension module) by design:
         // every server module pulls config in anyway, so isolating it from this classpath
         // buys nothing. See `.claude/skills/feature-tdd/layers/domain.md` for the rule.
@@ -197,6 +237,19 @@ object `provider-gateways` extends Module {
         object test extends ScalaTests {
           def testFramework = "zio.test.sbt.ZTestFramework"
           override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+        }
+
+        // Test-only ZIO Test generators for the private domain. JVM-only (the private domain
+        // is JVM-only). Depends on the public generators for the leaf newtype `given`s that
+        // private types reference. Reference ONLY from test.moduleDeps — never production.
+        object generators extends UbcScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(domainPrivate, domainPublic.generators.jvm)
+          override def mvnDeps = genDeps ++ neotypeDeps ++ zioDeps
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
         }
       }
 
@@ -691,6 +744,29 @@ object common extends Module {
       def scalaJSVersion = scalaJSVer
       // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
       override def mvnDeps = Seq(mvn"dev.zio:zio_sjs1_3:2.1.17")
+    }
+
+    // Test-only ZIO Test generators for pagination types. Cross-compiled so future
+    // Scala.js (Tyrian) tests can use them too. Reference ONLY from test.moduleDeps —
+    // never from a production moduleDeps chain (enforced by verify-no-test-deps-in-deploy).
+    object generators extends Module {
+      trait Shared extends UbcScalaModule {
+        def scalaVersion = scalaVer
+        override def sources = Task.Sources(moduleDir / os.up / "src")
+      }
+      object jvm extends Shared {
+        override def moduleDeps = Seq(pagination.jvm)
+        override def mvnDeps = genDeps
+        object test extends ScalaTests {
+          def testFramework = "zio.test.sbt.ZTestFramework"
+          override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+        }
+      }
+      object js extends Shared with UbcScalaJSModule {
+        def scalaJSVersion = scalaJSVer
+        override def moduleDeps = Seq(pagination.js)
+        override def mvnDeps = genDepsJs
+      }
     }
   }
 

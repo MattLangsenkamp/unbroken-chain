@@ -4,7 +4,7 @@ GITHUB_GATEWAY_PRESENTATION_IMAGE ?= unbrokenchain/github-gateway-presentation:l
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings full-github-gateway full-reader full-writer full-extraction-service full-ubc-control-plane load-github-app-secrets docs-deps docs-serve docs-build help
+.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings full-github-gateway full-reader full-writer full-extraction-service full-ubc-control-plane load-github-app-secrets docs-deps docs-serve docs-build verify-deploy-deps help
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -145,9 +145,14 @@ docs-serve:
 ## docs-build : build the static docs site into site/_site (strict mode)
 docs-build:
 	@$(SCRIPT_DIR)/docs-build.sh
+
 ## load-github-app-secrets : load PEM/webhook/verifier from .local/ into the local-credentials Secret
 load-github-app-secrets:
 	@$(SCRIPT_DIR)/load-github-app-secrets.sh
+
+## verify-deploy-deps : fail if any server bundles test-only generators or zio-test
+verify-deploy-deps:
+	@$(SCRIPT_DIR)/verify-no-test-deps-in-deploy.sh
 
 ## help : list available targets
 help:
