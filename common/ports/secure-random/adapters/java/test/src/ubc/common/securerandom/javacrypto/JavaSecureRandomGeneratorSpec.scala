@@ -29,5 +29,12 @@ object JavaSecureRandomGeneratorSpec extends ZIOSpecDefault:
           a   <- rng.urlSafeRandomString(32)
           b   <- rng.urlSafeRandomString(32)
         yield assertTrue(a != b)
+      },
+      test("nextUuid returns distinct version-4 UUIDs") {
+        for
+          rng <- ZIO.service[SecureRandom]
+          a   <- rng.nextUuid
+          b   <- rng.nextUuid
+        yield assertTrue(a != b, a.version == 4, b.version == 4, a.variant == 2)
       }
     ).provide(JavaSecureRandomGenerator.live)

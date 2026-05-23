@@ -68,9 +68,9 @@ case class GitHubGatewayService(
     */
   def initiate(): UIO[LinkInitiation] =
     for
-      // 32 bytes → 43 base64url chars. Newtype wrapping happens here at the call site; the
-      // SecureRandom port itself is generic and lives in `common`.
-      state      <- random.urlSafeRandomString(byteCount = 32).map(LinkState(_))
+      // The state nonce is an identifier we own, so it is a UUID from the SecureRandom port.
+      // Newtype wrapping happens here at the call site; the port itself lives in `common`.
+      state      <- random.nextUuid.map(LinkState(_))
       now        <- Clock.instant
       expiresAt   = now.plus(config.pendingLinkTtl)
       flow        = PendingLinkFlow(state = state, createdAt = now, expiresAt = expiresAt)

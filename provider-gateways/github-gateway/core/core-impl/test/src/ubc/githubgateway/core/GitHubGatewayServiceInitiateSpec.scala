@@ -8,6 +8,8 @@ import ubc.githubgateway.domain.*
 import zio.*
 import zio.test.*
 
+import java.util.UUID
+
 object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
 
   override def spec =
@@ -18,8 +20,8 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
           out <- svc.initiate()
         yield assertTrue(
           // DeterministicSecureRandom uses a single counter shared across calls. initiate()
-          // calls urlSafeRandomString once for the state (32 bytes → 43 chars), counter hits 1.
-          out.state == LinkState("rnd-1-" + "A" * (43 - "rnd-1-".length))
+          // calls nextUuid once for the state, so the counter hits 1 → UUID(0, 1).
+          out.state == LinkState(new UUID(0L, 1L))
         )
       },
       test("install URL has the form https://github.com/apps/<slug>/installations/new?state=<state>") {

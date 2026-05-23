@@ -88,7 +88,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         svc     <- ZIO.service[GitHubGatewayService]
         backend  = stubBackend(GitHubGatewayHttpController.abandonLogic(svc))
         resp    <- basicRequest
-                     .post(uri"http://test/links/never-existed/abandon")
+                     .post(uri"http://test/links/00000000-0000-0000-0000-0000000000ee/abandon")
                      .send(backend)
       yield assertTrue(resp.code == StatusCode.Ok)
     },
@@ -100,7 +100,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         // Seed an installation that the callback will look up after consuming the pending row.
         _       <- gh.seedInstallation(
                      Installation(
-                       id               = InstallationId(0L),
+                       id               = UnpersistedInstallationId,
                        ghInstallationId = GhInstallationId(99L),
                        accountLogin     = AccountLogin("octocat"),
                        accountId        = AccountId(1L),
@@ -128,7 +128,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         cfg     <- ZIO.service[GitHubGatewayConfig]
         backend  = stubBackend(GitHubGatewayHttpController.callbackLogic(svc, cfg))
         resp    <- basicRequest
-                     .get(uri"http://test/links/callback?state=does-not-exist&installation_id=42")
+                     .get(uri"http://test/links/callback?state=00000000-0000-0000-0000-0000000000ff&installation_id=42")
                      .followRedirects(false)
                      .send(backend)
         location = resp.header("Location").getOrElse("")
@@ -159,7 +159,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         gh      <- ZIO.service[InMemoryGitHubAppClient]
         _       <- gh.seedInstallation(
                      Installation(
-                       id               = InstallationId(0L),
+                       id               = UnpersistedInstallationId,
                        ghInstallationId = GhInstallationId(7L),
                        accountLogin     = AccountLogin("octocat"),
                        accountId        = AccountId(1L),
@@ -234,7 +234,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         gh      <- ZIO.service[InMemoryGitHubAppClient]
         _       <- gh.seedInstallation(
                      Installation(
-                       id               = InstallationId(0L),
+                       id               = UnpersistedInstallationId,
                        ghInstallationId = GhInstallationId(11L),
                        accountLogin     = AccountLogin("octocat"),
                        accountId        = AccountId(1L),
@@ -264,7 +264,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         backend  = stubBackend(GitHubGatewayHttpController.webhookLogic(svc))
         resp    <- basicRequest
                      .post(uri"http://test/webhooks/github")
-                     .header("X-GitHub-Delivery", "delivery-1")
+                     .header("X-GitHub-Delivery", "00000000-0000-0000-0000-000000000001")
                      .header("X-GitHub-Event", "installation")
                      .header("X-Hub-Signature-256", signature)
                      .body(installationDeletedBody)
@@ -277,7 +277,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         backend  = stubBackend(GitHubGatewayHttpController.webhookLogic(svc))
         resp    <- basicRequest
                      .post(uri"http://test/webhooks/github")
-                     .header("X-GitHub-Delivery", "delivery-2")
+                     .header("X-GitHub-Delivery", "00000000-0000-0000-0000-000000000002")
                      .header("X-GitHub-Event", "installation")
                      .header("X-Hub-Signature-256", "sha256=deadbeef")
                      .body(installationDeletedBody)
@@ -297,7 +297,7 @@ object GitHubGatewayHttpControllerSpec extends ZIOSpecDefault:
         backend  = stubBackend(GitHubGatewayHttpController.webhookLogic(svc))
         resp    <- basicRequest
                      .post(uri"http://test/webhooks/github")
-                     .header("X-GitHub-Delivery", "delivery-3")
+                     .header("X-GitHub-Delivery", "00000000-0000-0000-0000-000000000003")
                      .header("X-GitHub-Event", "installation")
                      .header("X-Hub-Signature-256", signature)
                      .body(malformed)

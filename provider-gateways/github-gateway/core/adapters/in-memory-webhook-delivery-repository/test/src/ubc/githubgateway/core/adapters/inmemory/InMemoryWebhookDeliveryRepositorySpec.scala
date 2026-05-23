@@ -7,8 +7,12 @@ import zio.*
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 object InMemoryWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
+
+  // DeliveryId is a UUID; map a readable label to a stable UUID so test keys stay legible.
+  private def did(label: String): DeliveryId = DeliveryId(UUID.nameUUIDFromBytes(label.getBytes))
 
   override def spec =
     suite("InMemoryWebhookDeliveryRepository")(
@@ -16,7 +20,7 @@ object InMemoryWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
         for
           repo <- ZIO.service[WebhookDeliveryRepository]
           delivery = WebhookDelivery(
-            deliveryId = DeliveryId("uuid-1"),
+            deliveryId = did("uuid-1"),
             eventType  = EventType("installation"),
             receivedAt = Instant.parse("2026-04-25T12:00:00Z"),
             outcome    = WebhookOutcome.Processed
@@ -31,13 +35,13 @@ object InMemoryWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
         for
           repo <- ZIO.service[WebhookDeliveryRepository]
           a = WebhookDelivery(
-                DeliveryId("uuid-A"),
+                did("uuid-A"),
                 EventType("installation"),
                 Instant.parse("2026-04-25T12:00:00Z"),
                 WebhookOutcome.Processed
               )
           b = WebhookDelivery(
-                DeliveryId("uuid-B"),
+                did("uuid-B"),
                 EventType("installation"),
                 Instant.parse("2026-04-25T12:00:00Z"),
                 WebhookOutcome.Processed
@@ -51,22 +55,22 @@ object InMemoryWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
           repo <- ZIO.service[WebhookDeliveryRepository]
           fake <- ZIO.service[InMemoryWebhookDeliveryRepository]
           delivery = WebhookDelivery(
-            deliveryId = DeliveryId("uuid-update"),
+            deliveryId = did("uuid-update"),
             eventType  = EventType("installation"),
             receivedAt = Instant.parse("2026-04-25T12:00:00Z"),
             outcome    = WebhookOutcome.Processed
           )
           _      <- repo.recordIfAbsent(delivery)
-          _      <- repo.updateOutcome(DeliveryId("uuid-update"), WebhookOutcome.Failed)
-          stored <- fake.peek(DeliveryId("uuid-update"))
+          _      <- repo.updateOutcome(did("uuid-update"), WebhookOutcome.Failed)
+          stored <- fake.peek(did("uuid-update"))
         yield assertTrue(stored.exists(_.outcome == WebhookOutcome.Failed))
       },
       test("updateOutcome is a no-op when no matching row exists") {
         for
           repo <- ZIO.service[WebhookDeliveryRepository]
           fake <- ZIO.service[InMemoryWebhookDeliveryRepository]
-          _      <- repo.updateOutcome(DeliveryId("uuid-missing"), WebhookOutcome.Failed)
-          stored <- fake.peek(DeliveryId("uuid-missing"))
+          _      <- repo.updateOutcome(did("uuid-missing"), WebhookOutcome.Failed)
+          stored <- fake.peek(did("uuid-missing"))
         yield assertTrue(stored.isEmpty)
       }
     ).provide(InMemoryWebhookDeliveryRepository.layer)

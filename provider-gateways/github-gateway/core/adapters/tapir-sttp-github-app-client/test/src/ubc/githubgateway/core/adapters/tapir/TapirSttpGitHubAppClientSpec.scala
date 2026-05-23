@@ -94,7 +94,7 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
           client <- ZIO.service[GitHubAppClient]
           got    <- client.getInstallation(jwt, ghId)
         yield assertTrue(
-          got.id == InstallationId(0L),
+          got.id == UnpersistedInstallationId,
           got.ghInstallationId == GhInstallationId(12345L),
           got.accountLogin == AccountLogin("octocat"),
           got.accountId == AccountId(7L),

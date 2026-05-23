@@ -155,7 +155,7 @@ final class TapirSttpGitHubAppClient(
         if gh.suspended_at.isDefined then InstallationStatus.Suspended
         else InstallationStatus.Active
       Installation(
-        id               = InstallationId(0L),
+        id               = UnpersistedInstallationId,
         ghInstallationId = GhInstallationId(gh.id),
         accountLogin     = AccountLogin(gh.account.login),
         accountId        = AccountId(gh.account.id),

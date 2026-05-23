@@ -112,7 +112,8 @@ object GitHubGatewayHttpController:
   val webhookEndpoint =
     endpoint.post
       .in("webhooks" / "github")
-      .in(header[String]("X-GitHub-Delivery"))
+      // DeliveryId is GitHub's UUID; decode it at the edge so a malformed header is a 400.
+      .in(header[DeliveryId]("X-GitHub-Delivery"))
       .in(header[String]("X-GitHub-Event"))
       .in(header[String]("X-Hub-Signature-256"))
       .in(byteArrayBody)
@@ -187,7 +188,7 @@ object GitHubGatewayHttpController:
   def webhookLogic(service: GitHubGatewayService): ZServerEndpoint[Any, Any] =
     webhookEndpoint.zServerLogic[Any] { case (deliveryId, eventType, signature, body) =>
       val headers = WebhookHeaders(
-        deliveryId = DeliveryId(deliveryId),
+        deliveryId = deliveryId,
         eventType  = EventType(eventType),
         signature  = signature
       )

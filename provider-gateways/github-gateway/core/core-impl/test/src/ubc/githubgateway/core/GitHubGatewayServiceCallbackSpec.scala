@@ -10,13 +10,14 @@ import zio.*
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
 
   private val ghInstallationId = GhInstallationId(2001L)
 
   private val seededInstallation = Installation(
-    id               = InstallationId(0L),
+    id               = UnpersistedInstallationId,
     ghInstallationId = ghInstallationId,
     accountLogin     = AccountLogin("octocat"),
     accountId        = AccountId(99L),
@@ -61,7 +62,7 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
       test("missing state → LinkError.StateNotFound, no pending row consumed") {
         for
           svc <- ZIO.service[GitHubGatewayService]
-          err <- svc.callback(LinkState("never-existed"), ghInstallationId).flip
+          err <- svc.callback(LinkState(UUID.randomUUID()), ghInstallationId).flip
         yield assertTrue(err == LinkError.StateNotFound)
       },
       test("expired state → LinkError.StateExpired AND the pending row is still deleted") {

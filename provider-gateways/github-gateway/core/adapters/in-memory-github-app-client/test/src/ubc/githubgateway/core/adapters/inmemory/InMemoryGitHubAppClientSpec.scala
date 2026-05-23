@@ -14,7 +14,7 @@ object InMemoryGitHubAppClientSpec extends ZIOSpecDefault:
   private val token = InstallationAccessToken.sensitive("dummy-token")
   private val ghId  = GhInstallationId(7L)
   private val seeded = Installation(
-    id               = InstallationId(0L),
+    id               = UnpersistedInstallationId,
     ghInstallationId = ghId,
     accountLogin     = AccountLogin("octocat"),
     accountId        = AccountId(99L),

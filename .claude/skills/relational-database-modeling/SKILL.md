@@ -9,6 +9,18 @@ This skill covers the Magnum-specific stack: Flyway migrations, SQL patterns, an
 
 ---
 
+## ID types: always UUID
+
+IDs we own are `Newtype[UUID]` — never `Int`, `Long`, or `String`. The app generates the value (`UUID.randomUUID()` in the repository on insert; `SecureRandom.nextUuid` for nonces); never lean on a DB sequence. Third-party identifiers follow the external API's type — e.g. GitHub's numeric ids stay `Newtype[Long]`.
+
+- SQL: `id UUID PRIMARY KEY` — no `BIGSERIAL`, no `DEFAULT`.
+- Codec: `given DbCodec[MyId] = DbCodec[UUID].biMap(MyId(_), _.unwrap)`.
+- Generator: `DeriveGen.instance(Gen.uuid.map(MyId(_)))`.
+
+UUID PKs have no insertion order. Don't rely on it; if you need chronology, add a timestamp column and order by it.
+
+---
+
 ## Migrations
 
 Migrations use [Flyway](https://flywaydb.org/) and live in `<service>/db-migrations/`:
@@ -50,7 +62,8 @@ The Helm chart runs a pre-install/pre-upgrade Job (`k8s/templates/migrate-job.ya
 
 | Scala type | SQL type |
 |---|---|
-| `Long` / `Newtype[Long]` | `BIGSERIAL` (PK) or `BIGINT` |
+| `UUID` / `Newtype[UUID]` (ids we own) | `UUID` (PK, app-generated) |
+| `Long` / `Newtype[Long]` (third-party ids) | `BIGINT` |
 | `String` / `Newtype[String]` | `TEXT` |
 | `Instant` | `TIMESTAMPTZ` |
 | `Option[Instant]` | `TIMESTAMPTZ` (nullable — no `NOT NULL`) |
@@ -126,7 +139,7 @@ For types in `domainPublic` (shared across services):
 
 ```scala
 object PublicMagnumCodecs:
-  given DbCodec[MyId]    = DbCodec[Long].biMap(MyId(_), _.unwrap)
+  given DbCodec[MyId]    = DbCodec[UUID].biMap(MyId(_), _.unwrap)   // ids we own are UUID
   given DbCodec[MyToken] = DbCodec[String].biMap(MyToken(_), _.unwrap)
 ```
 

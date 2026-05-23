@@ -12,6 +12,7 @@ import zio.*
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 /** Integration tests for [[MagnumWebhookDeliveryRepository]] against a real PostgreSQL.
   *
@@ -20,6 +21,9 @@ import java.time.Instant
 object MagnumWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
 
   private val migrationLocation = "classpath:db/migration"
+
+  // DeliveryId is a UUID; map a readable label to a stable UUID so test keys stay legible.
+  private def did(label: String): DeliveryId = DeliveryId(UUID.nameUUIDFromBytes(label.getBytes))
 
   // Need to derive the codec for direct SELECTs in test assertions.
   private given DbCodec[WebhookDelivery] = DbCodec.derived[WebhookDelivery]
@@ -37,7 +41,7 @@ object MagnumWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
     }).orDie
 
   private val delivery1 = WebhookDelivery(
-    deliveryId = DeliveryId("uuid-1"),
+    deliveryId = did("uuid-1"),
     eventType  = EventType("installation"),
     receivedAt = Instant.parse("2025-01-01T00:00:00Z"),
     outcome    = WebhookOutcome.Processed
@@ -88,8 +92,8 @@ object MagnumWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
       test("updateOutcome is a no-op when no row matches") {
         for
           repo <- ZIO.service[WebhookDeliveryRepository]
-          _    <- repo.updateOutcome(DeliveryId("missing"), WebhookOutcome.Failed)
-          row  <- peek(DeliveryId("missing"))
+          _    <- repo.updateOutcome(did("missing"), WebhookOutcome.Failed)
+          row  <- peek(did("missing"))
         yield assertTrue(row.isEmpty)
       }
 

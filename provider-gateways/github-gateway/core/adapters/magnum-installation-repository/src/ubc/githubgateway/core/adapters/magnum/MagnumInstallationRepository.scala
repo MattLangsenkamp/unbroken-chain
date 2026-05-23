@@ -10,6 +10,7 @@ import com.augustnagro.magnum.magzio.*
 import zio.*
 
 import java.time.Instant
+import java.util.UUID
 
 // Magnum derives DbCodec[Installation] by walking the case-class fields and looking up
 // a DbCodec for each one. The newtype/enum codecs are imported above. SELECT column order
@@ -27,9 +28,12 @@ class MagnumInstallationRepository(xa: TransactorZIO) extends InstallationReposi
       installedAt: Instant
   ): Task[Installation] =
     xa.transact {
+      // We own the surrogate id, so generate it app-side. On conflict the existing row's id is
+      // kept (we only update the non-id columns) and RETURNING echoes that existing id back.
+      val id = InstallationId(UUID.randomUUID())
       sql"""
-        INSERT INTO installation (gh_installation_id, account_login, account_id, account_type, status, installed_at)
-        VALUES ($ghInstallationId, $accountLogin, $accountId, $accountType, $status, $installedAt)
+        INSERT INTO installation (id, gh_installation_id, account_login, account_id, account_type, status, installed_at)
+        VALUES ($id, $ghInstallationId, $accountLogin, $accountId, $accountType, $status, $installedAt)
         ON CONFLICT (gh_installation_id) DO UPDATE SET
           account_login = EXCLUDED.account_login,
           account_id    = EXCLUDED.account_id,

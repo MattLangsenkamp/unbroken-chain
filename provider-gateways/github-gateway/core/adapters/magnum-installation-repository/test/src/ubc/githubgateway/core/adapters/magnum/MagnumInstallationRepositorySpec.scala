@@ -11,6 +11,7 @@ import zio.*
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 /** Integration tests for [[MagnumInstallationRepository]] against a real PostgreSQL instance.
   *
@@ -26,7 +27,7 @@ object MagnumInstallationRepositorySpec extends ZIOSpecDefault:
 
   private val migrationLocation = "classpath:db/migration"
 
-  // Wipe and reset BIGSERIAL between tests. CASCADE so linked_repo rows go too.
+  // Wipe between tests. CASCADE so linked_repo rows go too.
   private val truncate: URIO[TransactorZIO, Unit] =
     ZIO.serviceWithZIO[TransactorZIO](
       _.transact {
@@ -56,7 +57,7 @@ object MagnumInstallationRepositorySpec extends ZIOSpecDefault:
           ins.accountType      == AccountType.User,
           ins.status           == InstallationStatus.Active,
           ins.installedAt      == t0,
-          ins.id.unwrap        > 0L
+          ins.id              != UnpersistedInstallationId
         )
       },
 
@@ -114,8 +115,9 @@ object MagnumInstallationRepositorySpec extends ZIOSpecDefault:
           page2.items.size      == 1,
           page2.total           == 2L,
           page2.nextCursor.isEmpty,
-          page1.items.head.ghInstallationId == ghId1, // ORDER BY id ASC
-          page2.items.head.ghInstallationId == ghId2
+          // UUID PKs: ORDER BY id is stable but not insertion order, so assert the pages
+          // partition both installations across the two pages.
+          Set(page1.items.head.ghInstallationId, page2.items.head.ghInstallationId) == Set(ghId1, ghId2)
         )
       },
 
@@ -171,9 +173,10 @@ object MagnumInstallationRepositorySpec extends ZIOSpecDefault:
           ins  <- repo.upsertByGhInstallationId(ghId1, login1, accId1, AccountType.User, InstallationStatus.Active, t0)
           // Insert a linked_repo row directly via TransactorZIO — we don't depend on the linked-repo repo here.
           _ <- ZIO.serviceWithZIO[TransactorZIO](_.transact {
-                 val instId = ins.id.unwrap
-                 sql"""INSERT INTO linked_repo (installation_id, gh_repository_id, full_name)
-                       VALUES ($instId, ${100L}, ${"octocat/hello-world"})""".update.run()
+                 val instId = ins.id.unwrap        // UUID — Magnum's built-in DbCodec binds it
+                 val rid    = UUID.randomUUID()     // linked_repo.id is app-generated now
+                 sql"""INSERT INTO linked_repo (id, installation_id, gh_repository_id, full_name)
+                       VALUES ($rid, $instId, ${100L}, ${"octocat/hello-world"})""".update.run()
                })
           beforeCount <- ZIO.serviceWithZIO[TransactorZIO](_.connect {
                            sql"SELECT COUNT(*) FROM linked_repo".query[Long].run().head

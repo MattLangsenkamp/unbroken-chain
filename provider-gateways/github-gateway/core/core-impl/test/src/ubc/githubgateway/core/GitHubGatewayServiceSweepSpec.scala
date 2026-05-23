@@ -9,8 +9,12 @@ import zio.*
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 object GitHubGatewayServiceSweepSpec extends ZIOSpecDefault:
+
+  // LinkState is a UUID; map a readable label to a stable UUID so test keys stay legible.
+  private def ls(label: String): LinkState = LinkState(UUID.nameUUIDFromBytes(label.getBytes))
 
   override def spec =
     suite("GitHubGatewayService.sweepExpiredFlows")(
@@ -21,17 +25,17 @@ object GitHubGatewayServiceSweepSpec extends ZIOSpecDefault:
           repo <- ZIO.service[PendingLinkFlowRepository]
 
           past   = PendingLinkFlow(
-                     state     = LinkState("past"),
+                     state     = ls("past"),
                      createdAt = anchor.minusSeconds(7200),
                      expiresAt = anchor.minusSeconds(60)
                    )
           edge   = PendingLinkFlow(
-                     state     = LinkState("edge"),
+                     state     = ls("edge"),
                      createdAt = anchor.minusSeconds(7200),
                      expiresAt = anchor
                    )
           future = PendingLinkFlow(
-                     state     = LinkState("future"),
+                     state     = ls("future"),
                      createdAt = anchor.minusSeconds(7200),
                      expiresAt = anchor.plusSeconds(60)
                    )
@@ -43,9 +47,9 @@ object GitHubGatewayServiceSweepSpec extends ZIOSpecDefault:
           _   <- TestClock.setTime(anchor)
           n   <- svc.sweepExpiredFlows()
 
-          ps  <- repo.findByState(LinkState("past"))
-          es  <- repo.findByState(LinkState("edge"))
-          fs  <- repo.findByState(LinkState("future"))
+          ps  <- repo.findByState(ls("past"))
+          es  <- repo.findByState(ls("edge"))
+          fs  <- repo.findByState(ls("future"))
         yield assertTrue(
           n == 2,
           ps.isEmpty,

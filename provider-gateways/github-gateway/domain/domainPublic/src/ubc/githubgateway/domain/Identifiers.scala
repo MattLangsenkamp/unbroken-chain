@@ -2,12 +2,23 @@ package ubc.githubgateway.domain
 
 import neotype.*
 
-/** Local DB surrogate primary key for an installation row. */
-object InstallationId extends Newtype[Long]
+import java.util.UUID
+
+/** Local DB surrogate primary key for an installation row. We own this identifier, so it is a
+  * UUID generated app-side (never a DB sequence) — see the `relational-database-modeling` skill.
+  */
+object InstallationId extends Newtype[UUID]
 type InstallationId = InstallationId.Type
 
+/** Sentinel "not yet persisted" installation id (all-zero UUID).
+  * [[ubc.githubgateway.core.ports.GitHubAppClient]] returns it before the local row exists; the
+  * repository assigns the real id on upsert.
+  */
+val UnpersistedInstallationId: InstallationId = InstallationId(new UUID(0L, 0L))
+
 /** GitHub's numeric `installation_id` (the value GitHub itself assigns and echoes back in
-  * webhooks and API responses). Distinct from [[InstallationId]] which is our local surrogate.
+  * webhooks and API responses). A third-party identifier — we follow GitHub's API, which models
+  * it as an integer. Distinct from [[InstallationId]] which is our local surrogate.
   */
 object GhInstallationId extends Newtype[Long]
 type GhInstallationId = GhInstallationId.Type
@@ -16,15 +27,19 @@ type GhInstallationId = GhInstallationId.Type
 object AccountLogin extends Newtype[String]
 type AccountLogin = AccountLogin.Type
 
-/** GitHub's numeric account id (stable across login renames). */
+/** GitHub's numeric account id (stable across login renames). Third-party identifier — Long. */
 object AccountId extends Newtype[Long]
 type AccountId = AccountId.Type
 
-/** Local DB surrogate primary key for a linked_repo row. */
-object RepositoryId extends Newtype[Long]
+/** Local DB surrogate primary key for a linked_repo row. We own this identifier, so it is a
+  * UUID generated app-side.
+  */
+object RepositoryId extends Newtype[UUID]
 type RepositoryId = RepositoryId.Type
 
-/** GitHub's numeric `repository_id`. Distinct from [[RepositoryId]] which is our local surrogate. */
+/** GitHub's numeric `repository_id`. Third-party identifier — Long. Distinct from [[RepositoryId]]
+  * which is our local surrogate.
+  */
 object GhRepositoryId extends Newtype[Long]
 type GhRepositoryId = GhRepositoryId.Type
 
@@ -32,12 +47,16 @@ type GhRepositoryId = GhRepositoryId.Type
 object RepoFullName extends Newtype[String]
 type RepoFullName = RepoFullName.Type
 
-/** Server-generated nonce used to correlate a link initiation with its callback. */
-object LinkState extends Newtype[String]
+/** Server-generated nonce used to correlate a link initiation with its callback. We own this
+  * value, so it is a UUID generated from our `SecureRandom` port.
+  */
+object LinkState extends Newtype[UUID]
 type LinkState = LinkState.Type
 
-/** Value of the `X-GitHub-Delivery` header — a UUID GitHub assigns to each webhook delivery. */
-object DeliveryId extends Newtype[String]
+/** Value of the `X-GitHub-Delivery` header — a UUID GitHub assigns to each webhook delivery.
+  * GitHub's API dictates a UUID, so we model it as one.
+  */
+object DeliveryId extends Newtype[UUID]
 type DeliveryId = DeliveryId.Type
 
 /** Value of the `X-GitHub-Event` header, e.g. `installation`, `installation_repositories`. */
@@ -52,7 +71,7 @@ type EventAction = EventAction.Type
 object InstallUrl extends Newtype[String]
 type InstallUrl = InstallUrl.Type
 
-/** GitHub App's numeric id. */
+/** GitHub App's numeric id. Third-party identifier — Long. */
 object AppId extends Newtype[Long]
 type AppId = AppId.Type
 

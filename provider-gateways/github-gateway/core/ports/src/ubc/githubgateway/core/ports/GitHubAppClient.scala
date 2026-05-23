@@ -15,8 +15,8 @@ trait GitHubAppClient:
 
   /** `GET /app/installations/{installation_id}` — fetch the installation as known to GitHub.
     *
-    * The returned [[Installation]] has [[Installation.id]] = `InstallationId(0L)` as a sentinel
-    * meaning "not yet persisted". Callers MUST overwrite this with the local id from
+    * The returned [[Installation]] has [[Installation.id]] = [[UnpersistedInstallationId]] as a
+    * sentinel meaning "not yet persisted". Callers MUST overwrite this with the local id from
     * [[InstallationRepository.upsertByGhInstallationId]] before exposing it to the API layer.
     *
     * (We elected not to add a separate "GhInstallation" intermediate value type — the sentinel

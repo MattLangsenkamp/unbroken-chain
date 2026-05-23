@@ -7,18 +7,18 @@ import ubc.githubgateway.domain.*
 import zio.*
 
 import java.time.Instant
+import java.util.UUID
 
 /** Ref-backed [[InstallationRepository]] for tests and local dev.
   *
-  * State is two refs: a counter for assigning local ids on insert, and a map keyed by the
-  * local [[InstallationId]]. We key on the local id (not [[GhInstallationId]]) so the order
-  * of `listAll` is stable insertion order — matching the Postgres adapter's `ORDER BY id`.
+  * State is a single map keyed by the local [[InstallationId]] (a UUID we generate on insert,
+  * mirroring the Postgres adapter). `listAll` returns a stable order (by id string) — not
+  * insertion order, matching the UUID-keyed Postgres adapter's `ORDER BY id`.
   *
   * NOTE: deletes do NOT cascade to linked-repo rows. The Postgres adapter relies on a DB
   * cascade; tests using both repositories must clean up linked rows explicitly.
   */
 final class InMemoryInstallationRepository(
-    counter: Ref[Long],
     store: Ref[Map[InstallationId, Installation]]
 ) extends InstallationRepository:
 
@@ -43,18 +43,17 @@ final class InMemoryInstallationRepository(
           store.update(_.updated(existing.id, updated)).as(updated)
         case None =>
           for
-            nextId <- counter.updateAndGet(_ + 1L)
-            id      = InstallationId(nextId)
-            inst    = Installation(
-                        id               = id,
-                        ghInstallationId = ghInstallationId,
-                        accountLogin     = accountLogin,
-                        accountId        = accountId,
-                        accountType      = accountType,
-                        status           = status,
-                        installedAt      = installedAt
-                      )
-            _      <- store.update(_.updated(id, inst))
+            id  <- ZIO.succeed(InstallationId(UUID.randomUUID()))
+            inst = Installation(
+                     id               = id,
+                     ghInstallationId = ghInstallationId,
+                     accountLogin     = accountLogin,
+                     accountId        = accountId,
+                     accountType      = accountType,
+                     status           = status,
+                     installedAt      = installedAt
+                   )
+            _   <- store.update(_.updated(id, inst))
           yield inst
     }
 
@@ -63,7 +62,7 @@ final class InMemoryInstallationRepository(
 
   def listAll(page: PageRequest): Task[Page[Installation]] =
     store.get.map { current =>
-      val ordered = current.values.toList.sortBy(_.id.unwrap)
+      val ordered = current.values.toList.sortBy(_.id.unwrap.toString)
       val limited = ordered.take(page.limit)
       Page(items = limited, total = ordered.size.toLong, nextCursor = None)
     }
@@ -85,8 +84,5 @@ final class InMemoryInstallationRepository(
 object InMemoryInstallationRepository:
   val layer: ULayer[InstallationRepository] =
     ZLayer.fromZIO(
-      for
-        counter <- Ref.make(0L)
-        store   <- Ref.make(Map.empty[InstallationId, Installation])
-      yield new InMemoryInstallationRepository(counter, store)
+      Ref.make(Map.empty[InstallationId, Installation]).map(new InMemoryInstallationRepository(_))
     )
