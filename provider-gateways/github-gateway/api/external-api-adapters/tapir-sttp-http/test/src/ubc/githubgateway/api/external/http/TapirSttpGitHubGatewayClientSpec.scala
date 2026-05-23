@@ -20,12 +20,13 @@ object TapirSttpGitHubGatewayClientSpec extends ZIOSpecDefault:
 
   override def spec = suite("TapirSttpGitHubGatewayClientSpec")(
     test("initiate() parses the response into LinkInitiation") {
+      val state = "11111111-1111-1111-1111-111111111111"
       val responseJson =
-        """{"installUrl":"https://github.com/apps/x/installations/new?state=s","state":"s","expiresAt":"2026-04-25T12:10:00Z"}"""
+        s"""{"installUrl":"https://github.com/apps/x/installations/new?state=$state","state":"$state","expiresAt":"2026-04-25T12:10:00Z"}"""
       val client = new TapirSttpGitHubGatewayClient(stubFor(responseJson), baseUri)
       for out <- client.initiate()
       yield assertTrue(
-        out.state.toString.contains("s"),
+        out.state.toString == state,
         out.installUrl.toString.contains("github.com/apps/x")
       )
     },

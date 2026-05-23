@@ -36,7 +36,7 @@ object InMemoryInstallationRepositorySpec extends ZIOSpecDefault:
           inst.accountType == AccountType.Organization,
           inst.status == InstallationStatus.Active,
           inst.installedAt == installedAt,
-          inst.id != InstallationId(0L)
+          inst.id != UnpersistedInstallationId
         )
       },
       test("upsertByGhInstallationId updates the existing row when present (idempotent on ghInstallationId)") {
@@ -109,7 +109,8 @@ object InMemoryInstallationRepositorySpec extends ZIOSpecDefault:
           page.items.size == 1,
           page.total == 2L,
           full.items.size == 2,
-          full.items.map(_.ghInstallationId) == List(ghId1, ghId2)
+          // UUID primary keys: listing order is stable but not insertion order, so assert membership.
+          full.items.map(_.ghInstallationId).toSet == Set(ghId1, ghId2)
         )
       },
       test("deleteByGhInstallationId returns true when row existed, false when absent") {

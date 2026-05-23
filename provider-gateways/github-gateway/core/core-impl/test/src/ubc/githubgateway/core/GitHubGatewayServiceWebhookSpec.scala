@@ -10,6 +10,7 @@ import zio.*
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 object GitHubGatewayServiceWebhookSpec extends ZIOSpecDefault:
 
@@ -18,8 +19,11 @@ object GitHubGatewayServiceWebhookSpec extends ZIOSpecDefault:
 
   private val rawBody: Array[Byte] = """{"action":"any","installation":{"id":7001}}""".getBytes("UTF-8")
 
+  // DeliveryId is a UUID; map a readable label to a stable UUID so test keys stay legible.
+  private def did(label: String): DeliveryId = DeliveryId(UUID.nameUUIDFromBytes(label.getBytes))
+
   private def headers(deliveryId: String, eventType: String, signature: String): WebhookHeaders =
-    WebhookHeaders(DeliveryId(deliveryId), EventType(eventType), signature)
+    WebhookHeaders(did(deliveryId), EventType(eventType), signature)
 
   private val validSig = GitHubGatewayFixtures.signSha256Hex(GitHubGatewayFixtures.webhookSecret, rawBody)
 
@@ -252,7 +256,7 @@ object GitHubGatewayServiceWebhookSpec extends ZIOSpecDefault:
                         rawBody,
                         GithubWebhookEvent.Unhandled(EventType("ping"), None)
                       )
-          stored   <- fakeLog.peek(DeliveryId("d-log"))
+          stored   <- fakeLog.peek(did("d-log"))
         yield assertTrue(
           out == WebhookOutcome.Ignored,
           stored.exists(_.outcome == WebhookOutcome.Ignored)

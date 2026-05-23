@@ -10,11 +10,15 @@ import zio.*
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 /** Integration tests for [[MagnumPendingLinkFlowRepository]] against a real PostgreSQL. */
 object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
 
   private val migrationLocation = "classpath:db/migration"
+
+  // LinkState is a UUID; map a readable label to a stable UUID so test keys stay legible.
+  private def ls(label: String): LinkState = LinkState(UUID.nameUUIDFromBytes(label.getBytes))
 
   private val truncate: URIO[TransactorZIO, Unit] =
     ZIO.serviceWithZIO[TransactorZIO](
@@ -26,7 +30,7 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
       expiresAt: Instant = Instant.parse("2025-01-01T00:10:00Z")
   ): PendingLinkFlow =
     PendingLinkFlow(
-      state     = LinkState(state),
+      state     = ls(state),
       createdAt = Instant.parse("2025-01-01T00:00:00Z"),
       expiresAt = expiresAt
     )
@@ -39,7 +43,7 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
         for
           repo  <- ZIO.service[PendingLinkFlowRepository]
           _     <- repo.insert(original)
-          found <- repo.findByState(LinkState("state-1"))
+          found <- repo.findByState(ls("state-1"))
         yield assertTrue(
           found.isDefined,
           found.get.state     == original.state,
@@ -51,7 +55,7 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
       test("findByState returns None for an unknown state") {
         for
           repo   <- ZIO.service[PendingLinkFlowRepository]
-          result <- repo.findByState(LinkState("nope"))
+          result <- repo.findByState(ls("nope"))
         yield assertTrue(result.isEmpty)
       },
 
@@ -59,15 +63,15 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
         for
           repo    <- ZIO.service[PendingLinkFlowRepository]
           _       <- repo.insert(flow("state-1"))
-          deleted <- repo.deleteByState(LinkState("state-1"))
-          after   <- repo.findByState(LinkState("state-1"))
+          deleted <- repo.deleteByState(ls("state-1"))
+          after   <- repo.findByState(ls("state-1"))
         yield assertTrue(deleted, after.isEmpty)
       },
 
       test("deleteByState returns false on miss") {
         for
           repo    <- ZIO.service[PendingLinkFlowRepository]
-          deleted <- repo.deleteByState(LinkState("nothing-here"))
+          deleted <- repo.deleteByState(ls("nothing-here"))
         yield assertTrue(!deleted)
       },
 
@@ -78,8 +82,8 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
           _     <- repo.insert(flow("at-cutoff", expiresAt = cutoff))
           _     <- repo.insert(flow("future",   expiresAt = cutoff.plusSeconds(60)))
           n     <- repo.deleteExpired(cutoff)
-          atRow <- repo.findByState(LinkState("at-cutoff"))
-          future <- repo.findByState(LinkState("future"))
+          atRow <- repo.findByState(ls("at-cutoff"))
+          future <- repo.findByState(ls("future"))
         yield assertTrue(
           n            == 1, // only the at-cutoff row was swept
           atRow.isEmpty,
@@ -105,7 +109,7 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
           _    <- repo.insert(flow("e3", expiresAt = Instant.parse("2025-03-01T00:00:00Z")))
           _    <- repo.insert(flow("future", expiresAt = Instant.parse("2099-01-01T00:00:00Z")))
           n    <- repo.deleteExpired(cutoff)
-          futureRow <- repo.findByState(LinkState("future"))
+          futureRow <- repo.findByState(ls("future"))
         yield assertTrue(n == 3, futureRow.isDefined)
       }
 

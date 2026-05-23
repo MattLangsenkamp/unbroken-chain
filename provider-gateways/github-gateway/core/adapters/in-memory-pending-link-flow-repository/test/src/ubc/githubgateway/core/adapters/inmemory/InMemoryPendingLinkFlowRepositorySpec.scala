@@ -7,12 +7,16 @@ import zio.*
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 object InMemoryPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
 
+  // LinkState is a UUID; map a readable label to a stable UUID so test keys stay legible.
+  private def ls(label: String): LinkState = LinkState(UUID.nameUUIDFromBytes(label.getBytes))
+
   private def flow(state: String, expiresAt: Instant): PendingLinkFlow =
     PendingLinkFlow(
-      state     = LinkState(state),
+      state     = ls(state),
       createdAt = Instant.parse("2026-04-25T12:00:00Z"),
       expiresAt = expiresAt
     )
@@ -24,13 +28,13 @@ object InMemoryPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
           repo <- ZIO.service[PendingLinkFlowRepository]
           f    = flow("nonce-1", Instant.parse("2026-04-25T12:10:00Z"))
           _    <- repo.insert(f)
-          got  <- repo.findByState(LinkState("nonce-1"))
+          got  <- repo.findByState(ls("nonce-1"))
         yield assertTrue(got.contains(f))
       },
       test("findByState returns None for unknown state") {
         for
           repo <- ZIO.service[PendingLinkFlowRepository]
-          got  <- repo.findByState(LinkState("does-not-exist"))
+          got  <- repo.findByState(ls("does-not-exist"))
         yield assertTrue(got.isEmpty)
       },
       test("deleteByState returns true when present, false when absent") {
@@ -38,8 +42,8 @@ object InMemoryPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
           repo <- ZIO.service[PendingLinkFlowRepository]
           f    = flow("to-delete", Instant.parse("2026-04-25T12:10:00Z"))
           _    <- repo.insert(f)
-          first <- repo.deleteByState(LinkState("to-delete"))
-          again <- repo.deleteByState(LinkState("to-delete"))
+          first <- repo.deleteByState(ls("to-delete"))
+          again <- repo.deleteByState(ls("to-delete"))
         yield assertTrue(first, !again)
       },
       test("deleteExpired removes only rows whose expiresAt <= now") {
@@ -52,9 +56,9 @@ object InMemoryPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
           _   <- repo.insert(edge)
           _   <- repo.insert(future)
           n   <- repo.deleteExpired(Instant.parse("2026-04-25T12:00:00Z"))
-          ps  <- repo.findByState(LinkState("past"))
-          es  <- repo.findByState(LinkState("edge"))
-          fs  <- repo.findByState(LinkState("future"))
+          ps  <- repo.findByState(ls("past"))
+          es  <- repo.findByState(ls("edge"))
+          fs  <- repo.findByState(ls("future"))
         yield assertTrue(
           n == 2,
           ps.isEmpty,

@@ -10,40 +10,40 @@ object DomainGeneratorsSpec extends ZIOSpecDefault:
   override def spec =
     suite("DomainGeneratorsSpec")(
       test("Long-backed id newtypes round-trip through unwrap") {
-        check(installationId, ghInstallationId, accountId) { (a, b, c) =>
+        check(ghInstallationId, accountId, ghRepositoryId, appId) { (a, b, c, d) =>
+          assertTrue(
+            GhInstallationId(a.unwrap) == a,
+            AccountId(b.unwrap) == b,
+            GhRepositoryId(c.unwrap) == c,
+            AppId(d.unwrap) == d
+          )
+        }
+      },
+      test("UUID-backed id newtypes round-trip through unwrap") {
+        check(installationId, repositoryId, linkState, deliveryId) { (a, b, c, d) =>
           assertTrue(
             InstallationId(a.unwrap) == a,
-            GhInstallationId(b.unwrap) == b,
-            AccountId(c.unwrap) == c
-          )
-        }
-      },
-      test("remaining Long-backed id newtypes round-trip through unwrap") {
-        check(repositoryId, ghRepositoryId, appId) { (a, b, c) =>
-          assertTrue(
-            RepositoryId(a.unwrap) == a,
-            GhRepositoryId(b.unwrap) == b,
-            AppId(c.unwrap) == c
-          )
-        }
-      },
-      test("String-backed newtypes round-trip through unwrap") {
-        check(accountLogin, repoFullName, linkState, deliveryId) { (a, b, c, d) =>
-          assertTrue(
-            AccountLogin(a.unwrap) == a,
-            RepoFullName(b.unwrap) == b,
+            RepositoryId(b.unwrap) == b,
             LinkState(c.unwrap) == c,
             DeliveryId(d.unwrap) == d
           )
         }
       },
-      test("remaining String-backed newtypes round-trip through unwrap") {
-        check(eventType, eventAction, installUrl, appSlug) { (a, b, c, d) =>
+      test("String-backed newtypes round-trip through unwrap") {
+        check(accountLogin, repoFullName, eventType, eventAction) { (a, b, c, d) =>
           assertTrue(
-            EventType(a.unwrap) == a,
-            EventAction(b.unwrap) == b,
-            InstallUrl(c.unwrap) == c,
-            AppSlug(d.unwrap) == d
+            AccountLogin(a.unwrap) == a,
+            RepoFullName(b.unwrap) == b,
+            EventType(c.unwrap) == c,
+            EventAction(d.unwrap) == d
+          )
+        }
+      },
+      test("remaining String-backed newtypes round-trip through unwrap") {
+        check(installUrl, appSlug) { (a, b) =>
+          assertTrue(
+            InstallUrl(a.unwrap) == a,
+            AppSlug(b.unwrap) == b
           )
         }
       },

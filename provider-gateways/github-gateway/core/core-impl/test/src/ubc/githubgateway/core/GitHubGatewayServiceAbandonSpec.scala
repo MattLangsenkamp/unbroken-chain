@@ -7,6 +7,8 @@ import ubc.githubgateway.domain.LinkState
 import zio.*
 import zio.test.*
 
+import java.util.UUID
+
 object GitHubGatewayServiceAbandonSpec extends ZIOSpecDefault:
 
   override def spec =
@@ -24,7 +26,7 @@ object GitHubGatewayServiceAbandonSpec extends ZIOSpecDefault:
         for
           svc <- ZIO.service[GitHubGatewayService]
           // No initiate() call → no pending row to find → must not error
-          _   <- svc.abandon(LinkState("never-existed"))
+          _   <- svc.abandon(LinkState(UUID.randomUUID()))
         yield assertTrue(true)
       }
     ).provide(

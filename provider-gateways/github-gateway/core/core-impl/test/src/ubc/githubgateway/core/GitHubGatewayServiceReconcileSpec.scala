@@ -44,7 +44,7 @@ object GitHubGatewayServiceReconcileSpec extends ZIOSpecDefault:
           // Seed GitHub-side: the same installation but a different repo set
           _ <- ghClient.seedInstallation(
                  Installation(
-                   id               = InstallationId(0L),
+                   id               = UnpersistedInstallationId,
                    ghInstallationId = ghId,
                    accountLogin     = AccountLogin("octocat"),
                    accountId        = AccountId(99L),

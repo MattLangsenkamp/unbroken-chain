@@ -38,7 +38,8 @@ object GitHubGatewayServiceListSpec extends ZIOSpecDefault:
           first.items.size == 1,
           first.total == 2L,
           full.items.size == 2,
-          full.items.map(_.ghInstallationId) == List(gh1, gh2)
+          // UUID PKs: listing order is stable but not insertion order, so assert membership.
+          full.items.map(_.ghInstallationId).toSet == Set(gh1, gh2)
         )
       },
       test("listInstallationRepos returns repos for a known installation") {

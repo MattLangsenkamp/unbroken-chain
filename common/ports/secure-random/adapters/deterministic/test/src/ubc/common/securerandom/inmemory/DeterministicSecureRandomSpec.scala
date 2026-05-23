@@ -3,6 +3,7 @@ package ubc.common.securerandom.inmemory
 import ubc.common.securerandom.SecureRandom
 import zio.*
 import zio.test.*
+import java.util.UUID
 
 object DeterministicSecureRandomSpec extends ZIOSpecDefault:
 
@@ -20,5 +21,15 @@ object DeterministicSecureRandomSpec extends ZIOSpecDefault:
           a   <- rng.urlSafeRandomString(32)
           b   <- rng.urlSafeRandomString(32)
         yield assertTrue(a != b)
+      },
+      test("nextUuid is deterministic from the shared counter (n-th call → UUID(0, n))") {
+        for
+          rng <- ZIO.service[SecureRandom]
+          a   <- rng.nextUuid
+          b   <- rng.nextUuid
+        yield assertTrue(
+          a == new UUID(0L, 1L),
+          b == new UUID(0L, 2L)
+        )
       }
     ).provide(DeterministicSecureRandom.layer)

@@ -13,15 +13,15 @@ object DomainGenerators:
 
   // --- Leaf newtypes ---------------------------------------------------------------------
 
-  given DeriveGen[InstallationId]   = DeriveGen.instance(Gen.long.map(InstallationId(_)))
+  given DeriveGen[InstallationId]   = DeriveGen.instance(Gen.uuid.map(InstallationId(_)))
   given DeriveGen[GhInstallationId] = DeriveGen.instance(Gen.long.map(GhInstallationId(_)))
   given DeriveGen[AccountLogin]     = DeriveGen.instance(Gen.string.map(AccountLogin(_)))
   given DeriveGen[AccountId]        = DeriveGen.instance(Gen.long.map(AccountId(_)))
-  given DeriveGen[RepositoryId]     = DeriveGen.instance(Gen.long.map(RepositoryId(_)))
+  given DeriveGen[RepositoryId]     = DeriveGen.instance(Gen.uuid.map(RepositoryId(_)))
   given DeriveGen[GhRepositoryId]   = DeriveGen.instance(Gen.long.map(GhRepositoryId(_)))
   given DeriveGen[RepoFullName]     = DeriveGen.instance(Gen.string.map(RepoFullName(_)))
-  given DeriveGen[LinkState]        = DeriveGen.instance(Gen.string.map(LinkState(_)))
-  given DeriveGen[DeliveryId]       = DeriveGen.instance(Gen.string.map(DeliveryId(_)))
+  given DeriveGen[LinkState]        = DeriveGen.instance(Gen.uuid.map(LinkState(_)))
+  given DeriveGen[DeliveryId]       = DeriveGen.instance(Gen.uuid.map(DeliveryId(_)))
   given DeriveGen[EventType]        = DeriveGen.instance(Gen.string.map(EventType(_)))
   given DeriveGen[EventAction]      = DeriveGen.instance(Gen.string.map(EventAction(_)))
   given DeriveGen[InstallUrl]       = DeriveGen.instance(Gen.string.map(InstallUrl(_)))

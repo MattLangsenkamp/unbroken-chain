@@ -9,6 +9,8 @@ import com.augustnagro.magnum.*
 import com.augustnagro.magnum.magzio.*
 import zio.*
 
+import java.util.UUID
+
 private given DbCodec[LinkedRepo] = DbCodec.derived[LinkedRepo]
 
 class MagnumLinkedRepoRepository(xa: TransactorZIO) extends LinkedRepoRepository:
@@ -19,9 +21,10 @@ class MagnumLinkedRepoRepository(xa: TransactorZIO) extends LinkedRepoRepository
       fullName: RepoFullName
   ): Task[LinkedRepo] =
     xa.transact {
+      val id = RepositoryId(UUID.randomUUID())
       sql"""
-        INSERT INTO linked_repo (installation_id, gh_repository_id, full_name)
-        VALUES ($installationId, $ghRepositoryId, $fullName)
+        INSERT INTO linked_repo (id, installation_id, gh_repository_id, full_name)
+        VALUES ($id, $installationId, $ghRepositoryId, $fullName)
         RETURNING id, installation_id, gh_repository_id, full_name
       """.returning[LinkedRepo].run().head
     }
@@ -59,8 +62,9 @@ class MagnumLinkedRepoRepository(xa: TransactorZIO) extends LinkedRepoRepository
       }
       // Apply inserts
       toInsert.foreach { case (ghId, name) =>
-        sql"""INSERT INTO linked_repo (installation_id, gh_repository_id, full_name)
-              VALUES ($installationId, $ghId, $name)""".update.run()
+        val id = RepositoryId(UUID.randomUUID())
+        sql"""INSERT INTO linked_repo (id, installation_id, gh_repository_id, full_name)
+              VALUES ($id, $installationId, $ghId, $name)""".update.run()
       }
 
       ReconcileSummary(
@@ -122,8 +126,9 @@ class MagnumLinkedRepoRepository(xa: TransactorZIO) extends LinkedRepoRepository
     else
       xa.transact {
         repos.foreach { case (ghId, name) =>
-          sql"""INSERT INTO linked_repo (installation_id, gh_repository_id, full_name)
-                VALUES ($installationId, $ghId, $name)""".update.run()
+          val id = RepositoryId(UUID.randomUUID())
+          sql"""INSERT INTO linked_repo (id, installation_id, gh_repository_id, full_name)
+                VALUES ($id, $installationId, $ghId, $name)""".update.run()
         }
       }.unit
 

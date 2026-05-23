@@ -4,6 +4,7 @@ import ubc.githubgateway.domain.{DeliveryId, EventType}
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 object WebhookDeliverySpec extends ZIOSpecDefault:
 
@@ -33,14 +34,15 @@ object WebhookDeliverySpec extends ZIOSpecDefault:
       },
       test("WebhookDelivery records id, event, receipt time, and outcome") {
         val receivedAt = Instant.parse("2026-04-25T12:00:00Z")
+        val deliveryId = DeliveryId(UUID.fromString("72d3162e-cc78-11e3-81ab-4c9367dc0958"))
         val delivery = WebhookDelivery(
-          deliveryId = DeliveryId("72d3162e-cc78-11e3-81ab-4c9367dc0958"),
+          deliveryId = deliveryId,
           eventType  = EventType("installation"),
           receivedAt = receivedAt,
           outcome    = WebhookOutcome.Processed
         )
         assertTrue(
-          delivery.deliveryId == DeliveryId("72d3162e-cc78-11e3-81ab-4c9367dc0958"),
+          delivery.deliveryId == deliveryId,
           delivery.eventType == EventType("installation"),
           delivery.receivedAt == receivedAt,
           delivery.outcome == WebhookOutcome.Processed

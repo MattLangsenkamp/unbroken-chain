@@ -86,7 +86,7 @@ class SttpFetchGitHubGatewayClient(baseUri: Uri) extends GitHubGatewayApi:
     getUnit(
       uri"$baseUri/links/callback".addParams(
         Map(
-          "state"           -> state.unwrap,
+          "state"           -> state.unwrap.toString,
           "installation_id" -> ghInstallationId.unwrap.toString
         )
       )

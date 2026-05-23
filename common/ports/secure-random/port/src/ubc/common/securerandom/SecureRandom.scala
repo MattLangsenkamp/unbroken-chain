@@ -2,6 +2,8 @@ package ubc.common.securerandom
 
 import zio.UIO
 
+import java.util.UUID
+
 /** Outbound port for cryptographically secure randomness, generic across services.
   *
   * Returns base64url-encoded (no padding) random strings of an arbitrary byte length.
@@ -21,3 +23,10 @@ trait SecureRandom:
     * of 43-128 chars, satisfied by `byteCount = 32..96`).
     */
   def urlSafeRandomString(byteCount: Int): UIO[String]
+
+  /** Generate a cryptographically random version-4 [[UUID]].
+    *
+    * Use for identifiers we own that must be unguessable — nonces (e.g. a link-flow state) or
+    * surrogate keys. Backed by the same CSPRNG as [[urlSafeRandomString]].
+    */
+  def nextUuid: UIO[UUID]

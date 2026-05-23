@@ -7,10 +7,12 @@ import ubc.githubgateway.domain.*
 import zio.*
 import zio.test.*
 
+import java.util.UUID
+
 object InMemoryLinkedRepoRepositorySpec extends ZIOSpecDefault:
 
-  private val instA = InstallationId(1L)
-  private val instB = InstallationId(2L)
+  private val instA = InstallationId(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+  private val instB = InstallationId(UUID.fromString("00000000-0000-0000-0000-000000000002"))
 
   override def spec =
     suite("InMemoryLinkedRepoRepository")(

@@ -12,6 +12,7 @@ import zio.*
 import zio.test.*
 
 import java.time.Instant
+import java.util.UUID
 
 /** Integration tests for [[MagnumLinkedRepoRepository]] against a real PostgreSQL.
   *
@@ -32,9 +33,10 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
   // Seed an installation row and return its assigned local id.
   private def seedInstallation(ghId: Long): URIO[TransactorZIO, InstallationId] =
     ZIO.serviceWithZIO[TransactorZIO](_.transact {
+      val id = InstallationId(UUID.randomUUID())
       sql"""INSERT INTO installation
-              (gh_installation_id, account_login, account_id, account_type, status, installed_at)
-            VALUES ($ghId, ${"someone"}, ${10L}, ${"User"}, ${"Active"}, ${Instant.parse("2025-01-01T00:00:00Z")})
+              (id, gh_installation_id, account_login, account_id, account_type, status, installed_at)
+            VALUES ($id, $ghId, ${"someone"}, ${10L}, ${"User"}, ${"Active"}, ${Instant.parse("2025-01-01T00:00:00Z")})
             RETURNING id""".returning[InstallationId].run().head
     }).orDie
 
@@ -50,7 +52,7 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
           row.installationId == instId,
           row.ghRepositoryId == GhRepositoryId(100L),
           row.fullName       == RepoFullName("octocat/hello-world"),
-          row.id.unwrap      > 0L
+          row.id.unwrap.version == 4 // app-generated random (v4) UUID
         )
       },
 
@@ -143,11 +145,13 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
         yield assertTrue(
           page1.items.size == 1,
           page1.total      == 2L,
-          page1.items.head.ghRepositoryId == GhRepositoryId(100L),
           page2.items.size == 1,
           page2.total      == 2L,
-          page2.items.head.ghRepositoryId == GhRepositoryId(101L),
           page2.nextCursor.isEmpty,
+          // UUID PKs: ORDER BY id is stable but not insertion order, so assert the pages
+          // partition both repos across the two pages.
+          Set(page1.items.head.ghRepositoryId, page2.items.head.ghRepositoryId) ==
+            Set(GhRepositoryId(100L), GhRepositoryId(101L)),
           // Ensure no inst2 row leaked into either page
           (page1.items ++ page2.items).forall(_.installationId == inst1)
         )

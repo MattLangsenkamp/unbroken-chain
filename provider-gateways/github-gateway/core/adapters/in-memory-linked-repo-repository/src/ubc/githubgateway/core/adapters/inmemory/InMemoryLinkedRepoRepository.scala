@@ -6,14 +6,15 @@ import ubc.githubgateway.core.ports.LinkedRepoRepository
 import ubc.githubgateway.domain.*
 import zio.*
 
+import java.util.UUID
+
 /** Ref-backed [[LinkedRepoRepository]] for tests and local dev.
   *
-  * State is two refs: a counter for assigning local row ids, and a map keyed by the local
-  * [[RepositoryId]]. Order of `listByInstallation` / `listAll` matches insertion order
-  * (sorted by local id), so callers can rely on stable iteration in tests.
+  * State is a single map keyed by the local [[RepositoryId]] (a UUID we generate on insert).
+  * `listByInstallation` / `listAll` return a stable order (by id string) — not insertion order,
+  * matching the UUID-keyed Postgres adapter's `ORDER BY id`.
   */
 final class InMemoryLinkedRepoRepository(
-    counter: Ref[Long],
     store: Ref[Map[RepositoryId, LinkedRepo]]
 ) extends LinkedRepoRepository:
 
@@ -22,9 +23,7 @@ final class InMemoryLinkedRepoRepository(
       ghRepositoryId: GhRepositoryId,
       fullName: RepoFullName
   ): UIO[LinkedRepo] =
-    counter.updateAndGet(_ + 1L).map { n =>
-      LinkedRepo(RepositoryId(n), installationId, ghRepositoryId, fullName)
-    }
+    ZIO.succeed(LinkedRepo(RepositoryId(UUID.randomUUID()), installationId, ghRepositoryId, fullName))
 
   def insert(
       installationId: InstallationId,
@@ -74,13 +73,13 @@ final class InMemoryLinkedRepoRepository(
       val owned = current.values
         .filter(_.installationId == installationId)
         .toList
-        .sortBy(_.id.unwrap)
+        .sortBy(_.id.unwrap.toString)
       Page(items = owned.take(page.limit), total = owned.size.toLong, nextCursor = None)
     }
 
   def listAll(page: PageRequest): Task[Page[LinkedRepo]] =
     store.get.map { current =>
-      val ordered = current.values.toList.sortBy(_.id.unwrap)
+      val ordered = current.values.toList.sortBy(_.id.unwrap.toString)
       Page(items = ordered.take(page.limit), total = ordered.size.toLong, nextCursor = None)
     }
 
@@ -113,8 +112,5 @@ final class InMemoryLinkedRepoRepository(
 object InMemoryLinkedRepoRepository:
   val layer: ULayer[LinkedRepoRepository] =
     ZLayer.fromZIO(
-      for
-        counter <- Ref.make(0L)
-        store   <- Ref.make(Map.empty[RepositoryId, LinkedRepo])
-      yield new InMemoryLinkedRepoRepository(counter, store)
+      Ref.make(Map.empty[RepositoryId, LinkedRepo]).map(new InMemoryLinkedRepoRepository(_))
     )
