@@ -34,15 +34,15 @@ object PublicJsonCodecs:
   )
 
   // Case classes
-  given JsonCodec[Installation]      = DeriveJsonCodec.gen
-  given JsonCodec[LinkedRepo]        = DeriveJsonCodec.gen
-  given JsonCodec[LinkInitiation]    = DeriveJsonCodec.gen
-  given JsonCodec[ReconcileSummary]  = DeriveJsonCodec.gen
+  given JsonCodec[Installation]     = DeriveJsonCodec.gen
+  given JsonCodec[LinkedRepo]       = DeriveJsonCodec.gen
+  given JsonCodec[LinkInitiation]   = DeriveJsonCodec.gen
+  given JsonCodec[ReconcileSummary] = DeriveJsonCodec.gen
 
   // Pagination — Page[A] is generic, so derive a codec that picks up an
   // implicit JsonCodec[A] from the call site.
   given pageCodec[A](using JsonCodec[A]): JsonCodec[Page[A]] = DeriveJsonCodec.gen
-  given JsonCodec[PageRequest]       = DeriveJsonCodec.gen
+  given JsonCodec[PageRequest]                               = DeriveJsonCodec.gen
 
   // API error envelope — surfaces stable error codes to clients without leaking
   // domain-private error variants. Wire shape is `{code, message}`; on decode the
@@ -52,5 +52,5 @@ object PublicJsonCodecs:
 
   given JsonCodec[ApiError] = JsonCodec[ApiErrorWire].transformOrFail(
     wire => ApiError.fromWire(wire.code, wire.message),
-    e    => ApiErrorWire(e.code, e.message)
+    e => ApiErrorWire(e.code, e.message)
   )

@@ -9,8 +9,7 @@ import java.time.Instant
   *   - [[Processed]] — verified, parsed, and the resulting state change was applied.
   *   - [[Ignored]] — accepted but intentionally not acted on (e.g. unknown event type).
   *   - [[Duplicate]] — same `deliveryId` was already recorded; second receipt was a no-op.
-  *   - [[Failed]] — accepted (signature OK) but processing threw; will be retried via
-  *     GitHub's redelivery mechanism.
+  *   - [[Failed]] — accepted (signature OK) but processing threw; will be retried via GitHub's redelivery mechanism.
   */
 enum WebhookOutcome:
   case Processed
@@ -18,8 +17,8 @@ enum WebhookOutcome:
   case Duplicate
   case Failed
 
-/** A single webhook delivery record — used both for replay protection (via [[deliveryId]])
-  * and for after-the-fact debugging.
+/** A single webhook delivery record — used both for replay protection (via [[deliveryId]]) and for after-the-fact
+  * debugging.
   *
   * @param deliveryId
   *   value of `X-GitHub-Delivery` (UUID)

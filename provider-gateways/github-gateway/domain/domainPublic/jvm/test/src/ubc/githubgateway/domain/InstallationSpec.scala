@@ -14,14 +14,14 @@ object InstallationSpec extends ZIOSpecDefault:
     suite("InstallationSpec")(
       test("Installation holds local id, GitHub installation id, account info, status, and timestamp") {
         val installedAt = Instant.parse("2026-04-25T12:00:00Z")
-        val inst = Installation(
-          id               = instId,
+        val inst        = Installation(
+          id = instId,
           ghInstallationId = GhInstallationId(987654L),
-          accountLogin     = AccountLogin("octocat"),
-          accountId        = AccountId(42L),
-          accountType      = AccountType.User,
-          status           = InstallationStatus.Active,
-          installedAt      = installedAt
+          accountLogin = AccountLogin("octocat"),
+          accountId = AccountId(42L),
+          accountType = AccountType.User,
+          status = InstallationStatus.Active,
+          installedAt = installedAt
         )
         assertTrue(
           inst.id == instId,
@@ -35,13 +35,13 @@ object InstallationSpec extends ZIOSpecDefault:
       },
       test("Installation supports copy for status changes") {
         val original = Installation(
-          id               = instId,
+          id = instId,
           ghInstallationId = GhInstallationId(987654L),
-          accountLogin     = AccountLogin("octocat"),
-          accountId        = AccountId(42L),
-          accountType      = AccountType.Organization,
-          status           = InstallationStatus.Active,
-          installedAt      = Instant.parse("2026-04-25T12:00:00Z")
+          accountLogin = AccountLogin("octocat"),
+          accountId = AccountId(42L),
+          accountType = AccountType.Organization,
+          status = InstallationStatus.Active,
+          installedAt = Instant.parse("2026-04-25T12:00:00Z")
         )
         val suspended = original.copy(status = InstallationStatus.Suspended)
         assertTrue(
@@ -52,10 +52,10 @@ object InstallationSpec extends ZIOSpecDefault:
       },
       test("LinkedRepo holds local id, parent installation id, GitHub repo id, and full name") {
         val repo = LinkedRepo(
-          id              = repoId,
-          installationId  = instId,
-          ghRepositoryId  = GhRepositoryId(555L),
-          fullName        = RepoFullName("octocat/hello-world")
+          id = repoId,
+          installationId = instId,
+          ghRepositoryId = GhRepositoryId(555L),
+          fullName = RepoFullName("octocat/hello-world")
         )
         assertTrue(
           repo.id == repoId,

@@ -13,12 +13,11 @@ import zio.json.*
 
 /** Scala.js HTTP client for the GitHub Gateway, implementing [[GitHubGatewayApi]].
   *
-  * No Tapir on the JS side — Tapir's `Schema` derivations don't all work on Scala.js.
-  * Plain sttp + `FetchZioBackend` (browser Fetch API) + zio-json decoding instead.
+  * No Tapir on the JS side — Tapir's `Schema` derivations don't all work on Scala.js. Plain sttp + `FetchZioBackend`
+  * (browser Fetch API) + zio-json decoding instead.
   *
-  * Routes here mirror those defined on the server controller exactly. The shape of the
-  * response bodies is exercised end-to-end by the controller spec's JSON assertions, so
-  * we don't keep a separate Scala.js test suite for this class.
+  * Routes here mirror those defined on the server controller exactly. The shape of the response bodies is exercised
+  * end-to-end by the controller spec's JSON assertions, so we don't keep a separate Scala.js test suite for this class.
   */
 class SttpFetchGitHubGatewayClient(baseUri: Uri) extends GitHubGatewayApi:
 
@@ -119,11 +118,10 @@ class SttpFetchGitHubGatewayClient(baseUri: Uri) extends GitHubGatewayApi:
   def health(): Task[Unit] =
     getUnit(uri"$baseUri/health")
 
-
 object SttpFetchGitHubGatewayClient:
 
-  /** Build a client from a base URL string. Tyrian instantiates this synchronously at
-    * SPA init time — no ZLayer needed in the JS world.
+  /** Build a client from a base URL string. Tyrian instantiates this synchronously at SPA init time — no ZLayer needed
+    * in the JS world.
     */
   def apply(baseUrl: String): SttpFetchGitHubGatewayClient =
     new SttpFetchGitHubGatewayClient(Uri.unsafeParse(baseUrl))

@@ -17,13 +17,13 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
   private val ghInstallationId = GhInstallationId(2001L)
 
   private val seededInstallation = Installation(
-    id               = UnpersistedInstallationId,
+    id = UnpersistedInstallationId,
     ghInstallationId = ghInstallationId,
-    accountLogin     = AccountLogin("octocat"),
-    accountId        = AccountId(99L),
-    accountType      = AccountType.User,
-    status           = InstallationStatus.Active,
-    installedAt      = Instant.parse("2026-04-25T11:00:00Z")
+    accountLogin = AccountLogin("octocat"),
+    accountId = AccountId(99L),
+    accountType = AccountType.User,
+    status = InstallationStatus.Active,
+    installedAt = Instant.parse("2026-04-25T11:00:00Z")
   )
 
   private val seededRepos: List[(GhRepositoryId, RepoFullName)] =
@@ -36,21 +36,21 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
     suite("GitHubGatewayService.callback")(
       test("happy path: existing pending flow → installation upserted, repo set replaced, flow row deleted") {
         for
-          svc          <- ZIO.service[GitHubGatewayService]
-          ghClient     <- ZIO.service[InMemoryGitHubAppClient]
-          _            <- ghClient.seedInstallation(seededInstallation)
-          _            <- ghClient.seedRepos(ghInstallationId, seededRepos)
+          svc      <- ZIO.service[GitHubGatewayService]
+          ghClient <- ZIO.service[InMemoryGitHubAppClient]
+          _        <- ghClient.seedInstallation(seededInstallation)
+          _        <- ghClient.seedRepos(ghInstallationId, seededRepos)
 
-          init         <- svc.initiate()
-          _            <- svc.callback(init.state, ghInstallationId)
+          init <- svc.initiate()
+          _    <- svc.callback(init.state, ghInstallationId)
 
-          installRepo  <- ZIO.service[InstallationRepository]
-          repoRepo     <- ZIO.service[LinkedRepoRepository]
-          pendingRepo  <- ZIO.service[PendingLinkFlowRepository]
+          installRepo <- ZIO.service[InstallationRepository]
+          repoRepo    <- ZIO.service[LinkedRepoRepository]
+          pendingRepo <- ZIO.service[PendingLinkFlowRepository]
 
-          stored       <- installRepo.findByGhInstallationId(ghInstallationId)
-          repos        <- repoRepo.listAll(PageRequest.default(50))
-          pending      <- pendingRepo.findByState(init.state)
+          stored  <- installRepo.findByGhInstallationId(ghInstallationId)
+          repos   <- repoRepo.listAll(PageRequest.default(50))
+          pending <- pendingRepo.findByState(init.state)
         yield assertTrue(
           stored.isDefined,
           stored.exists(_.accountLogin == AccountLogin("octocat")),
@@ -67,8 +67,8 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
       },
       test("expired state → LinkError.StateExpired AND the pending row is still deleted") {
         for
-          svc         <- ZIO.service[GitHubGatewayService]
-          init        <- svc.initiate()
+          svc  <- ZIO.service[GitHubGatewayService]
+          init <- svc.initiate()
           // Time-travel past the TTL
           _           <- TestClock.adjust(GitHubGatewayFixtures.pendingTtl.plus(Duration.fromSeconds(1)))
           err         <- svc.callback(init.state, ghInstallationId).flip
@@ -81,7 +81,7 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
       },
       test("GitHub failure on getInstallation → LinkError.GitHubFailure, AND the pending row is still deleted") {
         for
-          svc         <- ZIO.service[GitHubGatewayService]
+          svc <- ZIO.service[GitHubGatewayService]
           // No seeding → InMemoryGitHubAppClient.getInstallation will fail
           init        <- svc.initiate()
           err         <- svc.callback(init.state, ghInstallationId).flip
@@ -94,23 +94,23 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
       },
       test("re-link of an already-linked installation is idempotent: same row, repo set replaced") {
         for
-          svc        <- ZIO.service[GitHubGatewayService]
-          ghClient   <- ZIO.service[InMemoryGitHubAppClient]
+          svc      <- ZIO.service[GitHubGatewayService]
+          ghClient <- ZIO.service[InMemoryGitHubAppClient]
           // First link with two repos
-          _          <- ghClient.seedInstallation(seededInstallation)
-          _          <- ghClient.seedRepos(ghInstallationId, seededRepos)
-          init1      <- svc.initiate()
-          _          <- svc.callback(init1.state, ghInstallationId)
+          _     <- ghClient.seedInstallation(seededInstallation)
+          _     <- ghClient.seedRepos(ghInstallationId, seededRepos)
+          init1 <- svc.initiate()
+          _     <- svc.callback(init1.state, ghInstallationId)
 
           installRepo <- ZIO.service[InstallationRepository]
           firstStored <- installRepo.findByGhInstallationId(ghInstallationId)
-          firstId      = firstStored.get.id
+          firstId = firstStored.get.id
 
           // Second link with a single repo replacing the prior set
-          newRepos    = List(GhRepositoryId(21L) -> RepoFullName("octocat/forked-repo"))
-          _          <- ghClient.seedRepos(ghInstallationId, newRepos)
-          init2      <- svc.initiate()
-          _          <- svc.callback(init2.state, ghInstallationId)
+          newRepos = List(GhRepositoryId(21L) -> RepoFullName("octocat/forked-repo"))
+          _     <- ghClient.seedRepos(ghInstallationId, newRepos)
+          init2 <- svc.initiate()
+          _     <- svc.callback(init2.state, ghInstallationId)
 
           secondStored <- installRepo.findByGhInstallationId(ghInstallationId)
           repoRepo     <- ZIO.service[LinkedRepoRepository]
@@ -125,12 +125,12 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
       test("two concurrent flows complete independently") {
         // Two distinct installations linked in parallel — each round-trips through its own
         // state nonce and the in-memory adapters end up with both installations + repo sets.
-        val gh1 = GhInstallationId(3001L)
-        val gh2 = GhInstallationId(3002L)
+        val gh1   = GhInstallationId(3001L)
+        val gh2   = GhInstallationId(3002L)
         val inst1 = seededInstallation.copy(ghInstallationId = gh1, accountLogin = AccountLogin("a"))
         val inst2 = seededInstallation.copy(ghInstallationId = gh2, accountLogin = AccountLogin("b"))
-        val r1 = List(GhRepositoryId(101L) -> RepoFullName("a/r1"))
-        val r2 = List(GhRepositoryId(201L) -> RepoFullName("b/r1"))
+        val r1    = List(GhRepositoryId(101L) -> RepoFullName("a/r1"))
+        val r2    = List(GhRepositoryId(201L) -> RepoFullName("b/r1"))
         for
           svc      <- ZIO.service[GitHubGatewayService]
           ghClient <- ZIO.service[InMemoryGitHubAppClient]
@@ -140,12 +140,12 @@ object GitHubGatewayServiceCallbackSpec extends ZIOSpecDefault:
           _        <- ghClient.seedRepos(gh2, r2)
           init1    <- svc.initiate()
           init2    <- svc.initiate()
-          _        <- ZIO.foreachPar(List((init1.state, gh1), (init2.state, gh2))) {
-                        case (state, gh) => svc.callback(state, gh)
-                      }
+          _        <- ZIO.foreachPar(List((init1.state, gh1), (init2.state, gh2))) { case (state, gh) =>
+            svc.callback(state, gh)
+          }
           installRepo <- ZIO.service[InstallationRepository]
-          a <- installRepo.findByGhInstallationId(gh1)
-          b <- installRepo.findByGhInstallationId(gh2)
+          a           <- installRepo.findByGhInstallationId(gh1)
+          b           <- installRepo.findByGhInstallationId(gh2)
         yield assertTrue(
           a.exists(_.accountLogin == AccountLogin("a")),
           b.exists(_.accountLogin == AccountLogin("b"))

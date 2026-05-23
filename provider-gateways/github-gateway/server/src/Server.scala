@@ -19,12 +19,10 @@ import zio.http.{Response, Routes, Server as ZioServer}
 
 /** Bootstrap for the github-gateway service.
   *
-  * Wiring only — every layer constructor lives on its own companion (config in
-  * `GitHubGatewayConfig.layer`, sweeper in `GitHubGatewayService.sweeperLayer`, etc.). This
-  * file just lists which adapters get wired and runs the program.
+  * Wiring only — every layer constructor lives on its own companion (config in `GitHubGatewayConfig.layer`, sweeper in
+  * `GitHubGatewayService.sweeperLayer`, etc.). This file just lists which adapters get wired and runs the program.
   *
-  * Configuration is sourced from environment variables via
-  * `ConfigProvider.envProvider.snakeCase`.
+  * Configuration is sourced from environment variables via `ConfigProvider.envProvider.snakeCase`.
   */
 object Server extends ZIOAppDefault:
 

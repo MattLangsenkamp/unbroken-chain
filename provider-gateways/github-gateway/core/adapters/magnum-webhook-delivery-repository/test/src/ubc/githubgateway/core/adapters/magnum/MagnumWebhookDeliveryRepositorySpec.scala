@@ -29,27 +29,33 @@ object MagnumWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
   private given DbCodec[WebhookDelivery] = DbCodec.derived[WebhookDelivery]
 
   private val truncate: URIO[TransactorZIO, Unit] =
-    ZIO.serviceWithZIO[TransactorZIO](
-      _.transact { sql"TRUNCATE TABLE webhook_delivery".update.run() }
-    ).unit.orDie
+    ZIO
+      .serviceWithZIO[TransactorZIO](
+        _.transact { sql"TRUNCATE TABLE webhook_delivery".update.run() }
+      )
+      .unit
+      .orDie
 
   private def peek(deliveryId: DeliveryId): URIO[TransactorZIO, Option[WebhookDelivery]] =
-    ZIO.serviceWithZIO[TransactorZIO](_.connect {
-      sql"""SELECT delivery_id, event_type, received_at, outcome
+    ZIO
+      .serviceWithZIO[TransactorZIO](_.connect {
+        sql"""SELECT delivery_id, event_type, received_at, outcome
             FROM webhook_delivery WHERE delivery_id = $deliveryId"""
-        .query[WebhookDelivery].run().headOption
-    }).orDie
+          .query[WebhookDelivery]
+          .run()
+          .headOption
+      })
+      .orDie
 
   private val delivery1 = WebhookDelivery(
     deliveryId = did("uuid-1"),
-    eventType  = EventType("installation"),
+    eventType = EventType("installation"),
     receivedAt = Instant.parse("2025-01-01T00:00:00Z"),
-    outcome    = WebhookOutcome.Processed
+    outcome = WebhookOutcome.Processed
   )
 
   override def spec =
     (suite("MagnumWebhookDeliveryRepositorySpec")(
-
       test("recordIfAbsent first call returns true and inserts the row") {
         for
           repo     <- ZIO.service[WebhookDeliveryRepository]
@@ -64,15 +70,15 @@ object MagnumWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
 
       test("recordIfAbsent second call with same id returns false; original row unchanged") {
         val collision = delivery1.copy(
-          eventType  = EventType("installation_repositories"),
+          eventType = EventType("installation_repositories"),
           receivedAt = Instant.parse("2099-01-01T00:00:00Z"),
-          outcome    = WebhookOutcome.Failed
+          outcome = WebhookOutcome.Failed
         )
         for
-          repo     <- ZIO.service[WebhookDeliveryRepository]
-          first    <- repo.recordIfAbsent(delivery1)
-          second   <- repo.recordIfAbsent(collision)
-          row      <- peek(delivery1.deliveryId)
+          repo   <- ZIO.service[WebhookDeliveryRepository]
+          first  <- repo.recordIfAbsent(delivery1)
+          second <- repo.recordIfAbsent(collision)
+          row    <- peek(delivery1.deliveryId)
         yield assertTrue(
           first,
           !second,
@@ -82,10 +88,10 @@ object MagnumWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
 
       test("updateOutcome rewrites the outcome of an existing row") {
         for
-          repo  <- ZIO.service[WebhookDeliveryRepository]
-          _     <- repo.recordIfAbsent(delivery1)
-          _     <- repo.updateOutcome(delivery1.deliveryId, WebhookOutcome.Failed)
-          row   <- peek(delivery1.deliveryId)
+          repo <- ZIO.service[WebhookDeliveryRepository]
+          _    <- repo.recordIfAbsent(delivery1)
+          _    <- repo.updateOutcome(delivery1.deliveryId, WebhookOutcome.Failed)
+          row  <- peek(delivery1.deliveryId)
         yield assertTrue(row.get.outcome == WebhookOutcome.Failed)
       },
 
@@ -96,7 +102,6 @@ object MagnumWebhookDeliveryRepositorySpec extends ZIOSpecDefault:
           row  <- peek(did("missing"))
         yield assertTrue(row.isEmpty)
       }
-
     ) @@ TestAspect.before(truncate) @@ TestAspect.sequential)
       .provideShared(
         TestDatabase.suiteLayer(migrationLocation),

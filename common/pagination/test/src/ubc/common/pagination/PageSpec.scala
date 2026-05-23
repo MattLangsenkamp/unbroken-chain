@@ -8,8 +8,8 @@ object PageSpec extends ZIOSpecDefault:
     suite("PageSpec")(
       test("constructs a non-empty page with items, total, and a next cursor") {
         val page = Page[String](
-          items      = List("a", "b", "c"),
-          total      = 42L,
+          items = List("a", "b", "c"),
+          total = 42L,
           nextCursor = Some("opaque-cursor")
         )
         assertTrue(
@@ -29,8 +29,8 @@ object PageSpec extends ZIOSpecDefault:
       test("Page is generic over the item type") {
         case class Item(id: Long)
         val page = Page[Item](
-          items      = List(Item(1L), Item(2L)),
-          total      = 2L,
+          items = List(Item(1L), Item(2L)),
+          total = 2L,
           nextCursor = None
         )
         assertTrue(page.items.size == 2, page.total == 2L)

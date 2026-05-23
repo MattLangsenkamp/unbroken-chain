@@ -7,19 +7,19 @@ import zio.*
 
 /** In-memory fake of GitHub's REST API for the App.
   *
-  * Used by core service tests that need a deterministic, in-process backend — never in
-  * production. State lives in two refs:
+  * Used by core service tests that need a deterministic, in-process backend — never in production. State lives in two
+  * refs:
   *   - `installations` keyed by [[GhInstallationId]]
-  *   - `repos`         keyed by [[GhInstallationId]]
+  *   - `repos` keyed by [[GhInstallationId]]
   *
-  * Tests seed state via the public `seedInstallation` / `seedRepos` methods, which are NOT
-  * part of the [[GitHubAppClient]] port. The companion's `layer` exposes both the port AND
-  * the concrete class so tests can `ZIO.serviceWith[InMemoryGitHubAppClient]` to seed and
-  * `ZIO.serviceWith[GitHubAppClient]` to exercise the port surface.
+  * Tests seed state via the public `seedInstallation` / `seedRepos` methods, which are NOT part of the
+  * [[GitHubAppClient]] port. The companion's `layer` exposes both the port AND the concrete class so tests can
+  * `ZIO.serviceWith[InMemoryGitHubAppClient]` to seed and `ZIO.serviceWith[GitHubAppClient]` to exercise the port
+  * surface.
   *
-  * Choice for `deleteInstallation`: succeeds for both seeded and unseeded inputs,
-  * mirroring GitHub's "404-as-success" idempotency semantic. Tests that need to assert a
-  * failure can compose a custom `GitHubAppClient` that fails the task instead.
+  * Choice for `deleteInstallation`: succeeds for both seeded and unseeded inputs, mirroring GitHub's "404-as-success"
+  * idempotency semantic. Tests that need to assert a failure can compose a custom `GitHubAppClient` that fails the task
+  * instead.
   */
 final class InMemoryGitHubAppClient(
     installations: Ref[Map[GhInstallationId, Installation]],
@@ -65,18 +65,20 @@ final class InMemoryGitHubAppClient(
     ZIO.succeed(InstallationAccessToken.sensitive(s"token-for-${ghInstallationId}"))
 
 object InMemoryGitHubAppClient:
-  /** Layer that provides BOTH the port-typed binding (so production-style code can depend on
-    * `GitHubAppClient`) and the concrete-typed binding (so tests can call the seeding API).
+  /** Layer that provides BOTH the port-typed binding (so production-style code can depend on `GitHubAppClient`) and the
+    * concrete-typed binding (so tests can call the seeding API).
     */
   val layer: ZLayer[Any, Nothing, GitHubAppClient & InMemoryGitHubAppClient] =
-    ZLayer.fromZIO {
-      for
-        installations <- Ref.make(Map.empty[GhInstallationId, Installation])
-        repos         <- Ref.make(Map.empty[GhInstallationId, List[(GhRepositoryId, RepoFullName)]])
-      yield new InMemoryGitHubAppClient(installations, repos)
-    }.flatMap { env =>
-      val fake = env.get[InMemoryGitHubAppClient]
-      ZLayer.succeedEnvironment(
-        ZEnvironment[GitHubAppClient, InMemoryGitHubAppClient](fake, fake)
-      )
-    }
+    ZLayer
+      .fromZIO {
+        for
+          installations <- Ref.make(Map.empty[GhInstallationId, Installation])
+          repos         <- Ref.make(Map.empty[GhInstallationId, List[(GhRepositoryId, RepoFullName)]])
+        yield new InMemoryGitHubAppClient(installations, repos)
+      }
+      .flatMap { env =>
+        val fake = env.get[InMemoryGitHubAppClient]
+        ZLayer.succeedEnvironment(
+          ZEnvironment[GitHubAppClient, InMemoryGitHubAppClient](fake, fake)
+        )
+      }

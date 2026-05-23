@@ -20,7 +20,7 @@ object TapirSttpGitHubGatewayClientSpec extends ZIOSpecDefault:
 
   override def spec = suite("TapirSttpGitHubGatewayClientSpec")(
     test("initiate() parses the response into LinkInitiation") {
-      val state = "11111111-1111-1111-1111-111111111111"
+      val state        = "11111111-1111-1111-1111-111111111111"
       val responseJson =
         s"""{"installUrl":"https://github.com/apps/x/installations/new?state=$state","state":"$state","expiresAt":"2026-04-25T12:10:00Z"}"""
       val client = new TapirSttpGitHubGatewayClient(stubFor(responseJson), baseUri)
@@ -32,7 +32,7 @@ object TapirSttpGitHubGatewayClientSpec extends ZIOSpecDefault:
     },
     test("listInstallations(None, 50) parses Page[Installation]") {
       val responseJson = """{"items":[],"total":0,"nextCursor":null}"""
-      val client = new TapirSttpGitHubGatewayClient(stubFor(responseJson), baseUri)
+      val client       = new TapirSttpGitHubGatewayClient(stubFor(responseJson), baseUri)
       for page <- client.listInstallations(None, 50)
       yield assertTrue(page.items.isEmpty, page.total == 0L, page.nextCursor.isEmpty)
     },
@@ -41,8 +41,8 @@ object TapirSttpGitHubGatewayClientSpec extends ZIOSpecDefault:
       val errorBody  = """{"code":"GITHUB_FAILURE","message":"boom"}"""
       val failClient = new TapirSttpGitHubGatewayClient(stubStatus(StatusCode.BadGateway, errorBody), baseUri)
       for
-        ok   <- okClient.unlink(ubc.githubgateway.domain.GhInstallationId(42L)).either
-        bad  <- failClient.unlink(ubc.githubgateway.domain.GhInstallationId(42L)).either
+        ok  <- okClient.unlink(ubc.githubgateway.domain.GhInstallationId(42L)).either
+        bad <- failClient.unlink(ubc.githubgateway.domain.GhInstallationId(42L)).either
       yield assertTrue(ok.isRight, bad.isLeft)
     },
     test("health() succeeds against an empty 200 body") {

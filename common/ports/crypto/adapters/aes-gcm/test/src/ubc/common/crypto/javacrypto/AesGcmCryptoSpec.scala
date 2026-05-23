@@ -37,19 +37,18 @@ object AesGcmCryptoSpec extends ZIOSpecDefault:
       test("decryption fails on tampered ciphertext (AEAD tag mismatch)") {
         val crypto = freshCrypto
         for
-          ct       <- crypto.encrypt("the quick brown fox")
-          combined  = Base64.getDecoder.decode(ct)
+          ct <- crypto.encrypt("the quick brown fox")
+          combined = Base64.getDecoder.decode(ct)
           // Flip a bit in the last byte (inside the GCM auth tag)
-          _         = combined.update(combined.length - 1, (combined(combined.length - 1) ^ 0x01).toByte)
-          tampered  = Base64.getEncoder.encodeToString(combined)
-          result   <- crypto.decrypt(tampered).exit
+          _        = combined.update(combined.length - 1, (combined(combined.length - 1) ^ 0x01).toByte)
+          tampered = Base64.getEncoder.encodeToString(combined)
+          result <- crypto.decrypt(tampered).exit
         yield assert(result)(fails(anything))
       },
       test("fromKey rejects a key that is not 32 bytes") {
         val sixteenBytes = new Array[Byte](16)
         val badKey       = Base64.getEncoder.encodeToString(sixteenBytes)
-        for
-          result <- AesGcmCrypto.fromKey(badKey).exit
+        for result <- AesGcmCrypto.fromKey(badKey).exit
         yield assert(result)(
           fails(hasMessage(containsString("32")))
         )

@@ -10,7 +10,7 @@ object IdentifiersSpec extends ZIOSpecDefault:
   override def spec =
     suite("IdentifiersSpec")(
       test("InstallationId wraps and unwraps a UUID") {
-        val u  = UUID.fromString("11111111-1111-1111-1111-111111111111")
+        val u                  = UUID.fromString("11111111-1111-1111-1111-111111111111")
         val id: InstallationId = InstallationId(u)
         assertTrue(id.unwrap == u)
       },
@@ -27,7 +27,7 @@ object IdentifiersSpec extends ZIOSpecDefault:
         assertTrue(v.unwrap == 42L)
       },
       test("RepositoryId wraps a UUID") {
-        val u = UUID.fromString("22222222-2222-2222-2222-222222222222")
+        val u               = UUID.fromString("22222222-2222-2222-2222-222222222222")
         val v: RepositoryId = RepositoryId(u)
         assertTrue(v.unwrap == u)
       },
@@ -40,12 +40,12 @@ object IdentifiersSpec extends ZIOSpecDefault:
         assertTrue(v.unwrap == "octocat/hello-world")
       },
       test("LinkState wraps a UUID nonce") {
-        val u = UUID.fromString("33333333-3333-3333-3333-333333333333")
+        val u            = UUID.fromString("33333333-3333-3333-3333-333333333333")
         val v: LinkState = LinkState(u)
         assertTrue(v.unwrap == u)
       },
       test("DeliveryId wraps a UUID") {
-        val u = UUID.fromString("72d3162e-cc78-11e3-81ab-4c9367dc0958")
+        val u             = UUID.fromString("72d3162e-cc78-11e3-81ab-4c9367dc0958")
         val v: DeliveryId = DeliveryId(u)
         assertTrue(v.unwrap == u)
       },

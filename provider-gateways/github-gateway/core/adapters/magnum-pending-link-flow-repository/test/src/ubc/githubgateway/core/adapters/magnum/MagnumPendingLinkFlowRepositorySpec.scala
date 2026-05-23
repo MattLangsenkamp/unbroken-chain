@@ -21,23 +21,25 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
   private def ls(label: String): LinkState = LinkState(UUID.nameUUIDFromBytes(label.getBytes))
 
   private val truncate: URIO[TransactorZIO, Unit] =
-    ZIO.serviceWithZIO[TransactorZIO](
-      _.transact { sql"TRUNCATE TABLE pending_link_flow".update.run() }
-    ).unit.orDie
+    ZIO
+      .serviceWithZIO[TransactorZIO](
+        _.transact { sql"TRUNCATE TABLE pending_link_flow".update.run() }
+      )
+      .unit
+      .orDie
 
   private def flow(
       state: String,
       expiresAt: Instant = Instant.parse("2025-01-01T00:10:00Z")
   ): PendingLinkFlow =
     PendingLinkFlow(
-      state     = ls(state),
+      state = ls(state),
       createdAt = Instant.parse("2025-01-01T00:00:00Z"),
       expiresAt = expiresAt
     )
 
   override def spec =
     (suite("MagnumPendingLinkFlowRepositorySpec")(
-
       test("insert + findByState round-trip preserves all fields") {
         val original = flow("state-1")
         for
@@ -46,7 +48,7 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
           found <- repo.findByState(ls("state-1"))
         yield assertTrue(
           found.isDefined,
-          found.get.state     == original.state,
+          found.get.state == original.state,
           found.get.createdAt == original.createdAt,
           found.get.expiresAt == original.expiresAt
         )
@@ -78,14 +80,14 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
       test("deleteExpired is INCLUSIVE of rows whose expires_at == now") {
         val cutoff = Instant.parse("2025-01-01T00:10:00Z")
         for
-          repo  <- ZIO.service[PendingLinkFlowRepository]
-          _     <- repo.insert(flow("at-cutoff", expiresAt = cutoff))
-          _     <- repo.insert(flow("future",   expiresAt = cutoff.plusSeconds(60)))
-          n     <- repo.deleteExpired(cutoff)
-          atRow <- repo.findByState(ls("at-cutoff"))
+          repo   <- ZIO.service[PendingLinkFlowRepository]
+          _      <- repo.insert(flow("at-cutoff", expiresAt = cutoff))
+          _      <- repo.insert(flow("future", expiresAt = cutoff.plusSeconds(60)))
+          n      <- repo.deleteExpired(cutoff)
+          atRow  <- repo.findByState(ls("at-cutoff"))
           future <- repo.findByState(ls("future"))
         yield assertTrue(
-          n            == 1, // only the at-cutoff row was swept
+          n == 1, // only the at-cutoff row was swept
           atRow.isEmpty,
           future.isDefined
         )
@@ -103,16 +105,15 @@ object MagnumPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
       test("deleteExpired returns N when N rows are expired") {
         val cutoff = Instant.parse("2025-06-01T00:00:00Z")
         for
-          repo <- ZIO.service[PendingLinkFlowRepository]
-          _    <- repo.insert(flow("e1", expiresAt = Instant.parse("2025-01-01T00:00:00Z")))
-          _    <- repo.insert(flow("e2", expiresAt = Instant.parse("2025-02-01T00:00:00Z")))
-          _    <- repo.insert(flow("e3", expiresAt = Instant.parse("2025-03-01T00:00:00Z")))
-          _    <- repo.insert(flow("future", expiresAt = Instant.parse("2099-01-01T00:00:00Z")))
-          n    <- repo.deleteExpired(cutoff)
+          repo      <- ZIO.service[PendingLinkFlowRepository]
+          _         <- repo.insert(flow("e1", expiresAt = Instant.parse("2025-01-01T00:00:00Z")))
+          _         <- repo.insert(flow("e2", expiresAt = Instant.parse("2025-02-01T00:00:00Z")))
+          _         <- repo.insert(flow("e3", expiresAt = Instant.parse("2025-03-01T00:00:00Z")))
+          _         <- repo.insert(flow("future", expiresAt = Instant.parse("2099-01-01T00:00:00Z")))
+          n         <- repo.deleteExpired(cutoff)
           futureRow <- repo.findByState(ls("future"))
         yield assertTrue(n == 3, futureRow.isDefined)
       }
-
     ) @@ TestAspect.before(truncate) @@ TestAspect.sequential)
       .provideShared(
         TestDatabase.suiteLayer(migrationLocation),

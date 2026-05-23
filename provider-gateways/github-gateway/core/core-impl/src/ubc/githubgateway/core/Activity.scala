@@ -22,20 +22,17 @@ import zio.json.*
 
 // ----- Linking flow ----------------------------------------------------------
 
-final case class LinkInitiated(state: LinkState, expiresAt: java.time.Instant)
-    extends InfoLog derives ActivityEncoder
+final case class LinkInitiated(state: LinkState, expiresAt: java.time.Instant) extends InfoLog derives ActivityEncoder
 
-final case class CallbackReceived(state: LinkState, ghInstallationId: GhInstallationId)
-    extends InfoLog derives ActivityEncoder
+final case class CallbackReceived(state: LinkState, ghInstallationId: GhInstallationId) extends InfoLog
+    derives ActivityEncoder
 
-final case class CallbackRejectedStateNotFound(state: LinkState)
-    extends WarnLog derives ActivityEncoder
+final case class CallbackRejectedStateNotFound(state: LinkState) extends WarnLog derives ActivityEncoder
 
-final case class CallbackRejectedStateExpired(state: LinkState)
-    extends WarnLog derives ActivityEncoder
+final case class CallbackRejectedStateExpired(state: LinkState) extends WarnLog derives ActivityEncoder
 
-final case class CallbackRejectedGitHubFailure(state: LinkState, message: String)
-    extends WarnLog derives ActivityEncoder
+final case class CallbackRejectedGitHubFailure(state: LinkState, message: String) extends WarnLog
+    derives ActivityEncoder
 
 final case class CallbackCompleted(
     state: LinkState,
@@ -50,8 +47,7 @@ final case class LinkAbandoned(state: LinkState) extends InfoLog derives Activit
 
 // ----- Read APIs -------------------------------------------------------------
 
-final case class InstallationsListed(returned: Int, total: Long)
-    extends InfoLog derives ActivityEncoder
+final case class InstallationsListed(returned: Int, total: Long) extends InfoLog derives ActivityEncoder
 
 final case class InstallationReposListed(
     ghInstallationId: GhInstallationId,
@@ -59,19 +55,16 @@ final case class InstallationReposListed(
     total: Long
 ) extends InfoLog derives ActivityEncoder
 
-final case class InstallationReposListRejectedNotFound(ghInstallationId: GhInstallationId)
-    extends WarnLog derives ActivityEncoder
+final case class InstallationReposListRejectedNotFound(ghInstallationId: GhInstallationId) extends WarnLog
+    derives ActivityEncoder
 
-final case class ReposListed(returned: Int, total: Long)
-    extends InfoLog derives ActivityEncoder
+final case class ReposListed(returned: Int, total: Long) extends InfoLog derives ActivityEncoder
 
 // ----- Unlink ----------------------------------------------------------------
 
-final case class UnlinkRequested(ghInstallationId: GhInstallationId)
-    extends InfoLog derives ActivityEncoder
+final case class UnlinkRequested(ghInstallationId: GhInstallationId) extends InfoLog derives ActivityEncoder
 
-final case class UnlinkCompleted(ghInstallationId: GhInstallationId)
-    extends InfoLog derives ActivityEncoder
+final case class UnlinkCompleted(ghInstallationId: GhInstallationId) extends InfoLog derives ActivityEncoder
 
 final case class UnlinkRejectedGitHubFailure(
     ghInstallationId: GhInstallationId,
@@ -80,8 +73,7 @@ final case class UnlinkRejectedGitHubFailure(
 
 // ----- Reconcile -------------------------------------------------------------
 
-final case class ReconcileRequested(ghInstallationId: GhInstallationId)
-    extends InfoLog derives ActivityEncoder
+final case class ReconcileRequested(ghInstallationId: GhInstallationId) extends InfoLog derives ActivityEncoder
 
 final case class ReconcileCompleted(
     ghInstallationId: GhInstallationId,
@@ -90,8 +82,7 @@ final case class ReconcileCompleted(
     renamed: Int
 ) extends InfoLog derives ActivityEncoder
 
-final case class ReconcileRejectedNotFound(ghInstallationId: GhInstallationId)
-    extends WarnLog derives ActivityEncoder
+final case class ReconcileRejectedNotFound(ghInstallationId: GhInstallationId) extends WarnLog derives ActivityEncoder
 
 final case class ReconcileRejectedGitHubFailure(
     ghInstallationId: GhInstallationId,
@@ -104,14 +95,13 @@ final case class SweepCompleted(removed: Int) extends InfoLog derives ActivityEn
 
 // ----- Webhooks --------------------------------------------------------------
 
-final case class WebhookReceived(deliveryId: DeliveryId, eventType: EventType)
-    extends InfoLog derives ActivityEncoder
+final case class WebhookReceived(deliveryId: DeliveryId, eventType: EventType) extends InfoLog derives ActivityEncoder
 
-final case class WebhookSignatureRejected(deliveryId: DeliveryId, eventType: EventType)
-    extends WarnLog derives ActivityEncoder
+final case class WebhookSignatureRejected(deliveryId: DeliveryId, eventType: EventType) extends WarnLog
+    derives ActivityEncoder
 
-final case class WebhookDeduplicated(deliveryId: DeliveryId, eventType: EventType)
-    extends InfoLog derives ActivityEncoder
+final case class WebhookDeduplicated(deliveryId: DeliveryId, eventType: EventType) extends InfoLog
+    derives ActivityEncoder
 
 final case class WebhookProcessed(
     deliveryId: DeliveryId,

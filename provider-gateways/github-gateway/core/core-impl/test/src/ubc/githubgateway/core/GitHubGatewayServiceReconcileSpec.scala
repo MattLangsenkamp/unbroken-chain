@@ -26,37 +26,41 @@ object GitHubGatewayServiceReconcileSpec extends ZIOSpecDefault:
       },
       test("happy path: existing installation, GitHub returns repo set, local set is replaced") {
         for
-          svc        <- ZIO.service[GitHubGatewayService]
+          svc         <- ZIO.service[GitHubGatewayService]
           installRepo <- ZIO.service[InstallationRepository]
-          repoRepo   <- ZIO.service[LinkedRepoRepository]
-          ghClient   <- ZIO.service[InMemoryGitHubAppClient]
+          repoRepo    <- ZIO.service[LinkedRepoRepository]
+          ghClient    <- ZIO.service[InMemoryGitHubAppClient]
 
           // Seed local installation + a single existing repo row
           inst <- installRepo.upsertByGhInstallationId(
-                    ghId, AccountLogin("octocat"), AccountId(99L),
-                    AccountType.User, InstallationStatus.Active, installedAt
-                  )
+            ghId,
+            AccountLogin("octocat"),
+            AccountId(99L),
+            AccountType.User,
+            InstallationStatus.Active,
+            installedAt
+          )
           _ <- repoRepo.insertMany(
-                 inst.id,
-                 List(GhRepositoryId(1L) -> RepoFullName("octocat/old"))
-               )
+            inst.id,
+            List(GhRepositoryId(1L) -> RepoFullName("octocat/old"))
+          )
 
           // Seed GitHub-side: the same installation but a different repo set
           _ <- ghClient.seedInstallation(
-                 Installation(
-                   id               = UnpersistedInstallationId,
-                   ghInstallationId = ghId,
-                   accountLogin     = AccountLogin("octocat"),
-                   accountId        = AccountId(99L),
-                   accountType      = AccountType.User,
-                   status           = InstallationStatus.Active,
-                   installedAt      = installedAt
-                 )
-               )
+            Installation(
+              id = UnpersistedInstallationId,
+              ghInstallationId = ghId,
+              accountLogin = AccountLogin("octocat"),
+              accountId = AccountId(99L),
+              accountType = AccountType.User,
+              status = InstallationStatus.Active,
+              installedAt = installedAt
+            )
+          )
           _ <- ghClient.seedRepos(
-                 ghId,
-                 List(GhRepositoryId(2L) -> RepoFullName("octocat/new"))
-               )
+            ghId,
+            List(GhRepositoryId(2L) -> RepoFullName("octocat/new"))
+          )
 
           summary <- svc.reconcile(ghId)
           repos   <- repoRepo.listByInstallation(inst.id, PageRequest.default(50))

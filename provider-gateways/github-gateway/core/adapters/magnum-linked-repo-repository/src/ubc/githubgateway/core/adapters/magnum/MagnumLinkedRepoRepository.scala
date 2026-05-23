@@ -68,7 +68,7 @@ class MagnumLinkedRepoRepository(xa: TransactorZIO) extends LinkedRepoRepository
       }
 
       ReconcileSummary(
-        added   = toInsert.size,
+        added = toInsert.size,
         removed = toRemove.size,
         renamed = toRename.size
       )
@@ -86,10 +86,12 @@ class MagnumLinkedRepoRepository(xa: TransactorZIO) extends LinkedRepoRepository
         LIMIT $limit OFFSET $offset
       """.query[LinkedRepo].run().toList
       val total = sql"SELECT COUNT(*) FROM linked_repo WHERE installation_id = $installationId"
-        .query[Long].run().head
+        .query[Long]
+        .run()
+        .head
       Page(
-        items      = items,
-        total      = total,
+        items = items,
+        total = total,
         nextCursor = MagnumPagination.nextCursor(offset, items.size, total)
       )
     }
@@ -106,16 +108,15 @@ class MagnumLinkedRepoRepository(xa: TransactorZIO) extends LinkedRepoRepository
       """.query[LinkedRepo].run().toList
       val total = sql"SELECT COUNT(*) FROM linked_repo".query[Long].run().head
       Page(
-        items      = items,
-        total      = total,
+        items = items,
+        total = total,
         nextCursor = MagnumPagination.nextCursor(offset, items.size, total)
       )
     }
 
   def renameByGhRepositoryId(ghRepositoryId: GhRepositoryId, newFullName: RepoFullName): Task[Unit] =
     xa.transact {
-      sql"UPDATE linked_repo SET full_name = $newFullName WHERE gh_repository_id = $ghRepositoryId"
-        .update.run()
+      sql"UPDATE linked_repo SET full_name = $newFullName WHERE gh_repository_id = $ghRepositoryId".update.run()
     }.unit
 
   def insertMany(

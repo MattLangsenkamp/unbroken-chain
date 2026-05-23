@@ -16,33 +16,37 @@ import java.util.UUID
 
 /** Integration tests for [[MagnumLinkedRepoRepository]] against a real PostgreSQL.
   *
-  * Each test seeds an `installation` row directly via `TransactorZIO` so we don't need to
-  * pull the installation repo into the build graph just to satisfy the FK.
+  * Each test seeds an `installation` row directly via `TransactorZIO` so we don't need to pull the installation repo
+  * into the build graph just to satisfy the FK.
   */
 object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
 
   private val migrationLocation = "classpath:db/migration"
 
   private val truncate: URIO[TransactorZIO, Unit] =
-    ZIO.serviceWithZIO[TransactorZIO](
-      _.transact {
-        sql"TRUNCATE TABLE installation, linked_repo RESTART IDENTITY CASCADE".update.run()
-      }
-    ).unit.orDie
+    ZIO
+      .serviceWithZIO[TransactorZIO](
+        _.transact {
+          sql"TRUNCATE TABLE installation, linked_repo RESTART IDENTITY CASCADE".update.run()
+        }
+      )
+      .unit
+      .orDie
 
   // Seed an installation row and return its assigned local id.
   private def seedInstallation(ghId: Long): URIO[TransactorZIO, InstallationId] =
-    ZIO.serviceWithZIO[TransactorZIO](_.transact {
-      val id = InstallationId(UUID.randomUUID())
-      sql"""INSERT INTO installation
+    ZIO
+      .serviceWithZIO[TransactorZIO](_.transact {
+        val id = InstallationId(UUID.randomUUID())
+        sql"""INSERT INTO installation
               (id, gh_installation_id, account_login, account_id, account_type, status, installed_at)
             VALUES ($id, $ghId, ${"someone"}, ${10L}, ${"User"}, ${"Active"}, ${Instant.parse("2025-01-01T00:00:00Z")})
             RETURNING id""".returning[InstallationId].run().head
-    }).orDie
+      })
+      .orDie
 
   override def spec =
     (suite("MagnumLinkedRepoRepositorySpec")(
-
       test("insert returns row with assigned id") {
         for
           repo   <- ZIO.service[LinkedRepoRepository]
@@ -51,7 +55,7 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
         yield assertTrue(
           row.installationId == instId,
           row.ghRepositoryId == GhRepositoryId(100L),
-          row.fullName       == RepoFullName("octocat/hello-world"),
+          row.fullName == RepoFullName("octocat/hello-world"),
           row.id.unwrap.version == 4 // app-generated random (v4) UUID
         )
       },
@@ -60,17 +64,20 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
         for
           repo    <- ZIO.service[LinkedRepoRepository]
           instId  <- seedInstallation(2001L)
-          summary <- repo.replaceSet(instId, List(
-                       (GhRepositoryId(100L), RepoFullName("octocat/hello-world")),
-                       (GhRepositoryId(101L), RepoFullName("octocat/spoon-knife"))
-                     ))
-          page    <- repo.listByInstallation(instId, PageRequest(None, 10))
+          summary <- repo.replaceSet(
+            instId,
+            List(
+              (GhRepositoryId(100L), RepoFullName("octocat/hello-world")),
+              (GhRepositoryId(101L), RepoFullName("octocat/spoon-knife"))
+            )
+          )
+          page <- repo.listByInstallation(instId, PageRequest(None, 10))
         yield assertTrue(
-          summary.added   == 2,
+          summary.added == 2,
           summary.removed == 0,
           summary.renamed == 0,
           page.items.size == 2,
-          page.total      == 2L
+          page.total == 2L
         )
       },
 
@@ -79,22 +86,28 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
           repo   <- ZIO.service[LinkedRepoRepository]
           instId <- seedInstallation(2001L)
           // Initial: {100→hello-world, 101→spoon-knife}
-          _      <- repo.replaceSet(instId, List(
-                      (GhRepositoryId(100L), RepoFullName("octocat/hello-world")),
-                      (GhRepositoryId(101L), RepoFullName("octocat/spoon-knife"))
-                    ))
+          _ <- repo.replaceSet(
+            instId,
+            List(
+              (GhRepositoryId(100L), RepoFullName("octocat/hello-world")),
+              (GhRepositoryId(101L), RepoFullName("octocat/spoon-knife"))
+            )
+          )
           // Desired: {100→hello-world (unchanged), 101→spoon-knife-renamed (rename), 102→new (add)}; 101 stays but renamed; original 101 is renamed not removed.
-          summary <- repo.replaceSet(instId, List(
-                       (GhRepositoryId(100L), RepoFullName("octocat/hello-world")),
-                       (GhRepositoryId(101L), RepoFullName("octocat/spoon-knife-renamed")),
-                       (GhRepositoryId(102L), RepoFullName("octocat/cli"))
-                     ))
-          page    <- repo.listByInstallation(instId, PageRequest(None, 10))
+          summary <- repo.replaceSet(
+            instId,
+            List(
+              (GhRepositoryId(100L), RepoFullName("octocat/hello-world")),
+              (GhRepositoryId(101L), RepoFullName("octocat/spoon-knife-renamed")),
+              (GhRepositoryId(102L), RepoFullName("octocat/cli"))
+            )
+          )
+          page <- repo.listByInstallation(instId, PageRequest(None, 10))
         yield assertTrue(
-          summary.added   == 1, // 102
+          summary.added == 1, // 102
           summary.removed == 0,
           summary.renamed == 1, // 101
-          page.total      == 3L
+          page.total == 3L
         )
       },
 
@@ -103,12 +116,15 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
           repo    <- ZIO.service[LinkedRepoRepository]
           instId  <- seedInstallation(2001L)
           _       <- repo.insert(instId, GhRepositoryId(100L), RepoFullName("old/name"))
-          summary <- repo.replaceSet(instId, List(
-                       (GhRepositoryId(100L), RepoFullName("new/name"))
-                     ))
-          page    <- repo.listByInstallation(instId, PageRequest(None, 10))
+          summary <- repo.replaceSet(
+            instId,
+            List(
+              (GhRepositoryId(100L), RepoFullName("new/name"))
+            )
+          )
+          page <- repo.listByInstallation(instId, PageRequest(None, 10))
         yield assertTrue(
-          summary.added   == 0,
+          summary.added == 0,
           summary.removed == 0,
           summary.renamed == 1,
           page.items.head.fullName == RepoFullName("new/name")
@@ -124,29 +140,29 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
           summary <- repo.replaceSet(instId, List((GhRepositoryId(100L), RepoFullName("a/a"))))
           page    <- repo.listByInstallation(instId, PageRequest(None, 10))
         yield assertTrue(
-          summary.added   == 0,
+          summary.added == 0,
           summary.removed == 1,
           summary.renamed == 0,
-          page.total      == 1L,
+          page.total == 1L,
           page.items.head.ghRepositoryId == GhRepositoryId(100L)
         )
       },
 
       test("listByInstallation paginates and only returns rows for that installation") {
         for
-          repo   <- ZIO.service[LinkedRepoRepository]
-          inst1  <- seedInstallation(2001L)
-          inst2  <- seedInstallation(2002L)
-          _      <- repo.insert(inst1, GhRepositoryId(100L), RepoFullName("inst1/r1"))
-          _      <- repo.insert(inst1, GhRepositoryId(101L), RepoFullName("inst1/r2"))
-          _      <- repo.insert(inst2, GhRepositoryId(200L), RepoFullName("inst2/r1"))
-          page1  <- repo.listByInstallation(inst1, PageRequest(None, 1))
-          page2  <- repo.listByInstallation(inst1, PageRequest(page1.nextCursor, 10))
+          repo  <- ZIO.service[LinkedRepoRepository]
+          inst1 <- seedInstallation(2001L)
+          inst2 <- seedInstallation(2002L)
+          _     <- repo.insert(inst1, GhRepositoryId(100L), RepoFullName("inst1/r1"))
+          _     <- repo.insert(inst1, GhRepositoryId(101L), RepoFullName("inst1/r2"))
+          _     <- repo.insert(inst2, GhRepositoryId(200L), RepoFullName("inst2/r1"))
+          page1 <- repo.listByInstallation(inst1, PageRequest(None, 1))
+          page2 <- repo.listByInstallation(inst1, PageRequest(page1.nextCursor, 10))
         yield assertTrue(
           page1.items.size == 1,
-          page1.total      == 2L,
+          page1.total == 2L,
           page2.items.size == 1,
-          page2.total      == 2L,
+          page2.total == 2L,
           page2.nextCursor.isEmpty,
           // UUID PKs: ORDER BY id is stable but not insertion order, so assert the pages
           // partition both repos across the two pages.
@@ -168,7 +184,7 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
           page2 <- repo.listAll(PageRequest(page1.nextCursor, 10))
         yield assertTrue(
           page1.items.size == 1,
-          page1.total      == 2L,
+          page1.total == 2L,
           page2.items.size == 1,
           page2.nextCursor.isEmpty
         )
@@ -195,12 +211,15 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
         for
           repo   <- ZIO.service[LinkedRepoRepository]
           instId <- seedInstallation(2001L)
-          _      <- repo.insertMany(instId, List(
-                      (GhRepositoryId(100L), RepoFullName("a/a")),
-                      (GhRepositoryId(101L), RepoFullName("b/b")),
-                      (GhRepositoryId(102L), RepoFullName("c/c"))
-                    ))
-          page   <- repo.listByInstallation(instId, PageRequest(None, 10))
+          _      <- repo.insertMany(
+            instId,
+            List(
+              (GhRepositoryId(100L), RepoFullName("a/a")),
+              (GhRepositoryId(101L), RepoFullName("b/b")),
+              (GhRepositoryId(102L), RepoFullName("c/c"))
+            )
+          )
+          page <- repo.listByInstallation(instId, PageRequest(None, 10))
         yield assertTrue(page.items.size == 3, page.total == 3L)
       },
 
@@ -242,7 +261,6 @@ object MagnumLinkedRepoRepositorySpec extends ZIOSpecDefault:
           page   <- repo.listByInstallation(instId, PageRequest(None, 10))
         yield assertTrue(page.total == 1L)
       }
-
     ) @@ TestAspect.before(truncate) @@ TestAspect.sequential)
       .provideShared(
         TestDatabase.suiteLayer(migrationLocation),

@@ -17,16 +17,14 @@ import sttp.tapir.client.sttp.SttpClientInterpreter
 
 import java.time.Instant
 
-/** Driven adapter implementing [[GitHubAppClient]] against GitHub's REST API
-  * via Tapir endpoint DSL + sttp's ZIO backend.
+/** Driven adapter implementing [[GitHubAppClient]] against GitHub's REST API via Tapir endpoint DSL + sttp's ZIO
+  * backend.
   *
-  * Production wires the real HTTP backend (e.g. `HttpClientZioBackend`); tests
-  * use `SttpBackendStub`. The adapter is unit-tested at this layer with the
-  * stub — no integration tests against real GitHub here.
+  * Production wires the real HTTP backend (e.g. `HttpClientZioBackend`); tests use `SttpBackendStub`. The adapter is
+  * unit-tested at this layer with the stub — no integration tests against real GitHub here.
   *
-  * Pagination note: `listInstallationRepos` issues a single `?per_page=100&page=1`
-  * request and assumes <= 100 repos in the installation. This matches the spec
-  * for this milestone — full pagination can be added later if a customer
+  * Pagination note: `listInstallationRepos` issues a single `?per_page=100&page=1` request and assumes <= 100 repos in
+  * the installation. This matches the spec for this milestone — full pagination can be added later if a customer
   * exceeds the cap.
   */
 final class TapirSttpGitHubAppClient(
@@ -39,8 +37,7 @@ final class TapirSttpGitHubAppClient(
 
   // ---- endpoints ----
 
-  private val getInstallationEndpoint
-      : Endpoint[String, Long, (StatusCode, String), GhDto.GhInstallation, Any] =
+  private val getInstallationEndpoint: Endpoint[String, Long, (StatusCode, String), GhDto.GhInstallation, Any] =
     endpoint.get
       .securityIn(auth.bearer[String]())
       .in("app" / "installations" / path[Long]("installation_id"))
@@ -57,8 +54,7 @@ final class TapirSttpGitHubAppClient(
       .out(jsonBody[GhDto.GhRepoListResponse])
       .errorOut(statusCode and stringBody)
 
-  private val deleteInstallationEndpoint
-      : Endpoint[String, Long, (StatusCode, String), StatusCode, Any] =
+  private val deleteInstallationEndpoint: Endpoint[String, Long, (StatusCode, String), StatusCode, Any] =
     endpoint.delete
       .securityIn(auth.bearer[String]())
       .in("app" / "installations" / path[Long]("installation_id"))
@@ -84,9 +80,7 @@ final class TapirSttpGitHubAppClient(
       .flatMap { resp =>
         ZIO
           .fromEither(resp.body)
-          .mapError(e =>
-            new RuntimeException(s"GitHub getInstallation failed: ${e._1.code} ${e._2}")
-          )
+          .mapError(e => new RuntimeException(s"GitHub getInstallation failed: ${e._1.code} ${e._2}"))
       }
       .flatMap(toDomainInstallation)
 
@@ -102,9 +96,7 @@ final class TapirSttpGitHubAppClient(
       .flatMap { resp =>
         ZIO
           .fromEither(resp.body)
-          .mapError(e =>
-            new RuntimeException(s"GitHub listInstallationRepos failed: ${e._1.code} ${e._2}")
-          )
+          .mapError(e => new RuntimeException(s"GitHub listInstallationRepos failed: ${e._1.code} ${e._2}"))
       }
       .map { listResp =>
         listResp.repositories.map(r => GhRepositoryId(r.id) -> RepoFullName(r.full_name))
@@ -122,7 +114,7 @@ final class TapirSttpGitHubAppClient(
       .flatMap { resp =>
         resp.body match
           // 204 (or any 2xx that Tapir routes to the success branch) → success
-          case Right(_)                       => ZIO.unit
+          case Right(_) => ZIO.unit
           // 404 is treated as success per GitHub's idempotency contract for unlinks
           case Left((StatusCode.NotFound, _)) => ZIO.unit
           case Left((status, body))           =>
@@ -141,9 +133,7 @@ final class TapirSttpGitHubAppClient(
       .flatMap { resp =>
         ZIO
           .fromEither(resp.body)
-          .mapError(e =>
-            new RuntimeException(s"GitHub createInstallationToken failed: ${e._1.code} ${e._2}")
-          )
+          .mapError(e => new RuntimeException(s"GitHub createInstallationToken failed: ${e._1.code} ${e._2}"))
       }
       .map(t => InstallationAccessToken.sensitive(t.token))
 
@@ -155,13 +145,13 @@ final class TapirSttpGitHubAppClient(
         if gh.suspended_at.isDefined then InstallationStatus.Suspended
         else InstallationStatus.Active
       Installation(
-        id               = UnpersistedInstallationId,
+        id = UnpersistedInstallationId,
         ghInstallationId = GhInstallationId(gh.id),
-        accountLogin     = AccountLogin(gh.account.login),
-        accountId        = AccountId(gh.account.id),
-        accountType      = gh.account.accountType,
-        status           = status,
-        installedAt      = Instant.parse(gh.created_at)
+        accountLogin = AccountLogin(gh.account.login),
+        accountId = AccountId(gh.account.id),
+        accountType = gh.account.accountType,
+        status = status,
+        installedAt = Instant.parse(gh.created_at)
       )
     }
 
@@ -174,9 +164,8 @@ object TapirSttpGitHubAppClient:
   val layer: ZLayer[SttpBackend[Task, Any], Nothing, GitHubAppClient] =
     layerWithBaseUri(defaultBaseUri)
 
-  /** Override the base URI — useful for any future config-driven base URI
-    * (for instance pointing at GitHub Enterprise Server, or in tests where the
-    * stub matches a different host).
+  /** Override the base URI — useful for any future config-driven base URI (for instance pointing at GitHub Enterprise
+    * Server, or in tests where the stub matches a different host).
     */
   def layerWithBaseUri(uri: Uri): URLayer[SttpBackend[Task, Any], GitHubAppClient] =
     ZLayer.fromFunction((b: SttpBackend[Task, Any]) => new TapirSttpGitHubAppClient(b, uri))

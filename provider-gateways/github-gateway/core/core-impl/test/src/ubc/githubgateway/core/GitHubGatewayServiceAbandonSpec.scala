@@ -15,18 +15,18 @@ object GitHubGatewayServiceAbandonSpec extends ZIOSpecDefault:
     suite("GitHubGatewayService.abandon")(
       test("removes the pending flow row keyed by state") {
         for
-          svc        <- ZIO.service[GitHubGatewayService]
-          init       <- svc.initiate()
-          _          <- svc.abandon(init.state)
-          repo       <- ZIO.service[PendingLinkFlowRepository]
-          remaining  <- repo.findByState(init.state)
+          svc       <- ZIO.service[GitHubGatewayService]
+          init      <- svc.initiate()
+          _         <- svc.abandon(init.state)
+          repo      <- ZIO.service[PendingLinkFlowRepository]
+          remaining <- repo.findByState(init.state)
         yield assertTrue(remaining.isEmpty)
       },
       test("succeeds even when no row matches the state") {
         for
           svc <- ZIO.service[GitHubGatewayService]
           // No initiate() call → no pending row to find → must not error
-          _   <- svc.abandon(LinkState(UUID.randomUUID()))
+          _ <- svc.abandon(LinkState(UUID.randomUUID()))
         yield assertTrue(true)
       }
     ).provide(

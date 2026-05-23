@@ -25,13 +25,21 @@ object GitHubGatewayServiceListSpec extends ZIOSpecDefault:
           svc  <- ZIO.service[GitHubGatewayService]
           repo <- ZIO.service[InstallationRepository]
           _    <- repo.upsertByGhInstallationId(
-                    gh1, AccountLogin("a"), AccountId(1L),
-                    AccountType.User, InstallationStatus.Active, installedAt
-                  )
-          _    <- repo.upsertByGhInstallationId(
-                    gh2, AccountLogin("b"), AccountId(2L),
-                    AccountType.Organization, InstallationStatus.Active, installedAt
-                  )
+            gh1,
+            AccountLogin("a"),
+            AccountId(1L),
+            AccountType.User,
+            InstallationStatus.Active,
+            installedAt
+          )
+          _ <- repo.upsertByGhInstallationId(
+            gh2,
+            AccountLogin("b"),
+            AccountId(2L),
+            AccountType.Organization,
+            InstallationStatus.Active,
+            installedAt
+          )
           first <- svc.listInstallations(PageRequest.default(1))
           full  <- svc.listInstallations(PageRequest.default(50))
         yield assertTrue(
@@ -44,15 +52,19 @@ object GitHubGatewayServiceListSpec extends ZIOSpecDefault:
       },
       test("listInstallationRepos returns repos for a known installation") {
         for
-          svc       <- ZIO.service[GitHubGatewayService]
+          svc         <- ZIO.service[GitHubGatewayService]
           installRepo <- ZIO.service[InstallationRepository]
-          repoRepo  <- ZIO.service[LinkedRepoRepository]
-          inst      <- installRepo.upsertByGhInstallationId(
-                          gh1, AccountLogin("a"), AccountId(1L),
-                          AccountType.User, InstallationStatus.Active, installedAt
-                        )
-          _         <- repoRepo.insertMany(inst.id, List(GhRepositoryId(1L) -> RepoFullName("a/r1")))
-          out       <- svc.listInstallationRepos(gh1, PageRequest.default(50))
+          repoRepo    <- ZIO.service[LinkedRepoRepository]
+          inst        <- installRepo.upsertByGhInstallationId(
+            gh1,
+            AccountLogin("a"),
+            AccountId(1L),
+            AccountType.User,
+            InstallationStatus.Active,
+            installedAt
+          )
+          _   <- repoRepo.insertMany(inst.id, List(GhRepositoryId(1L) -> RepoFullName("a/r1")))
+          out <- svc.listInstallationRepos(gh1, PageRequest.default(50))
         yield assertTrue(
           out.items.size == 1,
           out.items.head.fullName == RepoFullName("a/r1")
@@ -66,19 +78,27 @@ object GitHubGatewayServiceListSpec extends ZIOSpecDefault:
       },
       test("listRepos returns repos across installations") {
         for
-          svc        <- ZIO.service[GitHubGatewayService]
+          svc         <- ZIO.service[GitHubGatewayService]
           installRepo <- ZIO.service[InstallationRepository]
-          repoRepo   <- ZIO.service[LinkedRepoRepository]
-          a <- installRepo.upsertByGhInstallationId(
-                 gh1, AccountLogin("a"), AccountId(1L),
-                 AccountType.User, InstallationStatus.Active, installedAt
-               )
+          repoRepo    <- ZIO.service[LinkedRepoRepository]
+          a           <- installRepo.upsertByGhInstallationId(
+            gh1,
+            AccountLogin("a"),
+            AccountId(1L),
+            AccountType.User,
+            InstallationStatus.Active,
+            installedAt
+          )
           b <- installRepo.upsertByGhInstallationId(
-                 gh2, AccountLogin("b"), AccountId(2L),
-                 AccountType.Organization, InstallationStatus.Active, installedAt
-               )
-          _ <- repoRepo.insertMany(a.id, List(GhRepositoryId(1L) -> RepoFullName("a/r1")))
-          _ <- repoRepo.insertMany(b.id, List(GhRepositoryId(2L) -> RepoFullName("b/r2")))
+            gh2,
+            AccountLogin("b"),
+            AccountId(2L),
+            AccountType.Organization,
+            InstallationStatus.Active,
+            installedAt
+          )
+          _   <- repoRepo.insertMany(a.id, List(GhRepositoryId(1L) -> RepoFullName("a/r1")))
+          _   <- repoRepo.insertMany(b.id, List(GhRepositoryId(2L) -> RepoFullName("b/r2")))
           out <- svc.listRepos(PageRequest.default(50))
         yield assertTrue(out.items.size == 2)
       }
