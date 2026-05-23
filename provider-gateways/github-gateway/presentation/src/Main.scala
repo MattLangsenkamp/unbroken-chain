@@ -153,10 +153,10 @@ object Main extends TyrianZIOApp[Msg, Model]:
     val banner: List[Html[Msg]] =
       model.error.map(e => div(`class` := "banner")(text(e))).toList
     val body: Html[Msg] = model.view match
-      case View.Loading                 => p()(text("Loading..."))
-      case View.Linking                 => p()(text("Redirecting to GitHub..."))
-      case View.Home                    => homeView(model.installations)
-      case View.LinkResult(maybeError)  => linkResultView(maybeError)
+      case View.Loading                               => p()(text("Loading..."))
+      case View.Linking                               => p()(text("Redirecting to GitHub..."))
+      case View.Home                                  => homeView(model.installations)
+      case View.LinkResult(maybeError)                => linkResultView(maybeError)
       case View.InstallationDetail(inst, repos, more) =>
         detailView(inst, repos, more)
     div(`class` := "app")(

@@ -5,8 +5,8 @@ import zio.test.magnolia.DeriveGen
 
 /** ZIO Test generators for pagination types. Test-classpath only.
   *
-  * Case classes derive via `DeriveGen.gen`. `Page[A]` is generic, so it takes the element
-  * generator as a `using DeriveGen[A]`.
+  * Case classes derive via `DeriveGen.gen`. `Page[A]` is generic, so it takes the element generator as a
+  * `using DeriveGen[A]`.
   */
 object PaginationGenerators:
 

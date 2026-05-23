@@ -38,48 +38,51 @@ object BaseTelemetry:
 
   private def traceProvider(endpoint: String, serviceName: String): RIO[Scope, SdkTracerProvider] =
     for
-      exporter   <- ZIO.fromAutoCloseable(ZIO.succeed(OtlpGrpcSpanExporter.builder().setEndpoint(endpoint).build()))
-      processor  <- ZIO.fromAutoCloseable(ZIO.succeed(BatchSpanProcessor.builder(exporter).build()))
-      provider   <- ZIO.fromAutoCloseable(
-                      ZIO.succeed(
-                        SdkTracerProvider.builder()
-                          .setResource(createResource(serviceName))
-                          .addSpanProcessor(processor)
-                          .build()
-                      )
-                    )
+      exporter  <- ZIO.fromAutoCloseable(ZIO.succeed(OtlpGrpcSpanExporter.builder().setEndpoint(endpoint).build()))
+      processor <- ZIO.fromAutoCloseable(ZIO.succeed(BatchSpanProcessor.builder(exporter).build()))
+      provider  <- ZIO.fromAutoCloseable(
+        ZIO.succeed(
+          SdkTracerProvider
+            .builder()
+            .setResource(createResource(serviceName))
+            .addSpanProcessor(processor)
+            .build()
+        )
+      )
     yield provider
 
   private def metricProvider(endpoint: String, serviceName: String): RIO[Scope, SdkMeterProvider] =
     for
-      exporter  <- ZIO.fromAutoCloseable(ZIO.succeed(OtlpGrpcMetricExporter.builder().setEndpoint(endpoint).build()))
-      reader    <- ZIO.fromAutoCloseable(
-                     ZIO.succeed(
-                       PeriodicMetricReader.builder(exporter).setInterval(JDuration.ofSeconds(30)).build()
-                     )
-                   )
-      provider  <- ZIO.fromAutoCloseable(
-                     ZIO.succeed(
-                       SdkMeterProvider.builder()
-                         .setResource(createResource(serviceName))
-                         .registerMetricReader(reader)
-                         .build()
-                     )
-                   )
+      exporter <- ZIO.fromAutoCloseable(ZIO.succeed(OtlpGrpcMetricExporter.builder().setEndpoint(endpoint).build()))
+      reader   <- ZIO.fromAutoCloseable(
+        ZIO.succeed(
+          PeriodicMetricReader.builder(exporter).setInterval(JDuration.ofSeconds(30)).build()
+        )
+      )
+      provider <- ZIO.fromAutoCloseable(
+        ZIO.succeed(
+          SdkMeterProvider
+            .builder()
+            .setResource(createResource(serviceName))
+            .registerMetricReader(reader)
+            .build()
+        )
+      )
     yield provider
 
   private def logProvider(endpoint: String, serviceName: String): RIO[Scope, SdkLoggerProvider] =
     for
-      exporter   <- ZIO.fromAutoCloseable(ZIO.succeed(OtlpGrpcLogRecordExporter.builder().setEndpoint(endpoint).build()))
-      processor  <- ZIO.fromAutoCloseable(ZIO.succeed(BatchLogRecordProcessor.builder(exporter).build()))
-      provider   <- ZIO.fromAutoCloseable(
-                      ZIO.succeed(
-                        SdkLoggerProvider.builder()
-                          .setResource(createResource(serviceName))
-                          .addLogRecordProcessor(processor)
-                          .build()
-                      )
-                    )
+      exporter  <- ZIO.fromAutoCloseable(ZIO.succeed(OtlpGrpcLogRecordExporter.builder().setEndpoint(endpoint).build()))
+      processor <- ZIO.fromAutoCloseable(ZIO.succeed(BatchLogRecordProcessor.builder(exporter).build()))
+      provider  <- ZIO.fromAutoCloseable(
+        ZIO.succeed(
+          SdkLoggerProvider
+            .builder()
+            .setResource(createResource(serviceName))
+            .addLogRecordProcessor(processor)
+            .build()
+        )
+      )
     yield provider
 
   // ZLayer.scoped self-manages the Scope for all AutoCloseable OTel SDK objects, so
@@ -92,14 +95,15 @@ object BaseTelemetry:
         meter  <- metricProvider(cfg.otlpEndpoint, serviceName)
         logger <- logProvider(cfg.otlpEndpoint, serviceName)
         sdk    <- ZIO.fromAutoCloseable(
-                    ZIO.succeed(
-                      OpenTelemetrySdk.builder()
-                        .setTracerProvider(tracer)
-                        .setMeterProvider(meter)
-                        .setLoggerProvider(logger)
-                        .build()
-                    )
-                  )
+          ZIO.succeed(
+            OpenTelemetrySdk
+              .builder()
+              .setTracerProvider(tracer)
+              .setMeterProvider(meter)
+              .setLoggerProvider(logger)
+              .build()
+          )
+        )
       yield sdk
 
   def live(serviceName: String): TaskLayer[TelemetryEnv] =

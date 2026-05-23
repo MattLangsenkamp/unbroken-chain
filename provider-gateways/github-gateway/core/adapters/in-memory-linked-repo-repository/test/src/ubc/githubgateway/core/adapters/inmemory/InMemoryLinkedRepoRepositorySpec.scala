@@ -31,14 +31,14 @@ object InMemoryLinkedRepoRepositorySpec extends ZIOSpecDefault:
       },
       test("replaceSet from empty inserts the entire desired set") {
         for
-          repo <- ZIO.service[LinkedRepoRepository]
+          repo    <- ZIO.service[LinkedRepoRepository]
           summary <- repo.replaceSet(
-                       instA,
-                       List(
-                         (GhRepositoryId(200L), RepoFullName("o/x")),
-                         (GhRepositoryId(201L), RepoFullName("o/y"))
-                       )
-                     )
+            instA,
+            List(
+              (GhRepositoryId(200L), RepoFullName("o/x")),
+              (GhRepositoryId(201L), RepoFullName("o/y"))
+            )
+          )
           page <- repo.listByInstallation(instA, PageRequest(None, 10))
         yield assertTrue(
           summary == ReconcileSummary(added = 2, removed = 0, renamed = 0),
@@ -47,18 +47,18 @@ object InMemoryLinkedRepoRepositorySpec extends ZIOSpecDefault:
       },
       test("replaceSet removes rows missing from the desired set, renames matching ids, leaves equal rows alone") {
         for
-          repo <- ZIO.service[LinkedRepoRepository]
-          _ <- repo.insert(instA, GhRepositoryId(300L), RepoFullName("o/keep"))
-          _ <- repo.insert(instA, GhRepositoryId(301L), RepoFullName("o/old-name"))
-          _ <- repo.insert(instA, GhRepositoryId(302L), RepoFullName("o/dropme"))
+          repo    <- ZIO.service[LinkedRepoRepository]
+          _       <- repo.insert(instA, GhRepositoryId(300L), RepoFullName("o/keep"))
+          _       <- repo.insert(instA, GhRepositoryId(301L), RepoFullName("o/old-name"))
+          _       <- repo.insert(instA, GhRepositoryId(302L), RepoFullName("o/dropme"))
           summary <- repo.replaceSet(
-                       instA,
-                       List(
-                         (GhRepositoryId(300L), RepoFullName("o/keep")),
-                         (GhRepositoryId(301L), RepoFullName("o/new-name")),
-                         (GhRepositoryId(303L), RepoFullName("o/added"))
-                       )
-                     )
+            instA,
+            List(
+              (GhRepositoryId(300L), RepoFullName("o/keep")),
+              (GhRepositoryId(301L), RepoFullName("o/new-name")),
+              (GhRepositoryId(303L), RepoFullName("o/added"))
+            )
+          )
           page <- repo.listByInstallation(instA, PageRequest(None, 10))
         yield assertTrue(
           summary == ReconcileSummary(added = 1, removed = 1, renamed = 1),
@@ -80,14 +80,14 @@ object InMemoryLinkedRepoRepositorySpec extends ZIOSpecDefault:
       test("insertMany adds multiple rows for an installation") {
         for
           repo <- ZIO.service[LinkedRepoRepository]
-          _ <- repo.insertMany(
-                 instA,
-                 List(
-                   (GhRepositoryId(500L), RepoFullName("o/m1")),
-                   (GhRepositoryId(501L), RepoFullName("o/m2")),
-                   (GhRepositoryId(502L), RepoFullName("o/m3"))
-                 )
-               )
+          _    <- repo.insertMany(
+            instA,
+            List(
+              (GhRepositoryId(500L), RepoFullName("o/m1")),
+              (GhRepositoryId(501L), RepoFullName("o/m2")),
+              (GhRepositoryId(502L), RepoFullName("o/m3"))
+            )
+          )
           page <- repo.listByInstallation(instA, PageRequest(None, 10))
         yield assertTrue(page.total == 3L)
       },

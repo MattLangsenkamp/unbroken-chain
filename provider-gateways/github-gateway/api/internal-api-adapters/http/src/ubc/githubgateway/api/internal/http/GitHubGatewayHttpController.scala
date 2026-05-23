@@ -30,11 +30,11 @@ import zio.telemetry.opentelemetry.tracing.Tracing
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-/** Inbound HTTP adapter — exactly the routes from spec §9. Decodes requests, delegates to
-  * core, encodes responses. No business logic.
+/** Inbound HTTP adapter — exactly the routes from spec §9. Decodes requests, delegates to core, encodes responses. No
+  * business logic.
   *
-  * Traefik strips the `/github-gateway` prefix before forwarding here, so routes begin at
-  * `/links/...`, `/installations/...`, etc. — no per-controller prefix.
+  * Traefik strips the `/github-gateway` prefix before forwarding here, so routes begin at `/links/...`,
+  * `/installations/...`, etc. — no per-controller prefix.
   */
 object GitHubGatewayHttpController:
 
@@ -53,9 +53,9 @@ object GitHubGatewayHttpController:
       .out(jsonBody[LinkInitiation])
       .errorOut(apiErrorOut)
 
-  /** GitHub redirects the user here after install. We respond with a 302 to either the
-    * configured success URL (on success) or the failure URL (on any LinkError). The
-    * underlying error is encoded as an `?error=<code>` query string on the failure URL.
+  /** GitHub redirects the user here after install. We respond with a 302 to either the configured success URL (on
+    * success) or the failure URL (on any LinkError). The underlying error is encoded as an `?error=<code>` query string
+    * on the failure URL.
     */
   val callbackEndpoint =
     endpoint.get
@@ -163,11 +163,10 @@ object GitHubGatewayHttpController:
     }
 
   def listInstallationReposLogic(service: GitHubGatewayService): ZServerEndpoint[Any, Any] =
-    listInstallationReposEndpoint.zServerLogic[Any] {
-      case (ghInstallationId, cursor, limit) =>
-        service
-          .listInstallationRepos(ghInstallationId, toPageRequest(cursor, limit))
-          .mapError(reconcileErrorToApi)
+    listInstallationReposEndpoint.zServerLogic[Any] { case (ghInstallationId, cursor, limit) =>
+      service
+        .listInstallationRepos(ghInstallationId, toPageRequest(cursor, limit))
+        .mapError(reconcileErrorToApi)
     }
 
   def listReposLogic(service: GitHubGatewayService): ZServerEndpoint[Any, Any] =
@@ -189,8 +188,8 @@ object GitHubGatewayHttpController:
     webhookEndpoint.zServerLogic[Any] { case (deliveryId, eventType, signature, body) =>
       val headers = WebhookHeaders(
         deliveryId = deliveryId,
-        eventType  = EventType(eventType),
-        signature  = signature
+        eventType = EventType(eventType),
+        signature = signature
       )
       WebhookEventParser.parse(EventType(eventType), body) match
         case Left(err) =>
@@ -231,15 +230,15 @@ object GitHubGatewayHttpController:
     PageRequest(cursor = cursor, limit = limit.getOrElse(PageRequest.defaultLimit))
 
   private def reconcileErrorToApi(e: ReconcileError): ApiErr = e match
-    case ReconcileError.InstallationNotFound  => StatusCode.NotFound  -> ApiError.InstallationNotFound
+    case ReconcileError.InstallationNotFound   => StatusCode.NotFound   -> ApiError.InstallationNotFound
     case ReconcileError.GitHubFailure(message) => StatusCode.BadGateway -> ApiError.gitHubFailure(message)
 
   private def unlinkErrorToApi(e: UnlinkError): ApiErr = e match
     case UnlinkError.GitHubFailure(message) => StatusCode.BadGateway -> ApiError.gitHubFailure(message)
 
   private def webhookErrorToApi(e: WebhookError): ApiErr = e match
-    case WebhookError.InvalidSignature     => StatusCode.Unauthorized -> ApiError.InvalidSignature
-    case WebhookError.MalformedPayload(m)  => StatusCode.BadRequest   -> ApiError.malformedPayload(m)
+    case WebhookError.InvalidSignature    => StatusCode.Unauthorized -> ApiError.InvalidSignature
+    case WebhookError.MalformedPayload(m) => StatusCode.BadRequest   -> ApiError.malformedPayload(m)
 
   private def appendError(url: String, code: String): String =
     val sep = if url.contains("?") then "&" else "?"
@@ -256,13 +255,11 @@ object GitHubGatewayHttpController:
   val layer: ZLayer[GitHubGatewayService & GitHubGatewayConfig & Tracing, Nothing, Routes[Any, Response]] =
     ZLayer.fromFunction(routes)
 
-
 /** Parses GitHub webhook JSON into [[GithubWebhookEvent]] variants the core service understands.
   *
-  * Each top-level GitHub event type has a slightly different shape; we decode into small
-  * private DTOs and switch on `eventType` + `action` to pick the right variant. Anything
-  * we don't act on is funnelled to [[GithubWebhookEvent.Unhandled]] (the core service then
-  * records `WebhookOutcome.Ignored`).
+  * Each top-level GitHub event type has a slightly different shape; we decode into small private DTOs and switch on
+  * `eventType` + `action` to pick the right variant. Anything we don't act on is funnelled to
+  * [[GithubWebhookEvent.Unhandled]] (the core service then records `WebhookOutcome.Ignored`).
   */
 private[http] object WebhookEventParser:
 
@@ -316,8 +313,8 @@ private[http] object WebhookEventParser:
         val action = text.fromJson[GhPayload.ActionOnly].toOption.map(p => EventAction(p.action))
         Right(GithubWebhookEvent.Unhandled(eventType, action))
 
-  /** GitHub-shape DTOs — kept private to this file. The names match the on-the-wire
-    * field names exactly so DeriveJsonCodec can pick them up.
+  /** GitHub-shape DTOs — kept private to this file. The names match the on-the-wire field names exactly so
+    * DeriveJsonCodec can pick them up.
     */
   private object GhPayload:
 

@@ -21,8 +21,8 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
   private val token = InstallationAccessToken.sensitive("the-install-token")
   private val ghId  = GhInstallationId(12345L)
 
-  /** Build a layer that provides an [[SttpBackend]] backed by a stub matching the given
-    * partial function. Each test sets up its OWN stub so matchers are isolated.
+  /** Build a layer that provides an [[SttpBackend]] backed by a stub matching the given partial function. Each test
+    * sets up its OWN stub so matchers are isolated.
     */
   private def stubLayer(
       matcher: PartialFunction[Request[?, ?], Response[String]]
@@ -81,13 +81,13 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
 
   override def spec =
     suite("TapirSttpGitHubAppClient")(
-
       // ---- getInstallation ----
 
       test("getInstallation happy path: User account, Active") {
         val stub = stubLayer {
-          case r if r.method.method == "GET"
-            && r.uri.path == List("app", "installations", "12345") =>
+          case r
+              if r.method.method == "GET"
+                && r.uri.path == List("app", "installations", "12345") =>
             Response.ok(installationUserBody)
         }
         (for
@@ -162,11 +162,12 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
       test("getInstallation forwards the App JWT in Authorization: Bearer <jwt>") {
         // Stub matches ONLY when the bearer header is present and equal to the jwt value.
         val stub = stubLayer {
-          case r if r.uri.path == List("app", "installations", "12345")
-            && r.headers.exists(h =>
-              h.name.equalsIgnoreCase("Authorization")
-              && h.value == s"Bearer ${AppJwt.unwrap(jwt)}"
-            ) =>
+          case r
+              if r.uri.path == List("app", "installations", "12345")
+                && r.headers.exists(h =>
+                  h.name.equalsIgnoreCase("Authorization")
+                    && h.value == s"Bearer ${AppJwt.unwrap(jwt)}"
+                ) =>
             Response.ok(installationUserBody)
         }
         (for
@@ -180,8 +181,9 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
 
       test("listInstallationRepos returns the repository list") {
         val stub = stubLayer {
-          case r if r.method.method == "GET"
-            && r.uri.path == List("installation", "repositories") =>
+          case r
+              if r.method.method == "GET"
+                && r.uri.path == List("installation", "repositories") =>
             Response.ok(reposBody)
         }
         (for
@@ -199,8 +201,9 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
 
       test("deleteInstallation succeeds on 204 No Content") {
         val stub = stubLayer {
-          case r if r.method.method == "DELETE"
-            && r.uri.path == List("app", "installations", "12345") =>
+          case r
+              if r.method.method == "DELETE"
+                && r.uri.path == List("app", "installations", "12345") =>
             Response("", StatusCode.NoContent)
         }
         (for
@@ -212,8 +215,9 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
 
       test("deleteInstallation succeeds on 404 (idempotency)") {
         val stub = stubLayer {
-          case r if r.method.method == "DELETE"
-            && r.uri.path == List("app", "installations", "12345") =>
+          case r
+              if r.method.method == "DELETE"
+                && r.uri.path == List("app", "installations", "12345") =>
             Response("not found", StatusCode.NotFound)
         }
         (for
@@ -225,8 +229,9 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
 
       test("deleteInstallation fails with body included on 500") {
         val stub = stubLayer {
-          case r if r.method.method == "DELETE"
-            && r.uri.path == List("app", "installations", "12345") =>
+          case r
+              if r.method.method == "DELETE"
+                && r.uri.path == List("app", "installations", "12345") =>
             Response("kaboom", StatusCode.InternalServerError)
         }
         (for
@@ -241,8 +246,9 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
 
       test("createInstallationToken returns the minted access token") {
         val stub = stubLayer {
-          case r if r.method.method == "POST"
-            && r.uri.path == List("app", "installations", "12345", "access_tokens") =>
+          case r
+              if r.method.method == "POST"
+                && r.uri.path == List("app", "installations", "12345", "access_tokens") =>
             Response.ok(tokenBody)
         }
         (for

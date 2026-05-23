@@ -16,7 +16,7 @@ object InMemoryPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
 
   private def flow(state: String, expiresAt: Instant): PendingLinkFlow =
     PendingLinkFlow(
-      state     = ls(state),
+      state = ls(state),
       createdAt = Instant.parse("2026-04-25T12:00:00Z"),
       expiresAt = expiresAt
     )
@@ -26,9 +26,9 @@ object InMemoryPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
       test("insert + findByState round-trip") {
         for
           repo <- ZIO.service[PendingLinkFlowRepository]
-          f    = flow("nonce-1", Instant.parse("2026-04-25T12:10:00Z"))
-          _    <- repo.insert(f)
-          got  <- repo.findByState(ls("nonce-1"))
+          f = flow("nonce-1", Instant.parse("2026-04-25T12:10:00Z"))
+          _   <- repo.insert(f)
+          got <- repo.findByState(ls("nonce-1"))
         yield assertTrue(got.contains(f))
       },
       test("findByState returns None for unknown state") {
@@ -40,8 +40,8 @@ object InMemoryPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
       test("deleteByState returns true when present, false when absent") {
         for
           repo <- ZIO.service[PendingLinkFlowRepository]
-          f    = flow("to-delete", Instant.parse("2026-04-25T12:10:00Z"))
-          _    <- repo.insert(f)
+          f = flow("to-delete", Instant.parse("2026-04-25T12:10:00Z"))
+          _     <- repo.insert(f)
           first <- repo.deleteByState(ls("to-delete"))
           again <- repo.deleteByState(ls("to-delete"))
         yield assertTrue(first, !again)
@@ -52,13 +52,13 @@ object InMemoryPendingLinkFlowRepositorySpec extends ZIOSpecDefault:
           past   = flow("past", Instant.parse("2026-04-25T11:00:00Z"))
           edge   = flow("edge", Instant.parse("2026-04-25T12:00:00Z"))
           future = flow("future", Instant.parse("2026-04-25T13:00:00Z"))
-          _   <- repo.insert(past)
-          _   <- repo.insert(edge)
-          _   <- repo.insert(future)
-          n   <- repo.deleteExpired(Instant.parse("2026-04-25T12:00:00Z"))
-          ps  <- repo.findByState(ls("past"))
-          es  <- repo.findByState(ls("edge"))
-          fs  <- repo.findByState(ls("future"))
+          _  <- repo.insert(past)
+          _  <- repo.insert(edge)
+          _  <- repo.insert(future)
+          n  <- repo.deleteExpired(Instant.parse("2026-04-25T12:00:00Z"))
+          ps <- repo.findByState(ls("past"))
+          es <- repo.findByState(ls("edge"))
+          fs <- repo.findByState(ls("future"))
         yield assertTrue(
           n == 2,
           ps.isEmpty,

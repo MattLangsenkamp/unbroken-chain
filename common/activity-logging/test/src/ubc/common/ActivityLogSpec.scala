@@ -26,8 +26,8 @@ object ActivityLogSpec extends ZIOSpecDefault:
 
   final case class SeqSecretEvent(name: String, tokens: Seq[FakeSecret]) extends InfoLog derives ActivityEncoder
 
-  final case class EitherSecretEvent(name: String, result: Either[String, FakeSecret])
-      extends InfoLog derives ActivityEncoder
+  final case class EitherSecretEvent(name: String, result: Either[String, FakeSecret]) extends InfoLog
+      derives ActivityEncoder
 
   // Mirrors the production pattern for opting a neotype-backed newtype into
   // Sensitive: intersection-type alias plus a smart-constructor `make` inside

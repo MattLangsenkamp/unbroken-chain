@@ -7,10 +7,8 @@ import java.util.{Base64, UUID}
 
 /** Real [[SecureRandom]] adapter backed by `java.security.SecureRandom`.
   *
-  * Returns base64url-encoded (no padding) random strings of arbitrary byte length. Common
-  * sizings:
-  *   - `byteCount = 32` → 43 chars (good for state nonces; matches RFC 7636's PKCE 43-char
-  *     minimum)
+  * Returns base64url-encoded (no padding) random strings of arbitrary byte length. Common sizings:
+  *   - `byteCount = 32` → 43 chars (good for state nonces; matches RFC 7636's PKCE 43-char minimum)
   *   - `byteCount = 64` → 86 chars (comfortable PKCE verifier; well under the 128-char ceiling)
   */
 final class JavaSecureRandomGenerator(rng: java.security.SecureRandom) extends SecureRandom:

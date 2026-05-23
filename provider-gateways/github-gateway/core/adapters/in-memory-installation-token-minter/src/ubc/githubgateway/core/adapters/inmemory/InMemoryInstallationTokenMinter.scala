@@ -4,8 +4,8 @@ import ubc.githubgateway.core.ports.InstallationTokenMinter
 import ubc.githubgateway.domain.internal.AppJwt
 import zio.*
 
-/** Counter-backed in-memory [[InstallationTokenMinter]]. Returns `AppJwt.sensitive(s"jwt-$counter")`
-  * so core service tests can assert on the exact JWT value.
+/** Counter-backed in-memory [[InstallationTokenMinter]]. Returns `AppJwt.sensitive(s"jwt-$counter")` so core service
+  * tests can assert on the exact JWT value.
   *
   * NOT a real signer — production must use the RSA-backed adapter.
   */

@@ -20,15 +20,15 @@ object GitHubGatewayFixtures:
   val testConfigLayer: ULayer[GitHubGatewayConfig] =
     ZLayer.succeed(
       GitHubGatewayConfig(
-        githubAppId            = appId,
-        githubAppSlug          = appSlug,
-        githubAppPrivateKeyPem = "test-pem",                     // unused in service-level tests
-        githubWebhookSecret    = "test-secret",
-        pendingLinkTtl         = pendingTtl,
-        linkSuccessUrl         = successRedirectUrl,
-        linkFailureUrl         = failureRedirectUrl,
-        appJwtTtl              = 9.minutes,
-        sweepInterval          = 1.minute
+        githubAppId = appId,
+        githubAppSlug = appSlug,
+        githubAppPrivateKeyPem = "test-pem", // unused in service-level tests
+        githubWebhookSecret = "test-secret",
+        pendingLinkTtl = pendingTtl,
+        linkSuccessUrl = successRedirectUrl,
+        linkFailureUrl = failureRedirectUrl,
+        appJwtTtl = 9.minutes,
+        sweepInterval = 1.minute
       )
     )
 

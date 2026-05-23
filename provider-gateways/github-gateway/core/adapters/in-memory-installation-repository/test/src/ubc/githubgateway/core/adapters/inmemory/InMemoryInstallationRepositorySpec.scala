@@ -10,10 +10,10 @@ import java.time.Instant
 
 object InMemoryInstallationRepositorySpec extends ZIOSpecDefault:
 
-  private val ghId1     = GhInstallationId(1001L)
-  private val ghId2     = GhInstallationId(1002L)
-  private val acctLogin = AccountLogin("octocat")
-  private val acctId    = AccountId(42L)
+  private val ghId1       = GhInstallationId(1001L)
+  private val ghId2       = GhInstallationId(1002L)
+  private val acctLogin   = AccountLogin("octocat")
+  private val acctId      = AccountId(42L)
   private val installedAt = Instant.parse("2026-04-25T12:00:00Z")
 
   override def spec =
@@ -22,13 +22,13 @@ object InMemoryInstallationRepositorySpec extends ZIOSpecDefault:
         for
           repo <- ZIO.service[InstallationRepository]
           inst <- repo.upsertByGhInstallationId(
-                    ghId1,
-                    acctLogin,
-                    acctId,
-                    AccountType.Organization,
-                    InstallationStatus.Active,
-                    installedAt
-                  )
+            ghId1,
+            acctLogin,
+            acctId,
+            AccountType.Organization,
+            InstallationStatus.Active,
+            installedAt
+          )
         yield assertTrue(
           inst.ghInstallationId == ghId1,
           inst.accountLogin == acctLogin,
@@ -43,21 +43,21 @@ object InMemoryInstallationRepositorySpec extends ZIOSpecDefault:
         for
           repo  <- ZIO.service[InstallationRepository]
           first <- repo.upsertByGhInstallationId(
-                     ghId1,
-                     AccountLogin("old-login"),
-                     acctId,
-                     AccountType.Organization,
-                     InstallationStatus.Active,
-                     installedAt
-                   )
+            ghId1,
+            AccountLogin("old-login"),
+            acctId,
+            AccountType.Organization,
+            InstallationStatus.Active,
+            installedAt
+          )
           second <- repo.upsertByGhInstallationId(
-                      ghId1,
-                      AccountLogin("new-login"),
-                      acctId,
-                      AccountType.Organization,
-                      InstallationStatus.Suspended,
-                      installedAt
-                    )
+            ghId1,
+            AccountLogin("new-login"),
+            acctId,
+            AccountType.Organization,
+            InstallationStatus.Suspended,
+            installedAt
+          )
         yield assertTrue(
           first.id == second.id,
           second.accountLogin == AccountLogin("new-login"),
@@ -74,35 +74,35 @@ object InMemoryInstallationRepositorySpec extends ZIOSpecDefault:
         for
           repo <- ZIO.service[InstallationRepository]
           inst <- repo.upsertByGhInstallationId(
-                    ghId1,
-                    acctLogin,
-                    acctId,
-                    AccountType.Organization,
-                    InstallationStatus.Active,
-                    installedAt
-                  )
-          out  <- repo.findByGhInstallationId(ghId1)
+            ghId1,
+            acctLogin,
+            acctId,
+            AccountType.Organization,
+            InstallationStatus.Active,
+            installedAt
+          )
+          out <- repo.findByGhInstallationId(ghId1)
         yield assertTrue(out.contains(inst))
       },
       test("listAll paginates results in stable order and respects limit") {
         for
           repo <- ZIO.service[InstallationRepository]
           _    <- repo.upsertByGhInstallationId(
-                    ghId1,
-                    acctLogin,
-                    acctId,
-                    AccountType.Organization,
-                    InstallationStatus.Active,
-                    installedAt
-                  )
-          _    <- repo.upsertByGhInstallationId(
-                    ghId2,
-                    AccountLogin("octodog"),
-                    AccountId(43L),
-                    AccountType.User,
-                    InstallationStatus.Active,
-                    installedAt
-                  )
+            ghId1,
+            acctLogin,
+            acctId,
+            AccountType.Organization,
+            InstallationStatus.Active,
+            installedAt
+          )
+          _ <- repo.upsertByGhInstallationId(
+            ghId2,
+            AccountLogin("octodog"),
+            AccountId(43L),
+            AccountType.User,
+            InstallationStatus.Active,
+            installedAt
+          )
           page <- repo.listAll(PageRequest(cursor = None, limit = 1))
           full <- repo.listAll(PageRequest(cursor = None, limit = 10))
         yield assertTrue(
@@ -115,15 +115,15 @@ object InMemoryInstallationRepositorySpec extends ZIOSpecDefault:
       },
       test("deleteByGhInstallationId returns true when row existed, false when absent") {
         for
-          repo  <- ZIO.service[InstallationRepository]
-          _     <- repo.upsertByGhInstallationId(
-                     ghId1,
-                     acctLogin,
-                     acctId,
-                     AccountType.Organization,
-                     InstallationStatus.Active,
-                     installedAt
-                   )
+          repo <- ZIO.service[InstallationRepository]
+          _    <- repo.upsertByGhInstallationId(
+            ghId1,
+            acctLogin,
+            acctId,
+            AccountType.Organization,
+            InstallationStatus.Active,
+            installedAt
+          )
           first <- repo.deleteByGhInstallationId(ghId1)
           again <- repo.deleteByGhInstallationId(ghId1)
         yield assertTrue(first, !again)
@@ -132,21 +132,21 @@ object InMemoryInstallationRepositorySpec extends ZIOSpecDefault:
         for
           repo <- ZIO.service[InstallationRepository]
           _    <- repo.upsertByGhInstallationId(
-                    ghId1,
-                    acctLogin,
-                    acctId,
-                    AccountType.Organization,
-                    InstallationStatus.Active,
-                    installedAt
-                  )
-          _    <- repo.upsertByGhInstallationId(
-                    ghId2,
-                    AccountLogin("octodog"),
-                    AccountId(43L),
-                    AccountType.User,
-                    InstallationStatus.Active,
-                    installedAt
-                  )
+            ghId1,
+            acctLogin,
+            acctId,
+            AccountType.Organization,
+            InstallationStatus.Active,
+            installedAt
+          )
+          _ <- repo.upsertByGhInstallationId(
+            ghId2,
+            AccountLogin("octodog"),
+            AccountId(43L),
+            AccountType.User,
+            InstallationStatus.Active,
+            installedAt
+          )
           _      <- repo.updateStatus(ghId1, InstallationStatus.Suspended)
           first  <- repo.findByGhInstallationId(ghId1)
           second <- repo.findByGhInstallationId(ghId2)

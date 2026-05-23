@@ -14,20 +14,20 @@ import zio.telemetry.opentelemetry.tracing.Tracing
   */
 object ServerLayers:
 
-  /** Starts the ZIO HTTP server after telemetry services are present in the environment.
-    * Emits a ZServerStarting activity log on startup.
+  /** Starts the ZIO HTTP server after telemetry services are present in the environment. Emits a ZServerStarting
+    * activity log on startup.
     */
   val serverAfterTelemetry: ZLayer[TelemetryEnv, Throwable, ZServer] =
     ZLayer.scoped:
       for
-        _ <- ZIO.service[Tracing]
-        _ <- ZIO.service[ContextStorage]
-        _ <- ZIO.logActivity(ZServerStarting())
+        _      <- ZIO.service[Tracing]
+        _      <- ZIO.service[ContextStorage]
+        _      <- ZIO.logActivity(ZServerStarting())
         server <- ZServer.default.build
       yield server.get[ZServer]
 
-  /** Lifts Routes[Tracing, Response] into a ZLayer resolving Tracing from TelemetryEnv.
-    * Use this when route handlers directly inject Tracing for per-request span creation.
+  /** Lifts Routes[Tracing, Response] into a ZLayer resolving Tracing from TelemetryEnv. Use this when route handlers
+    * directly inject Tracing for per-request span creation.
     */
   def resolvedRoutesLayer(app: Routes[Tracing, Response]): URLayer[TelemetryEnv, Routes[Any, Response]] =
     ZLayer.fromZIO:

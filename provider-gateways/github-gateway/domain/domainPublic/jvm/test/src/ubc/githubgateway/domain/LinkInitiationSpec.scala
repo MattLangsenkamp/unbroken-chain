@@ -14,10 +14,10 @@ object LinkInitiationSpec extends ZIOSpecDefault:
     suite("LinkInitiationSpec")(
       test("LinkInitiation carries the install URL, server-generated state, and an expiry") {
         val expiresAt = Instant.parse("2026-04-25T13:00:00Z")
-        val init = LinkInitiation(
+        val init      = LinkInitiation(
           installUrl = InstallUrl(s"https://github.com/apps/my-app/installations/new?state=${state.unwrap}"),
-          state      = state,
-          expiresAt  = expiresAt
+          state = state,
+          expiresAt = expiresAt
         )
         assertTrue(
           init.installUrl == InstallUrl(s"https://github.com/apps/my-app/installations/new?state=${state.unwrap}"),
