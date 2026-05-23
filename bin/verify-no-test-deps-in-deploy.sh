@@ -17,10 +17,11 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
 # A runtime classpath entry is forbidden if it references a generators module output
-# (".../generators/...") or any zio-test artifact (zio-test, zio-test-sbt, zio-test-magnolia).
+# (".../generators/...") , any zio-test artifact (zio-test, zio-test-sbt, zio-test-magnolia),
+# or any scoverage instrumentation artifact (scalac-scoverage-* is test-only coverage tooling).
 # This relies on the convention that test-generator sub-modules are always named `generators`
 # (so their Mill out-path contains "/generators/"). Keep that name — see the test-generators skill.
-FORBIDDEN='zio-test|/generators/'
+FORBIDDEN='zio-test|scoverage|/generators/'
 
 servers="$(./mill resolve __ 2>/dev/null | grep -E '\.server$' || true)"
 
