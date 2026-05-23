@@ -4,9 +4,9 @@ import java.util.Base64
 
 /** Opaque-cursor encoding for paginated reads in Magnum-backed repositories.
   *
-  * Cursors are base64-encoded decimal offsets — the simplest representation that lets us
-  * round-trip the OFFSET we'll use on the next page. Returning `None` when the next offset
-  * would be at or past the total signals "no more pages" to the caller.
+  * Cursors are base64-encoded decimal offsets — the simplest representation that lets us round-trip the OFFSET we'll
+  * use on the next page. Returning `None` when the next offset would be at or past the total signals "no more pages" to
+  * the caller.
   */
 object MagnumPagination:
 
@@ -19,9 +19,12 @@ object MagnumPagination:
 
   /** Compute the cursor for the next page, or `None` if no more rows remain.
     *
-    * @param currentOffset OFFSET that produced the current page
-    * @param returned      number of rows actually returned in the current page
-    * @param total         total row count across all pages
+    * @param currentOffset
+    *   OFFSET that produced the current page
+    * @param returned
+    *   number of rows actually returned in the current page
+    * @param total
+    *   total row count across all pages
     */
   def nextCursor(currentOffset: Long, returned: Int, total: Long): Option[String] =
     val newOffset = currentOffset + returned.toLong

@@ -11,9 +11,9 @@ object NoopCryptoSpec extends ZIOSpecDefault:
       test("encrypt then decrypt round-trips arbitrary plaintext") {
         for
           crypto <- ZIO.service[Crypto]
-          input  = "the quick brown fox - üñîçödé and bytes  "
-          ct     <- crypto.encrypt(input)
-          back   <- crypto.decrypt(ct)
+          input = "the quick brown fox - üñîçödé and bytes  "
+          ct   <- crypto.encrypt(input)
+          back <- crypto.decrypt(ct)
         yield assertTrue(back == input)
       },
       test("encrypt of equal plaintext yields equal ciphertext (deterministic identity transform)") {

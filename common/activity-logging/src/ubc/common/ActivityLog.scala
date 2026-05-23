@@ -48,7 +48,7 @@ object ActivityEncoder:
   // it needs redaction.
   private inline def fieldJson[T](t: T): Json =
     summonFrom {
-      case _: (T <:< Sensitive) => Redacted
+      case _: (T <:< Sensitive)         => Redacted
       case _: (T <:< Option[Sensitive]) =>
         // Some(_) → redacted; None → Null (omitted by the null-stripping step
         // in encodeFields, matching the old derives JsonCodec shape).
@@ -65,7 +65,7 @@ object ActivityEncoder:
         t.asInstanceOf[Either[l, Any]] match
           case Left(l)  => Json.Obj("Left" -> summonInline[JsonEncoder[l]].toJsonAST(l).getOrElse(Json.Null))
           case Right(_) => Json.Obj("Right" -> Redacted)
-      case enc: JsonEncoder[T]  => enc.toJsonAST(t).getOrElse(Json.Null)
+      case enc: JsonEncoder[T] => enc.toJsonAST(t).getOrElse(Json.Null)
     }
 
   private inline def encodeFields[Labels <: Tuple, Types <: Tuple](
@@ -74,7 +74,7 @@ object ActivityEncoder:
       acc: Chunk[(String, Json)]
   ): Chunk[(String, Json)] =
     inline erasedValue[Labels] match
-      case _: EmptyTuple => acc
+      case _: EmptyTuple           => acc
       case _: (label *: labelTail) =>
         inline erasedValue[Types] match
           case _: (t *: typeTail) =>
@@ -85,7 +85,7 @@ object ActivityEncoder:
             // value is JSON null (typically `Option[_] = None`). Keeps wire
             // shape unchanged for consumers that previously relied on absent
             // fields.
-            val next  = if json == Json.Null then acc else acc :+ (name -> json)
+            val next = if json == Json.Null then acc else acc :+ (name -> json)
             encodeFields[labelTail, typeTail](product, index + 1, next)
 
   inline def derived[A <: ActivityLog](using m: Mirror.ProductOf[A]): ActivityEncoder[A] =

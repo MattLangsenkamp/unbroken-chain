@@ -6,8 +6,8 @@ import zio.*
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-/** Identity [[Crypto]] for tests and local dev — base64 round-trips the bytes without
-  * actually encrypting them. Satisfies the encrypt/decrypt contract while requiring no key.
+/** Identity [[Crypto]] for tests and local dev — base64 round-trips the bytes without actually encrypting them.
+  * Satisfies the encrypt/decrypt contract while requiring no key.
   *
   * NOT for production. Wire the real key-backed adapter in the server module.
   */

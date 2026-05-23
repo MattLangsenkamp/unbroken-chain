@@ -7,9 +7,8 @@ import zio.*
 
 /** Ref-backed [[WebhookDeliveryRepository]] for tests and local dev.
   *
-  * State is keyed by [[DeliveryId]] — Postgres enforces the same uniqueness via a primary key
-  * on `delivery_id`. `Ref.modify` gives the atomic check-and-set semantics that the port
-  * contract requires.
+  * State is keyed by [[DeliveryId]] — Postgres enforces the same uniqueness via a primary key on `delivery_id`.
+  * `Ref.modify` gives the atomic check-and-set semantics that the port contract requires.
   */
 final class InMemoryWebhookDeliveryRepository(
     store: Ref[Map[DeliveryId, WebhookDelivery]]
@@ -33,8 +32,8 @@ final class InMemoryWebhookDeliveryRepository(
     store.get.map(_.get(deliveryId))
 
 object InMemoryWebhookDeliveryRepository:
-  /** Layer that provides BOTH the port-typed binding and the concrete-typed binding so tests
-    * can call the test-only `peek` / seeding helpers.
+  /** Layer that provides BOTH the port-typed binding and the concrete-typed binding so tests can call the test-only
+    * `peek` / seeding helpers.
     */
   val layer: ZLayer[Any, Nothing, WebhookDeliveryRepository & InMemoryWebhookDeliveryRepository] =
     ZLayer

@@ -2,13 +2,11 @@ package ubc.githubgateway.api
 
 /** Public, transport-friendly error envelope for the GitHub Gateway API.
   *
-  * The driving adapter maps internal `LinkError` / `UnlinkError` / `ReconcileError` /
-  * `WebhookError` variants to one of these — domain-private error names never cross
-  * the API boundary.
+  * The driving adapter maps internal `LinkError` / `UnlinkError` / `ReconcileError` / `WebhookError` variants to one of
+  * these — domain-private error names never cross the API boundary.
   *
-  * Wire shape is `{ "code": string, "message": string }`. `code` is the stable
-  * machine-readable identifier (clients switch on it); `message` is human-readable
-  * and safe to display.
+  * Wire shape is `{ "code": string, "message": string }`. `code` is the stable machine-readable identifier (clients
+  * switch on it); `message` is human-readable and safe to display.
   */
 enum ApiError:
   case StateNotFound
@@ -45,9 +43,9 @@ object ApiError:
 
   /** Inverse of the wire shape: turn `{code, message}` back into a typed [[ApiError]].
     *
-    * For parameter-less variants the supplied `message` is ignored — those variants own
-    * their canonical message. Only the parametric variants (`GITHUB_FAILURE`,
-    * `MALFORMED_PAYLOAD`, `INTERNAL_ERROR`) carry the wire message into the value.
+    * For parameter-less variants the supplied `message` is ignored — those variants own their canonical message. Only
+    * the parametric variants (`GITHUB_FAILURE`, `MALFORMED_PAYLOAD`, `INTERNAL_ERROR`) carry the wire message into the
+    * value.
     */
   def fromWire(code: String, message: String): Either[String, ApiError] = code match
     case "STATE_NOT_FOUND"        => Right(StateNotFound)

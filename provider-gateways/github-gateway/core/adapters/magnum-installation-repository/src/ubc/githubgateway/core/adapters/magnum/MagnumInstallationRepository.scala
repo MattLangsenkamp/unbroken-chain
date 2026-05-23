@@ -65,8 +65,8 @@ class MagnumInstallationRepository(xa: TransactorZIO) extends InstallationReposi
       """.query[Installation].run().toList
       val total = sql"SELECT COUNT(*) FROM installation".query[Long].run().head
       Page(
-        items      = items,
-        total      = total,
+        items = items,
+        total = total,
         nextCursor = MagnumPagination.nextCursor(offset, items.size, total)
       )
     }

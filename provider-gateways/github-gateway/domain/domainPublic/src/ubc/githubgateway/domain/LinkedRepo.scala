@@ -1,7 +1,7 @@
 package ubc.githubgateway.domain
 
-/** A repository selected for a given installation. The repo's "selected" set is owned by
-  * GitHub; we mirror it here so consumers can query without round-tripping the GitHub API.
+/** A repository selected for a given installation. The repo's "selected" set is owned by GitHub; we mirror it here so
+  * consumers can query without round-tripping the GitHub API.
   *
   * @param id
   *   local DB surrogate primary key

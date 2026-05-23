@@ -24,32 +24,32 @@ object GitHubGatewayServiceSweepSpec extends ZIOSpecDefault:
           svc  <- ZIO.service[GitHubGatewayService]
           repo <- ZIO.service[PendingLinkFlowRepository]
 
-          past   = PendingLinkFlow(
-                     state     = ls("past"),
-                     createdAt = anchor.minusSeconds(7200),
-                     expiresAt = anchor.minusSeconds(60)
-                   )
-          edge   = PendingLinkFlow(
-                     state     = ls("edge"),
-                     createdAt = anchor.minusSeconds(7200),
-                     expiresAt = anchor
-                   )
+          past = PendingLinkFlow(
+            state = ls("past"),
+            createdAt = anchor.minusSeconds(7200),
+            expiresAt = anchor.minusSeconds(60)
+          )
+          edge = PendingLinkFlow(
+            state = ls("edge"),
+            createdAt = anchor.minusSeconds(7200),
+            expiresAt = anchor
+          )
           future = PendingLinkFlow(
-                     state     = ls("future"),
-                     createdAt = anchor.minusSeconds(7200),
-                     expiresAt = anchor.plusSeconds(60)
-                   )
+            state = ls("future"),
+            createdAt = anchor.minusSeconds(7200),
+            expiresAt = anchor.plusSeconds(60)
+          )
 
-          _   <- repo.insert(past)
-          _   <- repo.insert(edge)
-          _   <- repo.insert(future)
+          _ <- repo.insert(past)
+          _ <- repo.insert(edge)
+          _ <- repo.insert(future)
 
-          _   <- TestClock.setTime(anchor)
-          n   <- svc.sweepExpiredFlows()
+          _ <- TestClock.setTime(anchor)
+          n <- svc.sweepExpiredFlows()
 
-          ps  <- repo.findByState(ls("past"))
-          es  <- repo.findByState(ls("edge"))
-          fs  <- repo.findByState(ls("future"))
+          ps <- repo.findByState(ls("past"))
+          es <- repo.findByState(ls("edge"))
+          fs <- repo.findByState(ls("future"))
         yield assertTrue(
           n == 2,
           ps.isEmpty,

@@ -4,8 +4,8 @@ import ubc.githubgateway.domain.LinkState
 
 import java.time.Instant
 
-/** Pending link flow row — created on `POST /links/initiate`, consumed on the GitHub
-  * callback. Cleaned up by a periodic sweep once `expiresAt` passes.
+/** Pending link flow row — created on `POST /links/initiate`, consumed on the GitHub callback. Cleaned up by a periodic
+  * sweep once `expiresAt` passes.
   *
   * @param state
   *   server-generated nonce echoed via the GitHub callback's `state` parameter

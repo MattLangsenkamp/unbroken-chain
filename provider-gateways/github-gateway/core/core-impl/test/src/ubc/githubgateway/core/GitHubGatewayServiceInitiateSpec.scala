@@ -47,7 +47,7 @@ object GitHubGatewayServiceInitiateSpec extends ZIOSpecDefault:
       },
       test("expiresAt - createdAt == config.pendingLinkTtl, both anchored on Clock.instant") {
         for
-          svc  <- ZIO.service[GitHubGatewayService]
+          svc <- ZIO.service[GitHubGatewayService]
           // Adjust the test clock to a known moment
           fixedNow = java.time.Instant.parse("2026-04-25T12:00:00Z")
           _    <- TestClock.setTime(fixedNow)

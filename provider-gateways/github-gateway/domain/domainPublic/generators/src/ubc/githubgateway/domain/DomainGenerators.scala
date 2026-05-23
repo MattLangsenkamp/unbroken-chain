@@ -5,9 +5,9 @@ import zio.test.magnolia.DeriveGen
 
 /** ZIO Test generators for the public github-gateway domain. Test-classpath only.
   *
-  * Leaf newtypes export a `given DeriveGen` (so generators for containing types resolve them
-  * by derivation) plus a named `val` test handle. Case classes and enums derive from those
-  * leaves via `DeriveGen.gen` and are exposed as named `val`s.
+  * Leaf newtypes export a `given DeriveGen` (so generators for containing types resolve them by derivation) plus a
+  * named `val` test handle. Case classes and enums derive from those leaves via `DeriveGen.gen` and are exposed as
+  * named `val`s.
   */
 object DomainGenerators:
 
@@ -50,7 +50,7 @@ object DomainGenerators:
 
   // --- Case classes ----------------------------------------------------------------------
 
-  val installation: Gen[Any, Installation]       = DeriveGen.gen[Installation].derive
-  val linkedRepo: Gen[Any, LinkedRepo]           = DeriveGen.gen[LinkedRepo].derive
-  val linkInitiation: Gen[Any, LinkInitiation]   = DeriveGen.gen[LinkInitiation].derive
+  val installation: Gen[Any, Installation]         = DeriveGen.gen[Installation].derive
+  val linkedRepo: Gen[Any, LinkedRepo]             = DeriveGen.gen[LinkedRepo].derive
+  val linkInitiation: Gen[Any, LinkInitiation]     = DeriveGen.gen[LinkInitiation].derive
   val reconcileSummary: Gen[Any, ReconcileSummary] = DeriveGen.gen[ReconcileSummary].derive

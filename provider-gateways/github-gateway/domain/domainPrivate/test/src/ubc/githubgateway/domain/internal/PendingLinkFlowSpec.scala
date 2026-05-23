@@ -15,8 +15,8 @@ object PendingLinkFlowSpec extends ZIOSpecDefault:
       test("PendingLinkFlow holds state and timestamps") {
         val createdAt = Instant.parse("2026-04-25T12:00:00Z")
         val expiresAt = Instant.parse("2026-04-25T12:10:00Z")
-        val flow = PendingLinkFlow(
-          state     = state,
+        val flow      = PendingLinkFlow(
+          state = state,
           createdAt = createdAt,
           expiresAt = expiresAt
         )

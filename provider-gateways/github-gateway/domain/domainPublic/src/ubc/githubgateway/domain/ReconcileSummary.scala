@@ -1,7 +1,7 @@
 package ubc.githubgateway.domain
 
-/** Result of `POST /installations/{id}/reconcile`: how the linked-repo set changed
-  * relative to GitHub's authoritative view.
+/** Result of `POST /installations/{id}/reconcile`: how the linked-repo set changed relative to GitHub's authoritative
+  * view.
   *
   * @param added
   *   number of repos newly inserted into our mirror

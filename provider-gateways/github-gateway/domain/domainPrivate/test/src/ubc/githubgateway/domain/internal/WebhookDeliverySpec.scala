@@ -35,11 +35,11 @@ object WebhookDeliverySpec extends ZIOSpecDefault:
       test("WebhookDelivery records id, event, receipt time, and outcome") {
         val receivedAt = Instant.parse("2026-04-25T12:00:00Z")
         val deliveryId = DeliveryId(UUID.fromString("72d3162e-cc78-11e3-81ab-4c9367dc0958"))
-        val delivery = WebhookDelivery(
+        val delivery   = WebhookDelivery(
           deliveryId = deliveryId,
-          eventType  = EventType("installation"),
+          eventType = EventType("installation"),
           receivedAt = receivedAt,
-          outcome    = WebhookOutcome.Processed
+          outcome = WebhookOutcome.Processed
         )
         assertTrue(
           delivery.deliveryId == deliveryId,

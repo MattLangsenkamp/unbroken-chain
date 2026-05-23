@@ -11,12 +11,12 @@ import java.util.UUID
 
 /** Ref-backed [[InstallationRepository]] for tests and local dev.
   *
-  * State is a single map keyed by the local [[InstallationId]] (a UUID we generate on insert,
-  * mirroring the Postgres adapter). `listAll` returns a stable order (by id string) — not
-  * insertion order, matching the UUID-keyed Postgres adapter's `ORDER BY id`.
+  * State is a single map keyed by the local [[InstallationId]] (a UUID we generate on insert, mirroring the Postgres
+  * adapter). `listAll` returns a stable order (by id string) — not insertion order, matching the UUID-keyed Postgres
+  * adapter's `ORDER BY id`.
   *
-  * NOTE: deletes do NOT cascade to linked-repo rows. The Postgres adapter relies on a DB
-  * cascade; tests using both repositories must clean up linked rows explicitly.
+  * NOTE: deletes do NOT cascade to linked-repo rows. The Postgres adapter relies on a DB cascade; tests using both
+  * repositories must clean up linked rows explicitly.
   */
 final class InMemoryInstallationRepository(
     store: Ref[Map[InstallationId, Installation]]
@@ -35,25 +35,25 @@ final class InMemoryInstallationRepository(
         case Some(existing) =>
           val updated = existing.copy(
             accountLogin = accountLogin,
-            accountId    = accountId,
-            accountType  = accountType,
-            status       = status,
-            installedAt  = installedAt
+            accountId = accountId,
+            accountType = accountType,
+            status = status,
+            installedAt = installedAt
           )
           store.update(_.updated(existing.id, updated)).as(updated)
         case None =>
           for
-            id  <- ZIO.succeed(InstallationId(UUID.randomUUID()))
+            id <- ZIO.succeed(InstallationId(UUID.randomUUID()))
             inst = Installation(
-                     id               = id,
-                     ghInstallationId = ghInstallationId,
-                     accountLogin     = accountLogin,
-                     accountId        = accountId,
-                     accountType      = accountType,
-                     status           = status,
-                     installedAt      = installedAt
-                   )
-            _   <- store.update(_.updated(id, inst))
+              id = id,
+              ghInstallationId = ghInstallationId,
+              accountLogin = accountLogin,
+              accountId = accountId,
+              accountType = accountType,
+              status = status,
+              installedAt = installedAt
+            )
+            _ <- store.update(_.updated(id, inst))
           yield inst
     }
 

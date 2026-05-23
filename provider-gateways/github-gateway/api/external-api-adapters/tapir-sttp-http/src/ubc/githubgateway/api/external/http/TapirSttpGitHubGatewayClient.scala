@@ -14,16 +14,14 @@ import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
 import zio.*
 
-/** JVM HTTP client for the GitHub Gateway. Implements [[GitHubGatewayApi]] using Tapir
-  * endpoint shapes + sttp's ZIO backend. Endpoint shapes are redefined here (rather than
-  * shared with the server module) to keep this module's dependency surface tight — they
-  * MUST stay structurally identical to those in `internal-api-adapters/http`.
+/** JVM HTTP client for the GitHub Gateway. Implements [[GitHubGatewayApi]] using Tapir endpoint shapes + sttp's ZIO
+  * backend. Endpoint shapes are redefined here (rather than shared with the server module) to keep this module's
+  * dependency surface tight — they MUST stay structurally identical to those in `internal-api-adapters/http`.
   *
-  * Errors surface as `Task` failures wrapping the [[ApiError]] envelope (e.g. a 4xx response
-  * decoded as JSON) — clients pattern-match on the message to decide retry / surface.
+  * Errors surface as `Task` failures wrapping the [[ApiError]] envelope (e.g. a 4xx response decoded as JSON) — clients
+  * pattern-match on the message to decide retry / surface.
   */
-class TapirSttpGitHubGatewayClient(backend: SttpBackend[Task, Any], baseUri: Uri)
-    extends GitHubGatewayApi:
+class TapirSttpGitHubGatewayClient(backend: SttpBackend[Task, Any], baseUri: Uri) extends GitHubGatewayApi:
 
   private type ApiErr = (StatusCode, ApiError)
   private val apiErrorOut = statusCode.and(jsonBody[ApiError])
@@ -92,8 +90,8 @@ class TapirSttpGitHubGatewayClient(backend: SttpBackend[Task, Any], baseUri: Uri
 
   private def asTask[A](e: Either[ApiErr, A]): Task[A] =
     e match
-      case Right(value)         => ZIO.succeed(value)
-      case Left((status, err))  =>
+      case Right(value)        => ZIO.succeed(value)
+      case Left((status, err)) =>
         ZIO.fail(new RuntimeException(s"GitHubGateway client got ${status.code}: ${err.code} ${err.message}"))
 
   private def call[I, O](endpoint: PublicEndpoint[I, ApiErr, O, Any])(input: I): Task[O] =
@@ -135,7 +133,6 @@ class TapirSttpGitHubGatewayClient(backend: SttpBackend[Task, Any], baseUri: Uri
 
   def health(): Task[Unit] =
     call(healthEndpoint)(())
-
 
 object TapirSttpGitHubGatewayClient:
 

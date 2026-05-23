@@ -7,35 +7,33 @@ import zio.config.magnolia.deriveConfig
 
 /** Bundled configuration for the github-gateway server.
   *
-  * One config to rule them all: held in `domainPrivate` because every server module pulls
-  * config in anyway, so isolating it from that classpath buys nothing (per the
-  * `feature-tdd/layers/domain.md` skill).
+  * One config to rule them all: held in `domainPrivate` because every server module pulls config in anyway, so
+  * isolating it from that classpath buys nothing (per the `feature-tdd/layers/domain.md` skill).
   *
-  * Sourced from environment variables at startup via `ZIO.config[GitHubGatewayConfig]`. Each
-  * companion-object layer (`NimbusJoseInstallationTokenMinter.layer`,
-  * `GitHubGatewayService.sweeperLayer`, …) reads what it needs from this single value.
+  * Sourced from environment variables at startup via `ZIO.config[GitHubGatewayConfig]`. Each companion-object layer
+  * (`NimbusJoseInstallationTokenMinter.layer`, `GitHubGatewayService.sweeperLayer`, …) reads what it needs from this
+  * single value.
   *
   * @param githubAppId
-  *   GitHub App's numeric id (echoed in webhook payloads — used by the JWT minter to
-  *   populate the `iss` claim)
+  *   GitHub App's numeric id (echoed in webhook payloads — used by the JWT minter to populate the `iss` claim)
   * @param githubAppSlug
   *   GitHub App's URL slug — used to build the install URL in `service.initiate()`
   * @param githubAppPrivateKeyPem
-  *   PEM-encoded RSA private key (PKCS#8) used to sign the App-level JWT. Sourced from a
-  *   Kubernetes secret; never persisted, never logged.
+  *   PEM-encoded RSA private key (PKCS#8) used to sign the App-level JWT. Sourced from a Kubernetes secret; never
+  *   persisted, never logged.
   * @param githubWebhookSecret
-  *   raw bytes of the webhook signing secret (sourced as a UTF-8 string from a secret) —
-  *   used to verify HMAC-SHA-256 signatures on inbound webhooks
+  *   raw bytes of the webhook signing secret (sourced as a UTF-8 string from a secret) — used to verify HMAC-SHA-256
+  *   signatures on inbound webhooks
   * @param pendingLinkTtl
   *   how long a `pending_link_flow` row remains valid before sweep
   * @param linkSuccessUrl
   *   absolute URL the gateway 302s to after a successful link callback
   * @param linkFailureUrl
-  *   absolute URL the gateway 302s to when the link callback fails (`?error=<code>` is
-  *   appended by the controller so the SPA can render a useful message)
+  *   absolute URL the gateway 302s to when the link callback fails (`?error=<code>` is appended by the controller so
+  *   the SPA can render a useful message)
   * @param appJwtTtl
-  *   lifetime of the App-level JWT used to mint installation tokens (capped at 10 minutes
-  *   by GitHub; default ~9 minutes leaves comfortable headroom)
+  *   lifetime of the App-level JWT used to mint installation tokens (capped at 10 minutes by GitHub; default ~9 minutes
+  *   leaves comfortable headroom)
   * @param sweepInterval
   *   how often the background sweeper drains expired `pending_link_flow` rows
   */
@@ -71,15 +69,15 @@ object GitHubGatewayConfig:
   given Config[GitHubGatewayConfig] =
     deriveConfig[Raw].map { r =>
       GitHubGatewayConfig(
-        githubAppId             = AppId(r.githubAppId),
-        githubAppSlug           = AppSlug(r.githubAppSlug),
-        githubAppPrivateKeyPem  = r.githubAppPrivateKeyPem,
-        githubWebhookSecret     = r.githubWebhookSecret,
-        pendingLinkTtl          = r.pendingLinkTtl,
-        linkSuccessUrl          = r.linkSuccessUrl,
-        linkFailureUrl          = r.linkFailureUrl,
-        appJwtTtl               = r.appJwtTtl,
-        sweepInterval           = r.sweepInterval
+        githubAppId = AppId(r.githubAppId),
+        githubAppSlug = AppSlug(r.githubAppSlug),
+        githubAppPrivateKeyPem = r.githubAppPrivateKeyPem,
+        githubWebhookSecret = r.githubWebhookSecret,
+        pendingLinkTtl = r.pendingLinkTtl,
+        linkSuccessUrl = r.linkSuccessUrl,
+        linkFailureUrl = r.linkFailureUrl,
+        appJwtTtl = r.appJwtTtl,
+        sweepInterval = r.sweepInterval
       )
     }
 

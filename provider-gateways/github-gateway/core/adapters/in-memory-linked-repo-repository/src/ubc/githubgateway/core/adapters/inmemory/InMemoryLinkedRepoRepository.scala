@@ -10,9 +10,9 @@ import java.util.UUID
 
 /** Ref-backed [[LinkedRepoRepository]] for tests and local dev.
   *
-  * State is a single map keyed by the local [[RepositoryId]] (a UUID we generate on insert).
-  * `listByInstallation` / `listAll` return a stable order (by id string) — not insertion order,
-  * matching the UUID-keyed Postgres adapter's `ORDER BY id`.
+  * State is a single map keyed by the local [[RepositoryId]] (a UUID we generate on insert). `listByInstallation` /
+  * `listAll` return a stable order (by id string) — not insertion order, matching the UUID-keyed Postgres adapter's
+  * `ORDER BY id`.
   */
 final class InMemoryLinkedRepoRepository(
     store: Ref[Map[RepositoryId, LinkedRepo]]
@@ -44,9 +44,9 @@ final class InMemoryLinkedRepoRepository(
       val ownedByGhId = owned.map(r => r.ghRepositoryId -> r).toMap
       val desiredMap  = desired.toMap
 
-      val toRemove    = owned.filterNot(r => desiredMap.contains(r.ghRepositoryId))
+      val toRemove             = owned.filterNot(r => desiredMap.contains(r.ghRepositoryId))
       val (toRename, toInsert) = desired.partition { case (ghId, _) => ownedByGhId.contains(ghId) }
-      val renames     = toRename.collect {
+      val renames              = toRename.collect {
         case (ghId, name) if ownedByGhId(ghId).fullName != name =>
           ownedByGhId(ghId).copy(fullName = name)
       }
@@ -58,11 +58,11 @@ final class InMemoryLinkedRepoRepository(
         _ <- store.update(s => renames.foldLeft(s)((acc, r) => acc.updated(r.id, r)))
         // insert new
         inserted <- ZIO.foreach(toInsert) { case (ghId, name) =>
-                      nextRow(installationId, ghId, name)
-                    }
+          nextRow(installationId, ghId, name)
+        }
         _ <- store.update(s => inserted.foldLeft(s)((acc, r) => acc.updated(r.id, r)))
       yield ReconcileSummary(
-        added   = inserted.size,
+        added = inserted.size,
         removed = toRemove.size,
         renamed = renames.size
       )

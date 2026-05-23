@@ -14,8 +14,8 @@ import java.security.MessageDigest
 
 /** Core service for the GitHub App installation lifecycle.
   *
-  * Composes the seven outbound ports (four repos, one outbound HTTP client, one token minter,
-  * one randomness source) into the operations exposed by the API layer.
+  * Composes the seven outbound ports (four repos, one outbound HTTP client, one token minter, one randomness source)
+  * into the operations exposed by the API layer.
   *
   * Scope:
   *   - link initiation (state nonce, persist pending row, build install URL)
@@ -24,8 +24,8 @@ import java.security.MessageDigest
   *   - sweeping expired pending flows
   *   - dispatching verified webhook deliveries onto the repository state
   *
-  * No HTTP, no SQL, no JSON. Errors are translated at the GitHub-call boundary into the
-  * domain `LinkError` / `UnlinkError` / `ReconcileError` / `WebhookError` enums.
+  * No HTTP, no SQL, no JSON. Errors are translated at the GitHub-call boundary into the domain `LinkError` /
+  * `UnlinkError` / `ReconcileError` / `WebhookError` enums.
   */
 case class GitHubGatewayService(
     config: GitHubGatewayConfig,
@@ -60,25 +60,25 @@ case class GitHubGatewayService(
   // Link initiation
   // ---------------------------------------------------------------------------------------
 
-  /** Begin a link flow. Generates a fresh state nonce, persists the pending row, and returns
-    * the GitHub install URL the caller should redirect the user to.
+  /** Begin a link flow. Generates a fresh state nonce, persists the pending row, and returns the GitHub install URL the
+    * caller should redirect the user to.
     *
-    * No modelled errors — entropy and pending-row insertion are infrastructure defects rather
-    * than business outcomes. Surface them as ZIO defects (via `.orDie`).
+    * No modelled errors — entropy and pending-row insertion are infrastructure defects rather than business outcomes.
+    * Surface them as ZIO defects (via `.orDie`).
     */
   def initiate(): UIO[LinkInitiation] =
     for
       // The state nonce is an identifier we own, so it is a UUID from the SecureRandom port.
       // Newtype wrapping happens here at the call site; the port itself lives in `common`.
-      state      <- random.nextUuid.map(LinkState(_))
-      now        <- Clock.instant
-      expiresAt   = now.plus(config.pendingLinkTtl)
-      flow        = PendingLinkFlow(state = state, createdAt = now, expiresAt = expiresAt)
-      _          <- pendingFlows.insert(flow).orDie
-      installUrl  = InstallUrl(
-                      s"https://github.com/apps/${config.githubAppSlug.unwrap}/installations/new?state=${state.unwrap}"
-                    )
-      _          <- ZIO.logActivity(LinkInitiated(state, expiresAt))
+      state <- random.nextUuid.map(LinkState(_))
+      now   <- Clock.instant
+      expiresAt = now.plus(config.pendingLinkTtl)
+      flow      = PendingLinkFlow(state = state, createdAt = now, expiresAt = expiresAt)
+      _ <- pendingFlows.insert(flow).orDie
+      installUrl = InstallUrl(
+        s"https://github.com/apps/${config.githubAppSlug.unwrap}/installations/new?state=${state.unwrap}"
+      )
+      _ <- ZIO.logActivity(LinkInitiated(state, expiresAt))
     yield LinkInitiation(installUrl, state, expiresAt)
 
   // ---------------------------------------------------------------------------------------
@@ -87,9 +87,8 @@ case class GitHubGatewayService(
 
   /** Complete a link flow.
     *
-    * The pending row is single-use: we delete it on every exit path (success, expired, GitHub
-    * failure) by bracketing the dispatch. The single exception is `StateNotFound` — there is
-    * no row to delete in that case.
+    * The pending row is single-use: we delete it on every exit path (success, expired, GitHub failure) by bracketing
+    * the dispatch. The single exception is `StateNotFound` — there is no row to delete in that case.
     */
   def callback(state: LinkState, ghInstallationId: GhInstallationId): IO[LinkError, Unit] =
     ZIO.logActivity(CallbackReceived(state, ghInstallationId)) *>
@@ -97,43 +96,41 @@ case class GitHubGatewayService(
         .findByState(state)
         .orDie
         .flatMap {
-          case None       =>
+          case None =>
             ZIO.logActivity(CallbackRejectedStateNotFound(state)) *>
               ZIO.fail(LinkError.StateNotFound)
           case Some(flow) =>
-            ZIO.acquireReleaseWith(ZIO.succeed(flow))(_ =>
-              pendingFlows.deleteByState(state).ignore
-            ) { f =>
+            ZIO.acquireReleaseWith(ZIO.succeed(flow))(_ => pendingFlows.deleteByState(state).ignore) { f =>
               (for
                 now <- Clock.instant
                 _   <- (ZIO.logActivity(CallbackRejectedStateExpired(state)) *>
-                         ZIO.fail(LinkError.StateExpired))
-                         .when(!f.expiresAt.isAfter(now))
-                jwt <- minter.mintAppJwt().mapError(asGitHubFailure)
+                  ZIO.fail(LinkError.StateExpired))
+                  .when(!f.expiresAt.isAfter(now))
+                jwt          <- minter.mintAppJwt().mapError(asGitHubFailure)
                 installation <- github.getInstallation(jwt, ghInstallationId).mapError(asGitHubFailure)
                 persisted    <- installations
-                                  .upsertByGhInstallationId(
-                                    ghInstallationId,
-                                    installation.accountLogin,
-                                    installation.accountId,
-                                    installation.accountType,
-                                    installation.status,
-                                    installation.installedAt
-                                  )
-                                  .orDie
+                  .upsertByGhInstallationId(
+                    ghInstallationId,
+                    installation.accountLogin,
+                    installation.accountId,
+                    installation.accountType,
+                    installation.status,
+                    installation.installedAt
+                  )
+                  .orDie
                 token   <- github.createInstallationToken(jwt, ghInstallationId).mapError(asGitHubFailure)
                 desired <- github.listInstallationRepos(token, ghInstallationId).mapError(asGitHubFailure)
                 summary <- linkedRepos.replaceSet(persisted.id, desired).orDie
                 _       <- ZIO.logActivity(
-                             CallbackCompleted(
-                               state            = state,
-                               ghInstallationId = ghInstallationId,
-                               installationId   = persisted.id,
-                               addedRepos       = summary.added,
-                               removedRepos     = summary.removed,
-                               renamedRepos     = summary.renamed
-                             )
-                           )
+                  CallbackCompleted(
+                    state = state,
+                    ghInstallationId = ghInstallationId,
+                    installationId = persisted.id,
+                    addedRepos = summary.added,
+                    removedRepos = summary.removed,
+                    renamedRepos = summary.renamed
+                  )
+                )
               yield ()).tapError {
                 case LinkError.GitHubFailure(message) =>
                   ZIO.logActivity(CallbackRejectedGitHubFailure(state, message))
@@ -162,15 +159,15 @@ case class GitHubGatewayService(
       page: PageRequest
   ): IO[ReconcileError, Page[LinkedRepo]] =
     installations.findByGhInstallationId(ghInstallationId).orDie.flatMap {
-      case None        =>
+      case None =>
         ZIO.logActivity(InstallationReposListRejectedNotFound(ghInstallationId)) *>
           ZIO.fail(ReconcileError.InstallationNotFound)
-      case Some(inst)  =>
+      case Some(inst) =>
         for
           result <- linkedRepos.listByInstallation(inst.id, page).orDie
           _      <- ZIO.logActivity(
-                      InstallationReposListed(ghInstallationId, result.items.size, result.total)
-                    )
+            InstallationReposListed(ghInstallationId, result.items.size, result.total)
+          )
         yield result
     }
 
@@ -202,7 +199,7 @@ case class GitHubGatewayService(
   def reconcile(ghInstallationId: GhInstallationId): IO[ReconcileError, ReconcileSummary] =
     ZIO.logActivity(ReconcileRequested(ghInstallationId)) *>
       installations.findByGhInstallationId(ghInstallationId).orDie.flatMap {
-        case None           =>
+        case None =>
           ZIO.logActivity(ReconcileRejectedNotFound(ghInstallationId)) *>
             ZIO.fail(ReconcileError.InstallationNotFound)
         case Some(existing) =>
@@ -210,26 +207,26 @@ case class GitHubGatewayService(
             jwt          <- minter.mintAppJwt().mapError(asReconcileFailure)
             installation <- github.getInstallation(jwt, ghInstallationId).mapError(asReconcileFailure)
             _            <- installations
-                              .upsertByGhInstallationId(
-                                ghInstallationId,
-                                installation.accountLogin,
-                                installation.accountId,
-                                installation.accountType,
-                                installation.status,
-                                installation.installedAt
-                              )
-                              .orDie
+              .upsertByGhInstallationId(
+                ghInstallationId,
+                installation.accountLogin,
+                installation.accountId,
+                installation.accountType,
+                installation.status,
+                installation.installedAt
+              )
+              .orDie
             token   <- github.createInstallationToken(jwt, ghInstallationId).mapError(asReconcileFailure)
             desired <- github.listInstallationRepos(token, ghInstallationId).mapError(asReconcileFailure)
             summary <- linkedRepos.replaceSet(existing.id, desired).orDie
             _       <- ZIO.logActivity(
-                         ReconcileCompleted(
-                           ghInstallationId = ghInstallationId,
-                           added            = summary.added,
-                           removed          = summary.removed,
-                           renamed          = summary.renamed
-                         )
-                       )
+              ReconcileCompleted(
+                ghInstallationId = ghInstallationId,
+                added = summary.added,
+                removed = summary.removed,
+                renamed = summary.renamed
+              )
+            )
           yield summary).tapError { case ReconcileError.GitHubFailure(message) =>
             ZIO.logActivity(ReconcileRejectedGitHubFailure(ghInstallationId, message))
           }
@@ -272,9 +269,9 @@ case class GitHubGatewayService(
           now <- Clock.instant
           provisional = WebhookDelivery(
             deliveryId = headers.deliveryId,
-            eventType  = headers.eventType,
+            eventType = headers.eventType,
             receivedAt = now,
-            outcome    = WebhookOutcome.Processed
+            outcome = WebhookOutcome.Processed
           )
           inserted <- webhookLog.recordIfAbsent(provisional).orDie
           outcome  <- {
@@ -334,36 +331,32 @@ case class GitHubGatewayService(
     processed.tap {
       case WebhookOutcome.Processed =>
         ZIO.logActivity(WebhookProcessed(headers.deliveryId, headers.eventType, variant))
-      case WebhookOutcome.Ignored   =>
+      case WebhookOutcome.Ignored =>
         val action = event match
           case GithubWebhookEvent.Unhandled(_, a) => a
           case _                                  => None
         ZIO.logActivity(WebhookIgnored(headers.deliveryId, headers.eventType, action))
-      case WebhookOutcome.Failed    =>
+      case WebhookOutcome.Failed =>
         ZIO.logActivity(
           WebhookFailed(headers.deliveryId, headers.eventType, s"$variant could not be applied")
         )
-      case WebhookOutcome.Duplicate => ZIO.unit  // unreachable here; handled at handleWebhook level
+      case WebhookOutcome.Duplicate => ZIO.unit // unreachable here; handled at handleWebhook level
     }
 
 object GitHubGatewayService:
   val layer: URLayer[
-    GitHubGatewayConfig &
-      InstallationRepository & LinkedRepoRepository &
-      PendingLinkFlowRepository & WebhookDeliveryRepository &
-      GitHubAppClient & InstallationTokenMinter &
-      SecureRandom,
+    GitHubGatewayConfig & InstallationRepository & LinkedRepoRepository & PendingLinkFlowRepository &
+      WebhookDeliveryRepository & GitHubAppClient & InstallationTokenMinter & SecureRandom,
     GitHubGatewayService
   ] =
     ZLayer.fromFunction(GitHubGatewayService.apply)
 
-  /** Background sweeper layer: forks a fiber that drains expired `pending_link_flow` rows
-    * on a fixed cadence. Forked into the layer's scope, so it runs for the lifetime of the
-    * server and is interrupted automatically on shutdown — no leaked fibers.
+  /** Background sweeper layer: forks a fiber that drains expired `pending_link_flow` rows on a fixed cadence. Forked
+    * into the layer's scope, so it runs for the lifetime of the server and is interrupted automatically on shutdown —
+    * no leaked fibers.
     *
-    * Lives here (and not in `Server.scala`) per the `feature-tdd` skill: layer definitions
-    * belong with the service or adapter they construct, and background fibers are owned by
-    * the service whose work they perform.
+    * Lives here (and not in `Server.scala`) per the `feature-tdd` skill: layer definitions belong with the service or
+    * adapter they construct, and background fibers are owned by the service whose work they perform.
     */
   val sweeperLayer: ZLayer[GitHubGatewayService & GitHubGatewayConfig, Nothing, Unit] =
     ZLayer.scoped {
@@ -371,8 +364,8 @@ object GitHubGatewayService:
         cfg <- ZIO.service[GitHubGatewayConfig]
         svc <- ZIO.service[GitHubGatewayService]
         _   <- svc
-                 .sweepExpiredFlows()
-                 .repeat(Schedule.spaced(cfg.sweepInterval))
-                 .forkScoped
+          .sweepExpiredFlows()
+          .repeat(Schedule.spaced(cfg.sweepInterval))
+          .forkScoped
       yield ()
     }

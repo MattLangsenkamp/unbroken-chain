@@ -66,8 +66,8 @@ object NimbusJoseInstallationTokenMinter:
       new NimbusJoseInstallationTokenMinter(appId, key, ttl)
     }
 
-  /** Production layer — reads the App id, PEM-encoded private key, and JWT TTL from the
-    * shared [[GitHubGatewayConfig]]. Server bootstrap just lists this in `provide(...)`.
+  /** Production layer — reads the App id, PEM-encoded private key, and JWT TTL from the shared [[GitHubGatewayConfig]].
+    * Server bootstrap just lists this in `provide(...)`.
     */
   val layer: ZLayer[GitHubGatewayConfig, Throwable, InstallationTokenMinter] =
     ZLayer.fromZIO {

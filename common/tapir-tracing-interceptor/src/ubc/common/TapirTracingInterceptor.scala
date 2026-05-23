@@ -21,9 +21,8 @@ import zio.telemetry.opentelemetry.tracing.propagation.TraceContextPropagator
 
 object TapirTracingInterceptor:
 
-  /** Returns ZioHttpServerOptions with a TracingInterceptor wired in.
-    * Pass the result to ZioHttpInterpreter(...) so every Tapir endpoint gets
-    * an OTel server span that extracts the incoming W3C trace context.
+  /** Returns ZioHttpServerOptions with a TracingInterceptor wired in. Pass the result to ZioHttpInterpreter(...) so
+    * every Tapir endpoint gets an OTel server span that extracts the incoming W3C trace context.
     */
   def serverOptions(tracing: Tracing): ZioHttpServerOptions[Any] =
     ZioHttpServerOptions.customiseInterceptors
@@ -38,21 +37,22 @@ private class TracingInterceptor[R1](tracing: Tracing, ignoreEndpoints: Seq[AnyE
     extends RequestInterceptor[[X] =>> ZIO[R1, Throwable, X]]:
 
   override def apply[R, B](
-    responder: Responder[[X] =>> RIO[R1, X], B],
-    requestHandler: EndpointInterceptor[[X] =>> RIO[R1, X]] => RequestHandler[[X] =>> RIO[R1, X], R, B]
+      responder: Responder[[X] =>> RIO[R1, X], B],
+      requestHandler: EndpointInterceptor[[X] =>> RIO[R1, X]] => RequestHandler[[X] =>> RIO[R1, X], R, B]
   ): RequestHandler[[X] =>> RIO[R1, X], R, B] =
     new RequestHandler[[X] =>> RIO[R1, X], R, B]:
 
       override def apply(
-        request: ServerRequest,
-        endpoints: List[ServerEndpoint[R, [X] =>> RIO[R1, X]]]
+          request: ServerRequest,
+          endpoints: List[ServerEndpoint[R, [X] =>> RIO[R1, X]]]
       )(implicit monad: MonadError[[X] =>> RIO[R1, X]]): RIO[R1, RequestResult[B]] =
         val statusMapper = StatusMapper.failureThrowable(_ => StatusCode.ERROR)
-        val attributes = List(
+        val attributes   = List(
           Attribute(HttpAttributes.HTTP_REQUEST_METHOD, request.method.method),
           Attribute(UrlAttributes.URL_FULL, request.uri.toString())
         ) ++ request.uri.scheme.map(Attribute(UrlAttributes.URL_SCHEME, _)).toList ++
-          request.header(HeaderNames.UserAgent)
+          request
+            .header(HeaderNames.UserAgent)
             .map(Attribute(UserAgentAttributes.USER_AGENT_ORIGINAL, _))
             .toList
         tracing.extractSpan(
@@ -71,36 +71,35 @@ private class TracingInterceptor[R1](tracing: Tracing, ignoreEndpoints: Seq[AnyE
           )
         )
 
-private class EndpointTracingInterceptor[R1](tracing: Tracing)
-    extends EndpointInterceptor[[X] =>> RIO[R1, X]]:
+private class EndpointTracingInterceptor[R1](tracing: Tracing) extends EndpointInterceptor[[X] =>> RIO[R1, X]]:
 
   override def apply[B](
-    responder: Responder[[X] =>> RIO[R1, X], B],
-    endpointHandler: EndpointHandler[[X] =>> RIO[R1, X], B]
+      responder: Responder[[X] =>> RIO[R1, X], B],
+      endpointHandler: EndpointHandler[[X] =>> RIO[R1, X], B]
   ): EndpointHandler[[X] =>> RIO[R1, X], B] =
     new EndpointHandler[[X] =>> RIO[R1, X], B]:
 
       override def onDecodeSuccess[A, U, I](
-        ctx: DecodeSuccessContext[[X] =>> RIO[R1, X], A, U, I]
+          ctx: DecodeSuccessContext[[X] =>> RIO[R1, X], A, U, I]
       )(implicit
-        monad: MonadError[[X] =>> RIO[R1, X]],
-        bodyListener: BodyListener[[X] =>> RIO[R1, X], B]
+          monad: MonadError[[X] =>> RIO[R1, X]],
+          bodyListener: BodyListener[[X] =>> RIO[R1, X], B]
       ): RIO[R1, ServerResponse[B]] =
         onEndpoint(ctx.endpoint) *> endpointHandler.onDecodeSuccess(ctx).tap(onResponse)
 
       override def onSecurityFailure[A](
-        ctx: SecurityFailureContext[[X] =>> RIO[R1, X], A]
+          ctx: SecurityFailureContext[[X] =>> RIO[R1, X], A]
       )(implicit
-        monad: MonadError[[X] =>> RIO[R1, X]],
-        bodyListener: BodyListener[[X] =>> RIO[R1, X], B]
+          monad: MonadError[[X] =>> RIO[R1, X]],
+          bodyListener: BodyListener[[X] =>> RIO[R1, X], B]
       ): RIO[R1, ServerResponse[B]] =
         onEndpoint(ctx.endpoint) *> endpointHandler.onSecurityFailure(ctx).tap(onResponse)
 
       override def onDecodeFailure(
-        ctx: DecodeFailureContext
+          ctx: DecodeFailureContext
       )(implicit
-        monad: MonadError[[X] =>> RIO[R1, X]],
-        bodyListener: BodyListener[[X] =>> RIO[R1, X], B]
+          monad: MonadError[[X] =>> RIO[R1, X]],
+          bodyListener: BodyListener[[X] =>> RIO[R1, X], B]
       ): RIO[R1, Option[ServerResponse[B]]] =
         onEndpoint(ctx.endpoint) *>
           endpointHandler.onDecodeFailure(ctx).tap(_.fold(ZIO.unit)(onResponse))

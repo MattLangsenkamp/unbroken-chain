@@ -33,7 +33,7 @@ object ErrorsSpec extends ZIOSpecDefault:
       },
       test("WebhookError covers InvalidSignature and MalformedPayload(message)") {
         def label(e: WebhookError): String = e match
-          case WebhookError.InvalidSignature         => "bad-sig"
+          case WebhookError.InvalidSignature          => "bad-sig"
           case WebhookError.MalformedPayload(message) => s"malformed:$message"
         assertTrue(
           label(WebhookError.InvalidSignature) == "bad-sig",
