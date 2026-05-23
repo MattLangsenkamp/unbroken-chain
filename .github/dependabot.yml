@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # Keep GitHub Actions pinned in our workflows up to date. Dependabot has no Mill
+  # ecosystem support, so Scala library versions in build.mill are handled by Scala
+  # Steward (.github/workflows/scala-steward.yml) instead.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Wait 7 days after a release before proposing it — gives time for a bad/compromised
+    # action version to be yanked. Note: cooldown applies to version updates only;
+    # security (CVE) updates are still raised immediately.
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"

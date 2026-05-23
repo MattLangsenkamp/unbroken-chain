@@ -1,0 +1,26 @@
+name: Scala Steward
+
+# Proposes updates to Scala/Mill library versions declared in build.mill.
+# Reads repo-specific settings (including the supply-chain cooldown) from .scala-steward.conf.
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scala-steward:
+    name: Scala Steward
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Scala Steward
+        uses: scala-steward-org/scala-steward-action@v2
+        with:
+          # A token with permission to push branches and open PRs on this repo, stored
+          # as the SCALA_STEWARD_TOKEN repo secret. Use either a classic PAT with the
+          # `repo` scope, or a fine-grained PAT scoped to this repo with
+          # Contents: read/write and Pull requests: read/write. Without it the job
+          # cannot create update PRs.
+          github-token: ${{ secrets.SCALA_STEWARD_TOKEN }}
