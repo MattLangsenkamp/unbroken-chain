@@ -33,6 +33,16 @@ val zioTestDeps = Seq(
   mvn"dev.zio::zio-test-sbt:2.1.24"
 )
 
+val genDeps = Seq(
+  mvn"dev.zio::zio-test:2.1.24",
+  mvn"dev.zio::zio-test-magnolia:2.1.24"
+)
+
+val genDepsJs = Seq(
+  mvn"dev.zio:zio-test_sjs1_3:2.1.24",
+  mvn"dev.zio:zio-test-magnolia_sjs1_3:2.1.24"
+)
+
 val zioJsonDeps = Seq(
   mvn"dev.zio::zio-json:0.7.3"
 )
@@ -184,11 +194,32 @@ object `provider-gateways` extends Module {
           // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
           override def mvnDeps = Seq(mvn"io.github.kitlangton:neotype_sjs1_3:0.4.10")
         }
+
+        object generators extends Module {
+          trait Shared extends UbcScalaModule {
+            def scalaVersion = scalaVer
+            override def sources = Task.Sources(moduleDir / os.up / "src")
+          }
+          object jvm extends Shared {
+            override def moduleDeps = Seq(domainPublic.jvm)
+            override def mvnDeps = genDeps ++ neotypeDeps
+            object test extends ScalaTests {
+              def testFramework = "zio.test.sbt.ZTestFramework"
+              override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+            }
+          }
+          object js extends Shared with UbcScalaJSModule {
+            def scalaJSVersion = scalaJSVer
+            override def moduleDeps = Seq(domainPublic.js)
+            // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+            override def mvnDeps = genDepsJs ++ Seq(mvn"io.github.kitlangton:neotype_sjs1_3:0.4.10")
+          }
+        }
       }
 
       object domainPrivate extends UbcScalaModule {
         def scalaVersion = scalaVer
-        override def moduleDeps = Seq(domainPublic.jvm)
+        override def moduleDeps = Seq(domainPublic.jvm, common.sensitive.jvm)
         // zio-config lives here (rather than in an adapter-extension module) by design:
         // every server module pulls config in anyway, so isolating it from this classpath
         // buys nothing. See `.claude/skills/feature-tdd/layers/domain.md` for the rule.
@@ -197,6 +228,16 @@ object `provider-gateways` extends Module {
         object test extends ScalaTests {
           def testFramework = "zio.test.sbt.ZTestFramework"
           override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+        }
+
+        object generators extends UbcScalaModule {
+          def scalaVersion = scalaVer
+          override def moduleDeps = Seq(domainPrivate, domainPublic.generators.jvm)
+          override def mvnDeps = genDeps ++ neotypeDeps ++ zioDeps
+          object test extends ScalaTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
         }
       }
 
@@ -691,6 +732,26 @@ object common extends Module {
       def scalaJSVersion = scalaJSVer
       // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
       override def mvnDeps = Seq(mvn"dev.zio:zio_sjs1_3:2.1.17")
+    }
+
+    object generators extends Module {
+      trait Shared extends UbcScalaModule {
+        def scalaVersion = scalaVer
+        override def sources = Task.Sources(moduleDir / os.up / "src")
+      }
+      object jvm extends Shared {
+        override def moduleDeps = Seq(pagination.jvm)
+        override def mvnDeps = genDeps
+        object test extends ScalaTests {
+          def testFramework = "zio.test.sbt.ZTestFramework"
+          override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+        }
+      }
+      object js extends Shared with UbcScalaJSModule {
+        def scalaJSVersion = scalaJSVer
+        override def moduleDeps = Seq(pagination.js)
+        override def mvnDeps = genDepsJs
+      }
     }
   }
 

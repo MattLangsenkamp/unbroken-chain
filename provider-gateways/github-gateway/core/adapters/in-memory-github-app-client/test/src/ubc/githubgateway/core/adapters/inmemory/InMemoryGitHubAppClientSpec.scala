@@ -10,8 +10,8 @@ import java.time.Instant
 
 object InMemoryGitHubAppClientSpec extends ZIOSpecDefault:
 
-  private val jwt   = AppJwt("dummy-jwt")
-  private val token = InstallationAccessToken("dummy-token")
+  private val jwt   = AppJwt.sensitive("dummy-jwt")
+  private val token = InstallationAccessToken.sensitive("dummy-token")
   private val ghId  = GhInstallationId(7L)
   private val seeded = Installation(
     id               = InstallationId(0L),

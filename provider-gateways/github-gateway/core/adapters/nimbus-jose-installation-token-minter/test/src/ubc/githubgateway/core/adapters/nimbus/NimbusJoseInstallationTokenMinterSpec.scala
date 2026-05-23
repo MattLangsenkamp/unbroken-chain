@@ -5,6 +5,7 @@ import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jwt.SignedJWT
 import neotype.*
 import ubc.githubgateway.domain.AppId
+import ubc.githubgateway.domain.internal.AppJwt
 import zio.*
 import zio.test.*
 
@@ -43,21 +44,21 @@ object NimbusJoseInstallationTokenMinterSpec extends ZIOSpecDefault:
         val minter = new NimbusJoseInstallationTokenMinter(testAppId, privateKey, testTtl)
         for
           jwt    <- minter.mintAppJwt()
-          parsed = SignedJWT.parse(jwt.unwrap)
+          parsed = SignedJWT.parse(AppJwt.unwrap(jwt))
         yield assertTrue(parsed.getHeader.getAlgorithm == JWSAlgorithm.RS256)
       },
       test("issuer claim equals appId") {
         val minter = new NimbusJoseInstallationTokenMinter(testAppId, privateKey, testTtl)
         for
           jwt    <- minter.mintAppJwt()
-          parsed = SignedJWT.parse(jwt.unwrap)
+          parsed = SignedJWT.parse(AppJwt.unwrap(jwt))
         yield assertTrue(parsed.getJWTClaimsSet.getIssuer == testAppId.unwrap.toString)
       },
       test("expirationTime - issueTime stays within ttl plus skew window") {
         val minter = new NimbusJoseInstallationTokenMinter(testAppId, privateKey, testTtl)
         for
           jwt      <- minter.mintAppJwt()
-          parsed   = SignedJWT.parse(jwt.unwrap)
+          parsed   = SignedJWT.parse(AppJwt.unwrap(jwt))
           claims   = parsed.getJWTClaimsSet
           issued   = claims.getIssueTime.toInstant
           expires  = claims.getExpirationTime.toInstant
@@ -72,7 +73,7 @@ object NimbusJoseInstallationTokenMinterSpec extends ZIOSpecDefault:
         val minter = new NimbusJoseInstallationTokenMinter(testAppId, privateKey, testTtl)
         for
           jwt    <- minter.mintAppJwt()
-          parsed = SignedJWT.parse(jwt.unwrap)
+          parsed = SignedJWT.parse(AppJwt.unwrap(jwt))
           ok     <- ZIO.attempt(parsed.verify(new RSASSAVerifier(publicKey)))
         yield assertTrue(ok)
       },
@@ -81,7 +82,7 @@ object NimbusJoseInstallationTokenMinterSpec extends ZIOSpecDefault:
         for
           minter <- NimbusJoseInstallationTokenMinter.fromPem(testAppId, pem, testTtl)
           jwt    <- minter.mintAppJwt()
-          parsed = SignedJWT.parse(jwt.unwrap)
+          parsed = SignedJWT.parse(AppJwt.unwrap(jwt))
           ok     <- ZIO.attempt(parsed.verify(new RSASSAVerifier(publicKey)))
         yield assertTrue(ok, parsed.getJWTClaimsSet.getIssuer == testAppId.unwrap.toString)
       },
@@ -91,7 +92,7 @@ object NimbusJoseInstallationTokenMinterSpec extends ZIOSpecDefault:
         for
           _      <- TestClock.setTime(fixedNow)
           jwt    <- minter.mintAppJwt()
-          parsed = SignedJWT.parse(jwt.unwrap)
+          parsed = SignedJWT.parse(AppJwt.unwrap(jwt))
           issued = parsed.getJWTClaimsSet.getIssueTime.toInstant
         yield assertTrue(issued == fixedNow.minusSeconds(60))
       }

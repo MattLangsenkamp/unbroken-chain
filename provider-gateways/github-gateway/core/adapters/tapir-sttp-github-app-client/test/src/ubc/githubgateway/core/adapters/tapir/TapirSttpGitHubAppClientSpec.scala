@@ -3,7 +3,6 @@ package ubc.githubgateway.core.adapters.tapir
 import ubc.githubgateway.core.ports.GitHubAppClient
 import ubc.githubgateway.domain.*
 import ubc.githubgateway.domain.internal.*
-import neotype.*
 import zio.*
 import zio.test.*
 
@@ -18,8 +17,8 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
 
   // ---- shared fixtures ----
 
-  private val jwt   = AppJwt("the-app-jwt")
-  private val token = InstallationAccessToken("the-install-token")
+  private val jwt   = AppJwt.sensitive("the-app-jwt")
+  private val token = InstallationAccessToken.sensitive("the-install-token")
   private val ghId  = GhInstallationId(12345L)
 
   /** Build a layer that provides an [[SttpBackend]] backed by a stub matching the given
@@ -166,7 +165,7 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
           case r if r.uri.path == List("app", "installations", "12345")
             && r.headers.exists(h =>
               h.name.equalsIgnoreCase("Authorization")
-              && h.value == s"Bearer ${jwt.unwrap}"
+              && h.value == s"Bearer ${AppJwt.unwrap(jwt)}"
             ) =>
             Response.ok(installationUserBody)
         }
@@ -249,7 +248,7 @@ object TapirSttpGitHubAppClientSpec extends ZIOSpecDefault:
         (for
           client <- ZIO.service[GitHubAppClient]
           got    <- client.createInstallationToken(jwt, ghId)
-        yield assertTrue(got == InstallationAccessToken("v1.abc")))
+        yield assertTrue(got == InstallationAccessToken.sensitive("v1.abc")))
           .provide(stub, TapirSttpGitHubAppClient.layer)
       }
     )

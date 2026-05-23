@@ -78,7 +78,7 @@ final class TapirSttpGitHubAppClient(
   def getInstallation(jwt: AppJwt, ghInstallationId: GhInstallationId): Task[Installation] =
     SttpClientInterpreter()
       .toSecureRequestThrowDecodeFailures(getInstallationEndpoint, Some(baseUri))
-      .apply(jwt.unwrap)
+      .apply(AppJwt.unwrap(jwt))
       .apply(ghInstallationId.unwrap)
       .send(backend)
       .flatMap { resp =>
@@ -96,7 +96,7 @@ final class TapirSttpGitHubAppClient(
   ): Task[List[(GhRepositoryId, RepoFullName)]] =
     SttpClientInterpreter()
       .toSecureRequestThrowDecodeFailures(listInstallationReposEndpoint, Some(baseUri))
-      .apply(token.unwrap)
+      .apply(InstallationAccessToken.unwrap(token))
       .apply((100, 1))
       .send(backend)
       .flatMap { resp =>
@@ -116,7 +116,7 @@ final class TapirSttpGitHubAppClient(
   ): Task[Unit] =
     SttpClientInterpreter()
       .toSecureRequestThrowDecodeFailures(deleteInstallationEndpoint, Some(baseUri))
-      .apply(jwt.unwrap)
+      .apply(AppJwt.unwrap(jwt))
       .apply(ghInstallationId.unwrap)
       .send(backend)
       .flatMap { resp =>
@@ -135,7 +135,7 @@ final class TapirSttpGitHubAppClient(
   ): Task[InstallationAccessToken] =
     SttpClientInterpreter()
       .toSecureRequestThrowDecodeFailures(createInstallationTokenEndpoint, Some(baseUri))
-      .apply(jwt.unwrap)
+      .apply(AppJwt.unwrap(jwt))
       .apply(ghInstallationId.unwrap)
       .send(backend)
       .flatMap { resp =>
@@ -145,7 +145,7 @@ final class TapirSttpGitHubAppClient(
             new RuntimeException(s"GitHub createInstallationToken failed: ${e._1.code} ${e._2}")
           )
       }
-      .map(t => InstallationAccessToken(t.token))
+      .map(t => InstallationAccessToken.sensitive(t.token))
 
   // ---- helpers ----
 

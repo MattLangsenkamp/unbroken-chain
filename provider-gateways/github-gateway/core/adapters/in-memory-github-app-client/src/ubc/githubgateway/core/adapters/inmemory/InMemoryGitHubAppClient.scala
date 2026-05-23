@@ -62,7 +62,7 @@ final class InMemoryGitHubAppClient(
       jwt: AppJwt,
       ghInstallationId: GhInstallationId
   ): Task[InstallationAccessToken] =
-    ZIO.succeed(InstallationAccessToken(s"token-for-${ghInstallationId}"))
+    ZIO.succeed(InstallationAccessToken.sensitive(s"token-for-${ghInstallationId}"))
 
 object InMemoryGitHubAppClient:
   /** Layer that provides BOTH the port-typed binding (so production-style code can depend on
