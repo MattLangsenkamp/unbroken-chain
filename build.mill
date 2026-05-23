@@ -1,4 +1,4 @@
-//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION", "com.github.lolgab::mill-scalablytyped::0.4.1"]
+//| mvnDeps: ["com.lihaoyi::mill-contrib-docker:$MILL_VERSION", "com.lihaoyi::mill-contrib-scoverage:$MILL_VERSION", "com.github.lolgab::mill-scalablytyped::0.4.1"]
 
 package build
 
@@ -6,11 +6,16 @@ import mill.*
 import mill.scalalib.*
 import mill.scalajslib.*
 import mill.contrib.docker.DockerModule
+import mill.contrib.scoverage.{ScoverageModule, ScoverageReport}
 import mill.scalajslib.api.ModuleKind
 import com.github.lolgab.mill.scalablytyped.*
 
 val scalaVer   = "3.6.4"
 val scalaJSVer = "1.20.2"
+
+// Scala 3 coverage is produced by the compiler itself (-coverage-out); this version pins
+// the scoverage reporter/runtime that mill-contrib-scoverage wires in to read and aggregate it.
+val scoverageVer = "2.3.0"
 
 // Compiler warnings for unused/discarded code. Inherited by every module via
 // UbcScalaModule / UbcScalaJSModule. ScalaTests inherits scalacOptions from the
@@ -126,6 +131,15 @@ trait UbcScalaJSModule extends ScalaJSModule {
   override def scalacOptions = (super.scalacOptions() ++ lintOptions).distinct
 }
 
+// Coverage mixin for JVM modules that have a test suite. Mixed in alongside (not into)
+// UbcScalaModule so it never reaches the cross-platform `js` submodules, which share the
+// same `Shared` base — ScoverageModule extends ScalaModule and must not touch Scala.js.
+// Adds an instrumented inner `<module>.scoverage` compile; the normal `compile` stays clean.
+// A module's `object test` must extend ScoverageTests for its coverage to be measured.
+trait UbcScoverage extends ScoverageModule {
+  def scoverageVersion = scoverageVer
+}
+
 trait ServiceModule extends UbcScalaModule with DockerModule {
   def scalaVersion = scalaVer
   override def mvnDeps = super.mvnDeps() ++ zioDeps
@@ -183,8 +197,8 @@ object `provider-gateways` extends Module {
           override def sources = Task.Sources(moduleDir / os.up / "src")
           override def mvnDeps = super.mvnDeps() ++ neotypeDeps
         }
-        object jvm extends Shared {
-          object test extends ScalaTests {
+        object jvm extends Shared with UbcScoverage {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
@@ -200,10 +214,10 @@ object `provider-gateways` extends Module {
             def scalaVersion = scalaVer
             override def sources = Task.Sources(moduleDir / os.up / "src")
           }
-          object jvm extends Shared {
+          object jvm extends Shared with UbcScoverage {
             override def moduleDeps = Seq(domainPublic.jvm)
             override def mvnDeps = genDeps ++ neotypeDeps
-            object test extends ScalaTests {
+            object test extends ScoverageTests {
               def testFramework = "zio.test.sbt.ZTestFramework"
               override def mvnDeps = super.mvnDeps() ++ zioTestDeps
             }
@@ -217,7 +231,7 @@ object `provider-gateways` extends Module {
         }
       }
 
-      object domainPrivate extends UbcScalaModule {
+      object domainPrivate extends UbcScalaModule with UbcScoverage {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(domainPublic.jvm, common.sensitive.jvm)
         // zio-config lives here (rather than in an adapter-extension module) by design:
@@ -225,16 +239,16 @@ object `provider-gateways` extends Module {
         // buys nothing. See `.claude/skills/feature-tdd/layers/domain.md` for the rule.
         override def mvnDeps = super.mvnDeps() ++ neotypeDeps ++ zioDeps ++ zioConfigDeps
 
-        object test extends ScalaTests {
+        object test extends ScoverageTests {
           def testFramework = "zio.test.sbt.ZTestFramework"
           override def mvnDeps = super.mvnDeps() ++ zioTestDeps
         }
 
-        object generators extends UbcScalaModule {
+        object generators extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(domainPrivate, domainPublic.generators.jvm)
           override def mvnDeps = genDeps ++ neotypeDeps ++ zioDeps
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
@@ -298,7 +312,7 @@ object `provider-gateways` extends Module {
         override def mvnDeps = zioDeps
       }
 
-      object `core-impl` extends UbcScalaModule {
+      object `core-impl` extends UbcScalaModule with UbcScoverage {
         def scalaVersion = scalaVer
         override def moduleDeps = Seq(
           ports,
@@ -308,7 +322,7 @@ object `provider-gateways` extends Module {
         )
         override def mvnDeps = zioDeps ++ zioJsonDeps
 
-        object test extends ScalaTests {
+        object test extends ScoverageTests {
           def testFramework = "zio.test.sbt.ZTestFramework"
           override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           override def moduleDeps = super.moduleDeps ++ Seq(
@@ -327,7 +341,7 @@ object `provider-gateways` extends Module {
 
         // Outbound HTTP adapter implementing GitHubAppClient against GitHub's REST API
         // via Tapir endpoint DSL + sttp's ZIO backend. Tests use SttpBackendStub.
-        object `tapir-sttp-github-app-client` extends UbcScalaModule {
+        object `tapir-sttp-github-app-client` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -335,14 +349,14 @@ object `provider-gateways` extends Module {
           )
           override def mvnDeps = zioDeps ++ tapirClientDeps ++ neotypeTapirDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
         }
 
         // Driven port implementation for InstallationRepository via Magnum + Postgres.
-        object `magnum-installation-repository` extends UbcScalaModule {
+        object `magnum-installation-repository` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -352,7 +366,7 @@ object `provider-gateways` extends Module {
           )
           override def mvnDeps = zioDeps ++ magnumDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
             override def moduleDeps = super.moduleDeps ++ Seq(
@@ -363,7 +377,7 @@ object `provider-gateways` extends Module {
         }
 
         // Driven port implementation for LinkedRepoRepository via Magnum + Postgres.
-        object `magnum-linked-repo-repository` extends UbcScalaModule {
+        object `magnum-linked-repo-repository` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -373,7 +387,7 @@ object `provider-gateways` extends Module {
           )
           override def mvnDeps = zioDeps ++ magnumDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
             override def moduleDeps = super.moduleDeps ++ Seq(
@@ -384,7 +398,7 @@ object `provider-gateways` extends Module {
         }
 
         // Driven port implementation for PendingLinkFlowRepository via Magnum + Postgres.
-        object `magnum-pending-link-flow-repository` extends UbcScalaModule {
+        object `magnum-pending-link-flow-repository` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -393,7 +407,7 @@ object `provider-gateways` extends Module {
           )
           override def mvnDeps = zioDeps ++ magnumDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
             override def moduleDeps = super.moduleDeps ++ Seq(
@@ -404,7 +418,7 @@ object `provider-gateways` extends Module {
         }
 
         // Driven port implementation for WebhookDeliveryRepository via Magnum + Postgres.
-        object `magnum-webhook-delivery-repository` extends UbcScalaModule {
+        object `magnum-webhook-delivery-repository` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(
             ports,
@@ -413,7 +427,7 @@ object `provider-gateways` extends Module {
           )
           override def mvnDeps = zioDeps ++ magnumDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ Seq(mvn"org.slf4j:slf4j-simple:2.0.17")
             override def moduleDeps = super.moduleDeps ++ Seq(
@@ -424,48 +438,48 @@ object `provider-gateways` extends Module {
         }
 
         // In-memory InstallationRepository for local dev and testing — no DB required.
-        object `in-memory-installation-repository` extends UbcScalaModule {
+        object `in-memory-installation-repository` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
         }
 
         // In-memory LinkedRepoRepository for local dev and testing.
-        object `in-memory-linked-repo-repository` extends UbcScalaModule {
+        object `in-memory-linked-repo-repository` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
         }
 
         // In-memory PendingLinkFlowRepository for local dev and testing.
-        object `in-memory-pending-link-flow-repository` extends UbcScalaModule {
+        object `in-memory-pending-link-flow-repository` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
         }
 
         // In-memory WebhookDeliveryRepository for local dev and testing.
-        object `in-memory-webhook-delivery-repository` extends UbcScalaModule {
+        object `in-memory-webhook-delivery-repository` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
@@ -473,24 +487,24 @@ object `provider-gateways` extends Module {
 
         // In-memory fake of GitHub's REST API for the App. Used by core service tests
         // that need a deterministic, in-process backend instead of calling github.com.
-        object `in-memory-github-app-client` extends UbcScalaModule {
+        object `in-memory-github-app-client` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
         }
 
         // In-memory InstallationTokenMinter — returns deterministic dummy JWTs for tests.
-        object `in-memory-installation-token-minter` extends UbcScalaModule {
+        object `in-memory-installation-token-minter` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
@@ -498,14 +512,14 @@ object `provider-gateways` extends Module {
 
         // Real InstallationTokenMinter: signs RS256 App JWTs from a configured RSA private key
         // using nimbus-jose-jwt. Used by the server bootstrap.
-        object `nimbus-jose-installation-token-minter` extends UbcScalaModule {
+        object `nimbus-jose-installation-token-minter` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(ports)
           override def mvnDeps = zioDeps ++ Seq(
             mvn"com.nimbusds:nimbus-jose-jwt:9.40"
           )
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
@@ -538,7 +552,7 @@ object `provider-gateways` extends Module {
       // Inbound HTTP adapter: Tapir endpoints that decode requests and delegate
       // immediately to core. No business logic lives here.
       object `internal-api-adapters` extends Module {
-        object http extends UbcScalaModule {
+        object http extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           // Tapir's Schema derivation for nested generics (Page[Installation]) needs
           // a higher inline budget than the default 32.
@@ -552,7 +566,7 @@ object `provider-gateways` extends Module {
           )
           override def mvnDeps = zioDeps ++ tapirServerDeps ++ neotypeTapirDeps ++ zioJsonDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ tapirClientDeps ++ Seq(
               mvn"com.softwaremill.sttp.tapir::tapir-sttp-stub-server:1.11.9"
@@ -575,7 +589,7 @@ object `provider-gateways` extends Module {
       object `external-api-adapters` extends Module {
         // JVM client: Tapir endpoint DSL + SttpClientInterpreter. Import this when a
         // JVM service needs to call the GitHub Gateway over HTTP.
-        object `tapir-sttp-http` extends UbcScalaModule {
+        object `tapir-sttp-http` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           // Tapir's Schema derivation for nested generics (Page[Installation]) needs
           // a higher inline budget than the default 32.
@@ -587,7 +601,7 @@ object `provider-gateways` extends Module {
           )
           override def mvnDeps = zioDeps ++ tapirClientDeps ++ neotypeTapirDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
@@ -659,12 +673,12 @@ object common extends Module {
 
   // Structured activity logging: typed event case classes encoded to JSON, with
   // Sensitive-typed fields redacted. See the `sensitive` skill for the full pattern.
-  object `activity-logging` extends UbcScalaModule {
+  object `activity-logging` extends UbcScalaModule with UbcScoverage {
     def scalaVersion = scalaVer
     override def moduleDeps = Seq(sensitive.jvm)
     override def mvnDeps = zioDeps ++ zioJsonDeps
 
-    object test extends ScalaTests {
+    object test extends ScoverageTests {
       def testFramework = "zio.test.sbt.ZTestFramework"
       override def mvnDeps = super.mvnDeps() ++ zioTestDeps ++ neotypeDeps ++ neotypeZioJsonDeps
     }
@@ -721,8 +735,8 @@ object common extends Module {
       override def sources = Task.Sources(moduleDir / os.up / "src")
       override def mvnDeps = zioDeps
     }
-    object jvm extends Shared {
-      object test extends ScalaTests {
+    object jvm extends Shared with UbcScoverage {
+      object test extends ScoverageTests {
         def testFramework = "zio.test.sbt.ZTestFramework"
         override def sources = Task.Sources(moduleDir / os.up / os.up / "test" / "src")
         override def mvnDeps = super.mvnDeps() ++ zioTestDeps
@@ -739,10 +753,10 @@ object common extends Module {
         def scalaVersion = scalaVer
         override def sources = Task.Sources(moduleDir / os.up / "src")
       }
-      object jvm extends Shared {
+      object jvm extends Shared with UbcScoverage {
         override def moduleDeps = Seq(pagination.jvm)
         override def mvnDeps = genDeps
-        object test extends ScalaTests {
+        object test extends ScoverageTests {
           def testFramework = "zio.test.sbt.ZTestFramework"
           override def mvnDeps = super.mvnDeps() ++ zioTestDeps
         }
@@ -780,24 +794,24 @@ object common extends Module {
         // Real Crypto adapter: AES-GCM with a base64-encoded 256-bit key. No `.layer` in the
         // companion — keys come from each consuming service's own config, so the wiring layer
         // lives next to the config rather than here.
-        object `aes-gcm` extends UbcScalaModule {
+        object `aes-gcm` extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(port)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
         }
 
         // No-op Crypto adapter: base64 identity transform. For tests and local dev only.
-        object noop extends UbcScalaModule {
+        object noop extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(port)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
@@ -815,12 +829,12 @@ object common extends Module {
       }
       object adapters extends Module {
         // Real SecureRandom adapter: java.security.SecureRandom-backed.
-        object java extends UbcScalaModule {
+        object java extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(port)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
@@ -828,12 +842,12 @@ object common extends Module {
 
         // Deterministic SecureRandom — counter-backed; emits predictable strings of the
         // requested byte-equivalent length so tests can assert exact values. Not for production.
-        object deterministic extends UbcScalaModule {
+        object deterministic extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
           override def moduleDeps = Seq(port)
           override def mvnDeps = zioDeps
 
-          object test extends ScalaTests {
+          object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
             override def mvnDeps = super.mvnDeps() ++ zioTestDeps
           }
@@ -891,4 +905,15 @@ object `ubc-control-plane` extends Module {
       def tags = List("unbrokenchain/ubc-control-plane:latest")
     }
   }
+}
+
+// Aggregates per-module scoverage data into one report across the whole build.
+// Run `./mill __.test` first to produce coverage data, then:
+//   ./mill scoverage.consoleReportAll   — prints overall statement/branch coverage
+//   ./mill scoverage.xmlReportAll       — writes out/scoverage/xmlReportAll.dest/scoverage.xml
+//   ./mill scoverage.htmlReportAll      — browsable HTML report
+// CI parses the aggregate statement-rate out of the XML to enforce the coverage floor.
+object scoverage extends ScoverageReport {
+  def scalaVersion     = scalaVer
+  def scoverageVersion = scoverageVer
 }

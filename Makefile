@@ -1,10 +1,13 @@
 CLUSTER_NAME ?= unbroken-chain
 UBC_PRESENTATION_IMAGE          ?= unbrokenchain/ubc-control-plane-presentation:latest
 GITHUB_GATEWAY_PRESENTATION_IMAGE ?= unbrokenchain/github-gateway-presentation:latest
+# Minimum aggregate statement coverage % enforced by `make coverage-check`.
+# Baseline at introduction was 72.68%; override with COVERAGE_MIN=NN.
+COVERAGE_MIN ?= 70
 
 SCRIPT_DIR := bin
 
-.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings full-github-gateway full-reader full-writer full-extraction-service full-ubc-control-plane load-github-app-secrets docs-deps docs-serve docs-build verify-deploy-deps help
+.PHONY: check-deps start stop kubeconfig k9s build-images build-presentations build-ubc-presentation build-github-gateway-presentation load-images deploy-images deploy-app psql-github-gateway psql-control-plane prepare-migrations rabbitmq-ui rabbitmq-queues rabbitmq-exchanges rabbitmq-bindings full-github-gateway full-reader full-writer full-extraction-service full-ubc-control-plane load-github-app-secrets docs-deps docs-serve docs-build verify-deploy-deps coverage coverage-check help
 
 ## check-deps : verify all required local tools are installed
 check-deps:
@@ -153,6 +156,14 @@ load-github-app-secrets:
 ## verify-deploy-deps : fail if any server bundles test-only generators or zio-test
 verify-deploy-deps:
 	@$(SCRIPT_DIR)/verify-no-test-deps-in-deploy.sh
+
+## coverage : run the instrumented test suite and print an aggregate coverage report (no gate)
+coverage:
+	@$(SCRIPT_DIR)/coverage.sh
+
+## coverage-check : enforce minimum statement coverage (run ./mill __.test first; override COVERAGE_MIN)
+coverage-check:
+	@$(SCRIPT_DIR)/check-coverage.sh $(COVERAGE_MIN)
 
 ## help : list available targets
 help:
