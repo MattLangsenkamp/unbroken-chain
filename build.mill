@@ -38,6 +38,13 @@ val zioTestDeps = Seq(
   mvn"dev.zio::zio-test-sbt:2.1.24"
 )
 
+// Scala.js counterpart of zioTestDeps — same pinning, single-colon Maven artifact names with
+// explicit _sjs1_3 suffix (Mill doesn't auto-add the platform suffix to top-level vals).
+val zioTestDepsJs = Seq(
+  mvn"dev.zio:zio-test_sjs1_3:2.1.24",
+  mvn"dev.zio:zio-test-sbt_sjs1_3:2.1.24"
+)
+
 val genDeps = Seq(
   mvn"dev.zio::zio-test:2.1.24",
   mvn"dev.zio::zio-test-magnolia:2.1.24"
@@ -263,8 +270,17 @@ object `provider-gateways` extends Module {
             override def sources = Task.Sources(moduleDir / os.up / "src")
             override def mvnDeps = zioJsonDeps ++ neotypeZioJsonDeps
           }
-          object jvm extends Shared {
+          object jvm extends Shared with UbcScoverage {
             override def moduleDeps = Seq(domainPublic.jvm, common.pagination.jvm, api.`api-defn`.jvm)
+            object test extends ScoverageTests {
+              def testFramework = "zio.test.sbt.ZTestFramework"
+              override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+              override def moduleDeps = super.moduleDeps ++ Seq(
+                domainPublic.generators.jvm,
+                common.pagination.generators.jvm,
+                common.`test-utils`.`codec-roundtrip`.`zio-json`.jvm
+              )
+            }
           }
           object js extends Shared with UbcScalaJSModule {
             def scalaJSVersion = scalaJSVer
@@ -285,12 +301,6 @@ object `provider-gateways` extends Module {
       }
 
       object domainPrivateAdapterExtensions extends Module {
-
-        object `zio-json` extends UbcScalaModule {
-          def scalaVersion = scalaVer
-          override def moduleDeps = Seq(domainPrivate, domainPublicAdapterExtensions.`zio-json`.jvm)
-          override def mvnDeps = zioJsonDeps
-        }
 
         object magnum extends UbcScalaModule {
           def scalaVersion = scalaVer
@@ -923,6 +933,36 @@ object common extends Module {
       mvn"org.flywaydb:flyway-core:10.21.0",
       mvn"org.flywaydb:flyway-database-postgresql:10.21.0"
     )
+  }
+
+  // Round-trip helpers for adapter-extension codecs. Each library gets its own nested module
+  // so consumers pull in only what they need (zio-test stays off classpaths that don't ask for it).
+  //
+  // IMPORTANT: like generators modules these expose zio-test on their main classpath. Add to
+  // test.moduleDeps of consuming modules only — verify-no-test-deps-in-deploy enforces this.
+  object `test-utils` extends Module {
+    object `codec-roundtrip` extends Module {
+      // zio-json round-trip helper: `JsonRoundTrip.value(v)` / `JsonRoundTrip.spec(name, gen)`.
+      // Cross-compiled so Scala.js test suites can use it too.
+      object `zio-json` extends Module {
+        trait Shared extends UbcScalaModule {
+          def scalaVersion = scalaVer
+          override def sources = Task.Sources(moduleDir / os.up / "src")
+          override def mvnDeps = zioJsonDeps ++ zioTestDeps
+        }
+        object jvm extends Shared with UbcScoverage {
+          object test extends ScoverageTests {
+            def testFramework = "zio.test.sbt.ZTestFramework"
+            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+          }
+        }
+        object js extends Shared with UbcScalaJSModule {
+          def scalaJSVersion = scalaJSVer
+          // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+          override def mvnDeps = Seq(mvn"dev.zio:zio-json_sjs1_3:0.7.3") ++ zioTestDepsJs
+        }
+      }
+    }
   }
 }
 
