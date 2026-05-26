@@ -1,18 +1,15 @@
 package ubc.githubgateway.api.internal.http
 
 import neotype.*
-import neotype.interop.tapir.given
-import sttp.model.{HeaderNames, StatusCode}
-import sttp.tapir.generic.auto.*
-import sttp.tapir.json.zio.*
+import sttp.model.StatusCode
 import sttp.tapir.server.ziohttp.*
 import sttp.tapir.ztapir.*
 import ubc.common.TapirTracingInterceptor
-import ubc.common.pagination.{Page, PageRequest}
+import ubc.common.pagination.PageRequest
 import ubc.githubgateway.api.ApiError
+import ubc.githubgateway.api.endpoints.GitHubGatewayEndpoints.*
 import ubc.githubgateway.core.GitHubGatewayService
 import ubc.githubgateway.domain.*
-import ubc.githubgateway.domain.adapters.json.PublicJsonCodecs.given
 import ubc.githubgateway.domain.internal.{
   GitHubGatewayConfig,
   GithubWebhookEvent,
@@ -33,94 +30,14 @@ import java.nio.charset.StandardCharsets
 /** Inbound HTTP adapter — exactly the routes from spec §9. Decodes requests, delegates to core, encodes responses. No
   * business logic.
   *
+  * The endpoint shapes live in `api/tapir-endpoints` ([[GitHubGatewayEndpoints]]) and are shared with the typed
+  * clients; this object only attaches server logic and the ZIO HTTP interpreter — there is no second copy of the route
+  * definitions to keep in sync.
+  *
   * Traefik strips the `/github-gateway` prefix before forwarding here, so routes begin at `/links/...`,
   * `/installations/...`, etc. — no per-controller prefix.
   */
 object GitHubGatewayHttpController:
-
-  // -------------------------------------------------------------------------
-  // Endpoints
-  // -------------------------------------------------------------------------
-
-  // All endpoints surface failures as (StatusCode, ApiError) so the JSON envelope
-  // is uniform and the status code is set per error class.
-  private type ApiErr = (StatusCode, ApiError)
-  private val apiErrorOut = statusCode.and(jsonBody[ApiError])
-
-  val initiateEndpoint =
-    endpoint.post
-      .in("links" / "initiate")
-      .out(jsonBody[LinkInitiation])
-      .errorOut(apiErrorOut)
-
-  /** GitHub redirects the user here after install. We respond with a 302 to either the configured success URL (on
-    * success) or the failure URL (on any LinkError). The underlying error is encoded as an `?error=<code>` query string
-    * on the failure URL.
-    */
-  val callbackEndpoint =
-    endpoint.get
-      .in("links" / "callback")
-      .in(query[LinkState]("state"))
-      .in(query[GhInstallationId]("installation_id"))
-      .in(query[Option[String]]("setup_action"))
-      .in(query[Option[String]]("code"))
-      // 302 redirect — body is irrelevant; we fold the redirect URL into the Location
-      // header. tapir requires a header output to set Location, so we use a plain
-      // (StatusCode, String) where the String is the Location header value.
-      .out(statusCode and header[String](HeaderNames.Location))
-
-  val abandonEndpoint =
-    endpoint.post
-      .in("links" / path[LinkState]("state") / "abandon")
-      .errorOut(apiErrorOut)
-
-  val listInstallationsEndpoint =
-    endpoint.get
-      .in("installations")
-      .in(query[Option[String]]("cursor"))
-      .in(query[Option[Int]]("limit"))
-      .out(jsonBody[Page[Installation]])
-      .errorOut(apiErrorOut)
-
-  val listInstallationReposEndpoint =
-    endpoint.get
-      .in("installations" / path[GhInstallationId]("installation_id") / "repos")
-      .in(query[Option[String]]("cursor"))
-      .in(query[Option[Int]]("limit"))
-      .out(jsonBody[Page[LinkedRepo]])
-      .errorOut(apiErrorOut)
-
-  val listReposEndpoint =
-    endpoint.get
-      .in("repos")
-      .in(query[Option[String]]("cursor"))
-      .in(query[Option[Int]]("limit"))
-      .out(jsonBody[Page[LinkedRepo]])
-      .errorOut(apiErrorOut)
-
-  val unlinkEndpoint =
-    endpoint.delete
-      .in("installations" / path[GhInstallationId]("installation_id"))
-      .errorOut(apiErrorOut)
-
-  val reconcileEndpoint =
-    endpoint.post
-      .in("installations" / path[GhInstallationId]("installation_id") / "reconcile")
-      .out(jsonBody[ReconcileSummary])
-      .errorOut(apiErrorOut)
-
-  val webhookEndpoint =
-    endpoint.post
-      .in("webhooks" / "github")
-      // DeliveryId is GitHub's UUID; decode it at the edge so a malformed header is a 400.
-      .in(header[DeliveryId]("X-GitHub-Delivery"))
-      .in(header[String]("X-GitHub-Event"))
-      .in(header[String]("X-Hub-Signature-256"))
-      .in(byteArrayBody)
-      .errorOut(apiErrorOut)
-
-  val healthEndpoint =
-    endpoint.get.in("health")
 
   // -------------------------------------------------------------------------
   // Wiring

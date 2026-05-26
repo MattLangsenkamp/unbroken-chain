@@ -549,22 +549,66 @@ object `provider-gateways` extends Module {
         }
       }
 
-      // Inbound HTTP adapter: Tapir endpoints that decode requests and delegate
-      // immediately to core. No business logic lives here.
+      // Dependencies shared by more than one API adapter (internal + external). Tapir is an
+      // implementation detail of the HTTP adapters, so its shared pieces live here rather than
+      // as a top-level api concept alongside the transport-free api-defn.
+      object `shared-adapter-dependencies` extends Module {
+
+        // Shared Tapir endpoint definitions — the single wire contract consumed by the
+        // server interpreter (internal-api-adapters/http) and every client
+        // (external-api-adapters/tapir-http, JVM + Scala.js). Cross-compiled so the browser
+        // client shares them too. Carries only the define-endpoints surface (tapir-core +
+        // json-zio + neotype-tapir); the request/response interpreters are added by adapters.
+        object `tapir-endpoints` extends Module {
+          trait Shared extends UbcScalaModule {
+            def scalaVersion = scalaVer
+            override def sources = Task.Sources(moduleDir / os.up / "src")
+            override def mvnDeps = tapirBaseDeps ++ neotypeTapirDeps
+          }
+          object jvm extends Shared {
+            // Tapir's Schema derivation for nested generics (Page[Installation]) needs a
+            // higher inline budget than the default 32.
+            override def scalacOptions = super.scalacOptions() ++ Seq("-Xmax-inlines", "64")
+            override def moduleDeps = Seq(
+              `api-defn`.jvm,
+              domain.domainPublicAdapterExtensions.`zio-json`.jvm,
+              common.pagination.jvm
+            )
+          }
+          object js extends Shared with UbcScalaJSModule {
+            def scalaJSVersion = scalaJSVer
+            override def scalacOptions = super.scalacOptions() ++ Seq("-Xmax-inlines", "64")
+            override def moduleDeps = Seq(
+              `api-defn`.js,
+              domain.domainPublicAdapterExtensions.`zio-json`.js,
+              common.pagination.js
+            )
+            // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+            override def mvnDeps = Seq(
+              mvn"com.softwaremill.sttp.tapir:tapir-core_sjs1_3:1.11.9",
+              mvn"com.softwaremill.sttp.tapir:tapir-json-zio_sjs1_3:1.11.9",
+              mvn"io.github.kitlangton:neotype-tapir_sjs1_3:0.4.10"
+            )
+          }
+        }
+      }
+
+      // Inbound HTTP adapter: attaches server logic to the shared tapir-endpoints and
+      // delegates to core. No business logic, and no endpoint definitions of its own.
       object `internal-api-adapters` extends Module {
         object http extends UbcScalaModule with UbcScoverage {
           def scalaVersion = scalaVer
-          // Tapir's Schema derivation for nested generics (Page[Installation]) needs
-          // a higher inline budget than the default 32.
-          override def scalacOptions = super.scalacOptions() ++ Seq("-Xmax-inlines", "64")
           override def moduleDeps = Seq(
             `api-defn`.jvm,
+            `shared-adapter-dependencies`.`tapir-endpoints`.jvm,
             core.`core-impl`,
             domain.domainPublicAdapterExtensions.`zio-json`.jvm,
             common.`tapir-tracing-interceptor`,
             common.pagination.jvm
           )
-          override def mvnDeps = zioDeps ++ tapirServerDeps ++ neotypeTapirDeps ++ zioJsonDeps
+          // Endpoint Schema derivation lives in tapir-endpoints; this module only adds the
+          // ZIO HTTP server interpreter. zio-json is for the webhook parser's own DTO codecs.
+          override def mvnDeps = zioDeps ++ tapirServerDeps ++ zioJsonDeps
 
           object test extends ScoverageTests {
             def testFramework = "zio.test.sbt.ZTestFramework"
@@ -584,49 +628,57 @@ object `provider-gateways` extends Module {
         }
       }
 
-      // Typed HTTP clients other services import to call this service.
-      // Depends only on api-defn and public domain codecs — never on core or private domain.
+      // Typed HTTP clients other services (and the SPA) import to call this service.
+      // Depends only on api-defn + tapir-endpoints — never on core or private domain.
       object `external-api-adapters` extends Module {
-        // JVM client: Tapir endpoint DSL + SttpClientInterpreter. Import this when a
-        // JVM service needs to call the GitHub Gateway over HTTP.
-        object `tapir-sttp-http` extends UbcScalaModule with UbcScoverage {
-          def scalaVersion = scalaVer
-          // Tapir's Schema derivation for nested generics (Page[Installation]) needs
-          // a higher inline budget than the default 32.
-          override def scalacOptions = super.scalacOptions() ++ Seq("-Xmax-inlines", "64")
-          override def moduleDeps = Seq(
-            `api-defn`.jvm,
-            domain.domainPublicAdapterExtensions.`zio-json`.jvm,
-            common.pagination.jvm
-          )
-          override def mvnDeps = zioDeps ++ tapirClientDeps ++ neotypeTapirDeps
 
-          object test extends ScoverageTests {
-            def testFramework = "zio.test.sbt.ZTestFramework"
-            override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+        // Cross-compiled (JVM + Scala.js) typed client. ONE TapirGitHubGatewayClient drives
+        // both platforms by interpreting the shared tapir-endpoints with SttpClientInterpreter;
+        // each platform injects its own sttp backend (an injected backend on the JVM,
+        // FetchZioBackend in the browser, supplied by the src-js/ entry point). Adds only the
+        // client interpreter on top of tapir-endpoints.
+        object `tapir-http` extends Module {
+          trait Shared extends UbcScalaModule {
+            def scalaVersion = scalaVer
+            override def sources = Task.Sources(moduleDir / os.up / "src")
+            override def mvnDeps = Seq(
+              mvn"com.softwaremill.sttp.tapir::tapir-sttp-client:1.11.9",
+              mvn"com.softwaremill.sttp.client3::zio:3.9.8"
+            )
           }
-        }
-
-        // Scala.js client: raw sttp + FetchZioBackend (browser Fetch API).
-        // No Tapir — FetchZioBackend returns ZIO Task directly, matching the port trait.
-        // Explicit _sjs1_3 artifact name required for ScalaJS resolution.
-        object `sttp-fetch-js` extends UbcScalaJSModule {
-          def scalaVersion = scalaVer
-          def scalaJSVersion = scalaJSVer
-          override def moduleDeps = Seq(
-            `api-defn`.js,
-            domain.domainPublicAdapterExtensions.`zio-json`.js,
-            common.pagination.js
-          )
-          override def mvnDeps = Seq(
-            mvn"com.softwaremill.sttp.client3:zio_sjs1_3:3.9.8"
-          )
+          object jvm extends Shared with UbcScoverage {
+            override def moduleDeps = Seq(
+              `api-defn`.jvm,
+              `shared-adapter-dependencies`.`tapir-endpoints`.jvm,
+              common.pagination.jvm
+            )
+            object test extends ScoverageTests {
+              def testFramework = "zio.test.sbt.ZTestFramework"
+              override def sources = Task.Sources(moduleDir / os.up / os.up / "test" / "src")
+              override def mvnDeps = super.mvnDeps() ++ zioTestDeps
+            }
+          }
+          object js extends Shared with UbcScalaJSModule {
+            def scalaJSVersion = scalaJSVer
+            // JS adds the src-js/ sources (the FetchZioBackend entry point) on top of shared src/.
+            override def sources = Task.Sources(moduleDir / os.up / "src", moduleDir / os.up / "src-js")
+            override def moduleDeps = Seq(
+              `api-defn`.js,
+              `shared-adapter-dependencies`.`tapir-endpoints`.js,
+              common.pagination.js
+            )
+            // Explicit _sjs1_3 suffix required — top-level val :: resolves JVM-only at link time
+            override def mvnDeps = Seq(
+              mvn"com.softwaremill.sttp.tapir:tapir-sttp-client_sjs1_3:1.11.9",
+              mvn"com.softwaremill.sttp.client3:zio_sjs1_3:3.9.8"
+            )
+          }
         }
       }
     }
 
     object presentation extends PresentationModule {
-      override def moduleDeps = Seq(api.`external-api-adapters`.`sttp-fetch-js`)
+      override def moduleDeps = Seq(api.`external-api-adapters`.`tapir-http`.js)
       override def mvnDeps = super.mvnDeps() ++ Seq(
         mvn"io.indigoengine:tyrian-zio_sjs1_3:0.14.0",
         mvn"dev.zio:zio-interop-cats_sjs1_3:23.1.0.3"
@@ -728,7 +780,7 @@ object common extends Module {
   // Reusable pagination types (Page[A], PageRequest) shared across services.
   // Pure domain types — no JSON/Magnum codecs here. Codec extensions can come later.
   // Cross-compiled (jvm + js) so Scala.js consumers (e.g. typed clients in
-  // external-api-adapters/sttp-fetch-js and Tyrian SPAs) can share the same types.
+  // external-api-adapters/tapir-http and Tyrian SPAs) can share the same types.
   object pagination extends Module {
     trait Shared extends UbcScalaModule {
       def scalaVersion = scalaVer
