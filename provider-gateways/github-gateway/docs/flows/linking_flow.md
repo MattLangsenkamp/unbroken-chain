@@ -2,6 +2,13 @@
 
 The linking flow connects a UBC user to a GitHub App installation (an account or org on GitHub) and mirrors that installation's selected-repo set into the gateway's database. It is the only way an installation enters our system; once linked, webhooks and reconcile jobs keep the mirror in sync.
 
+> **Precondition: the deployment's GitHub App must be provisioned first.** The app the user
+> installs is created per-deployment by the [app provisioning flow](./app_provisioning_flow.md),
+> not configured centrally. Until that one-time bootstrap completes there is no app slug to
+> install and no private key to mint JWTs with, so `POST /links/initiate` fails fast and the SPA
+> shows provisioning instead of the link button. The app slug, private key, and webhook secret
+> used below are loaded from the stored `github_app` record, not from environment config.
+
 The flow is a server-driven handshake keyed on a single-use `state` nonce:
 
 - The gateway issues a single-use `state` nonce and persists a pending row keyed on it.
@@ -63,14 +70,14 @@ sequenceDiagram
 2. SPA calls `POST /links/initiate` against the gateway (`api/api-defn/.../GitHubGatewayApi.scala:27`).
 3. Gateway generates a fresh `LinkState` nonce via the `SecureRandom` port.
 4. Gateway inserts a `PendingLinkFlow` row keyed by `state`, with `expiresAt = now + pendingLinkTtl` (`core/ports/.../PendingLinkFlowRepository.scala:20`).
-5. Gateway returns `LinkInitiation { installUrl, state, expiresAt }` where `installUrl = https://github.com/apps/<appSlug>/installations/new?state=<state>`.
+5. Gateway returns `LinkInitiation { installUrl, state, expiresAt }` where `installUrl = https://github.com/apps/<appSlug>/installations/new?state=<state>`. `<appSlug>` is read from the stored `github_app` record created during [provisioning](./app_provisioning_flow.md); if no app is provisioned, this step fails before a pending row is written.
 6. SPA performs a full-page navigation to `installUrl` via `Nav.loadUrl` (`presentation/src/Main.scala:113`).
 7. The user picks the account/org to install on and the repo set, then confirms.
 8. GitHub redirects to the configured callback URL with `state` and `installation_id` query parameters.
 9. Browser follows the redirect to the gateway (`api/internal-api-adapters/http/.../GitHubGatewayHttpController.scala:52`).
 10. Gateway looks up the pending row by `state`.
 11. Gateway verifies `flow.expiresAt > now`.
-12. Gateway mints a short-lived RS256 App JWT signed with the GitHub App private key (`InstallationTokenMinter`, implemented by `NimbusJoseInstallationTokenMinter`).
+12. Gateway mints a short-lived RS256 App JWT signed with the GitHub App private key (`InstallationTokenMinter`, implemented by `NimbusJoseInstallationTokenMinter`). The private key and the issuer App ID are loaded from the stored `github_app` record, not from config.
 13. Gateway calls `GET /app/installations/{installation_id}` to fetch installation metadata (`core/ports/.../GitHubAppClient.scala:26`).
 14. Gateway upserts the local installation row by `GhInstallationId`, getting back the persisted row with our local surrogate id.
 15. Gateway exchanges the App JWT for a short-lived installation access token (`GitHubAppClient.scala:51`).
