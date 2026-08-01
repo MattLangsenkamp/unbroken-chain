@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Scala Steward
-        uses: scala-steward-org/scala-steward-action@v2
+        uses: scala-steward-org/scala-steward-action@v2.92.0
         with:
           # A token with permission to push branches and open PRs on this repo, stored
           # as the SCALA_STEWARD_TOKEN repo secret. Use either a classic PAT with the
